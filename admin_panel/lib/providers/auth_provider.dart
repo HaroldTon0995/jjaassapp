@@ -106,4 +106,41 @@ class AuthProvider extends ChangeNotifier {
       return false;
     }
   }
+
+  // Password Reset Methods (100% Free Supabase OTP)
+  Future<bool> sendPasswordResetOtp(String email) async {
+    _setLoading(true);
+    _clearError();
+    try {
+      await _authRepository.sendPasswordResetOtp(email);
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _setLoading(false);
+      return false;
+    }
+  }
+
+  Future<bool> resetPasswordWithOtp({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    _setLoading(true);
+    _clearError();
+    try {
+      await _authRepository.resetPasswordWithOtp(
+        email: email,
+        otp: otp,
+        newPassword: newPassword,
+      );
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _setLoading(false);
+      return false;
+    }
+  }
 }

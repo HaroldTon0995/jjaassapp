@@ -8,6 +8,7 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/water_widgets.dart';
+import '../../widgets/forgot_password_modal.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -276,9 +277,9 @@ class _LoginScreenState extends State<LoginScreen> {
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () {
-                  Helpers.showSnackBar(
+                  ForgotPasswordModal.show(
                     context,
-                    'Password reset link simulated!',
+                    initialEmail: _emailController.text.trim(),
                   );
                 },
                 child: const Text(

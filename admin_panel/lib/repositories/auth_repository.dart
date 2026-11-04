@@ -13,6 +13,12 @@ abstract class AuthRepository {
   });
   Future<void> logout();
   Future<UserModel?> getCurrentUser();
+  Future<void> sendPasswordResetOtp(String email);
+  Future<void> resetPasswordWithOtp({
+    required String email,
+    required String otp,
+    required String newPassword,
+  });
 }
 
 class MockAuthRepository implements AuthRepository {
@@ -92,6 +98,32 @@ class MockAuthRepository implements AuthRepository {
   @override
   Future<UserModel?> getCurrentUser() async {
     return null;
+  }
+
+  @override
+  Future<void> sendPasswordResetOtp(String email) async {
+    await Future.delayed(const Duration(milliseconds: 600));
+    final normalizedEmail = email.trim().toLowerCase();
+    if (!_userStore.containsKey(normalizedEmail)) {
+      throw Exception('No account found with this email address.');
+    }
+  }
+
+  @override
+  Future<void> resetPasswordWithOtp({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 600));
+    final normalizedEmail = email.trim().toLowerCase();
+    if (!_userStore.containsKey(normalizedEmail)) {
+      throw Exception('No account found with this email address.');
+    }
+    if (newPassword.length < 6) {
+      throw Exception('Password must be at least 6 characters.');
+    }
+    _userStore[normalizedEmail]!['password'] = newPassword;
   }
 }
 
@@ -198,5 +230,44 @@ class SupabaseAuthRepository implements AuthRepository {
     } catch (e) {
       return null;
     }
+  }
+
+  @override
+  Future<void> sendPasswordResetOtp(String email) async {
+    final cleanEmail = email.trim();
+    if (cleanEmail.isEmpty) {
+      throw Exception('Please enter your email address.');
+    }
+    await _client.auth.resetPasswordForEmail(cleanEmail);
+  }
+
+  @override
+  Future<void> resetPasswordWithOtp({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    final cleanEmail = email.trim();
+    final cleanOtp = otp.trim();
+    if (cleanEmail.isEmpty || cleanOtp.isEmpty || newPassword.isEmpty) {
+      throw Exception('All fields are required.');
+    }
+    if (newPassword.length < 6) {
+      throw Exception('Password must be at least 6 characters.');
+    }
+
+    final response = await _client.auth.verifyOTP(
+      email: cleanEmail,
+      token: cleanOtp,
+      type: OtpType.recovery,
+    );
+
+    if (response.session == null && response.user == null) {
+      throw Exception('Invalid or expired 6-digit code. Please request a new one.');
+    }
+
+    await _client.auth.updateUser(
+      UserAttributes(password: newPassword),
+    );
   }
 }
