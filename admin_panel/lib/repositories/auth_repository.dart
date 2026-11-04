@@ -238,7 +238,10 @@ class SupabaseAuthRepository implements AuthRepository {
     if (cleanEmail.isEmpty) {
       throw Exception('Please enter your email address.');
     }
-    await _client.auth.resetPasswordForEmail(cleanEmail);
+    await _client.auth.signInWithOtp(
+      email: cleanEmail,
+      shouldCreateUser: false,
+    );
   }
 
   @override
@@ -259,7 +262,7 @@ class SupabaseAuthRepository implements AuthRepository {
     final response = await _client.auth.verifyOTP(
       email: cleanEmail,
       token: cleanOtp,
-      type: OtpType.recovery,
+      type: OtpType.email,
     );
 
     if (response.session == null && response.user == null) {
