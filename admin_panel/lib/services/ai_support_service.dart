@@ -223,7 +223,7 @@ class AiSupportService {
         final activeJob = orderProvider.getActiveDriverJob(userId);
         return "Hello Driver **$userName**! 🚚 I'm **AquaBot 💧**, your dispatch assistant.\n\n- **Active Delivery**: ${activeJob != null ? '${activeJob.id} (${activeJob.customerName})' : 'None right now'}\n- **Available Earnings**: ₱${orderProvider.getDriverEarnings(userId).toStringAsFixed(2)}\n\nAsk me to **optimize route**, check your **active job**, or view your **earnings**!";
       }
-      return "Hello **$userName**! 👋 Welcome to **JJAASS Water Market** 💧\n\nI can help you with:\n- 💧 **Water Types & Prices** (Purified, Alkaline, Mineral)\n- 🏺 **Jug Types** (5-Gallon Slim with Faucet & 5-Gallon Round)\n- 📦 **Order Tracking & Delivery Status**\n- 💳 **GCash & COD Payments**\n- 📍 **Store Location & Hours**\n\nWhat would you like to know?";
+      return "Hello **$userName**! 👋 Welcome to **JJAASS Water Market** 💧\n\nI can help you with:\n- 💧 **Water Types & Prices** (19L Purified ₱50)\n- 🏺 **Jug Types** (5-Gallon Slim with Faucet & 5-Gallon Round)\n- 📦 **Order Tracking & Delivery Status**\n- 💳 **GCash & COD Payments**\n- 📍 **Store Location & Hours**\n\nWhat would you like to know?";
     }
 
     // 2. Gratitude / Closing

@@ -35,7 +35,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   int _activeSidebarMenu = 0;
 
   // Order Water Form States
-  String _selectedWaterType = '19LPurified Water';
+  String _selectedWaterType = '19L Purified Water';
   String _selectedJugType = '5-Gallon Slim';
   int _orderQuantity = 2;
   String? _selectedProvince;
