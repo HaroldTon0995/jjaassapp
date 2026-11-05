@@ -19,7 +19,7 @@ class OrderProvider extends ChangeNotifier {
       'name': '19L Purified Water',
       'category': 'water',
       'unit': 'Gallons',
-      'price': 50.0,
+      'price': 30.0,
       'stock': 127.0,
       'capacity': 150.0,
       'color': Colors.blue,

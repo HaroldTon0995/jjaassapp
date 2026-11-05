@@ -2569,7 +2569,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         : '19L Purified';
     double pricePerUnit = orderProvider.waterProducts.isNotEmpty
         ? (orderProvider.waterProducts.first['price'] as double)
-        : 50.0;
+        : 30.0;
     String selectedPaymentMethod = 'Cash on Delivery';
     String selectedPaymentStatus = 'Pending';
 
