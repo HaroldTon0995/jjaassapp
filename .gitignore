@@ -42,3 +42,7 @@ app.*.map.json
 **/android/app/profile
 **/android/app/release
 *.apk
+
+# Sensitive credentials
+recovery-codes.txt
+*recovery*

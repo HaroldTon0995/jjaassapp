@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import '../core/theme/app_theme.dart';
+import '../models/order_model.dart';
 import '../services/tracking_service.dart';
 import '../services/routing_service.dart';
 import '../services/navigation_launcher.dart';
@@ -16,6 +17,8 @@ class GoogleMapWidget extends StatefulWidget {
   final String orderId;
   final String? customerName;
   final String? customerPhone;
+  final List<OrderModel>? otherActiveOrders;
+  final ValueChanged<String>? onOrderPinTapped;
 
   const GoogleMapWidget({
     super.key,
@@ -26,6 +29,8 @@ class GoogleMapWidget extends StatefulWidget {
     required this.orderId,
     this.customerName,
     this.customerPhone,
+    this.otherActiveOrders,
+    this.onOrderPinTapped,
   });
 
   @override
@@ -77,7 +82,8 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.destinationLat != widget.destinationLat ||
         oldWidget.destinationLng != widget.destinationLng ||
-        oldWidget.orderId != widget.orderId) {
+        oldWidget.orderId != widget.orderId ||
+        oldWidget.otherActiveOrders?.length != widget.otherActiveOrders?.length) {
       _zoomToFitMarkers();
       _fetchRoadRoute();
     }
@@ -263,6 +269,20 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
       double minLng = min(driver.longitude, destination.longitude);
       double maxLng = max(driver.longitude, destination.longitude);
 
+      if (widget.otherActiveOrders != null) {
+        for (var o in widget.otherActiveOrders!) {
+          final hash = o.deliveryAddress.hashCode;
+          final latOffset = (hash % 100) / 1000.0 - 0.05;
+          final lngOffset = ((hash >> 4) % 100) / 1000.0 - 0.05;
+          final lat = o.latitude ?? (_defaultManila.latitude + latOffset);
+          final lng = o.longitude ?? (_defaultManila.longitude + lngOffset);
+          minLat = min(minLat, lat);
+          maxLat = max(maxLat, lat);
+          minLng = min(minLng, lng);
+          maxLng = max(maxLng, lng);
+        }
+      }
+
       // Add minimum padding if coordinates are nearly identical
       if ((maxLat - minLat).abs() < 0.001) {
         maxLat += 0.002;
@@ -308,12 +328,35 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
         markerId: const MarkerId('dest_loc'),
         position: _destinationCoord,
         infoWindow: InfoWindow(
-          title: 'Delivery Pin Location',
+          title: widget.customerName != null ? 'Focus: ${widget.customerName}' : 'Delivery Pin Location',
           snippet: widget.destinationAddress,
         ),
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
       ),
     };
+
+    if (widget.otherActiveOrders != null) {
+      for (var o in widget.otherActiveOrders!) {
+        final hash = o.deliveryAddress.hashCode;
+        final latOffset = (hash % 100) / 1000.0 - 0.05;
+        final lngOffset = ((hash >> 4) % 100) / 1000.0 - 0.05;
+        final lat = o.latitude ?? (_defaultManila.latitude + latOffset);
+        final lng = o.longitude ?? (_defaultManila.longitude + lngOffset);
+        markers.add(
+          Marker(
+            markerId: MarkerId('order_${o.id}'),
+            position: LatLng(lat, lng),
+            infoWindow: InfoWindow(
+              title: '${o.customerName} (${o.id})',
+              snippet: o.deliveryAddress,
+              onTap: () => widget.onOrderPinTapped?.call(o.id),
+            ),
+            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+            onTap: () => widget.onOrderPinTapped?.call(o.id),
+          ),
+        );
+      }
+    }
 
     // Use road polyline from OSRM, fallback to direct line
     final List<LatLng> polylinePoints = _routeInfo?.points ?? [_driverCoord, _destinationCoord];

@@ -580,12 +580,6 @@ class OrderProvider extends ChangeNotifier {
     final index = _orders.indexWhere((o) => o.id == orderId);
     if (index == -1) return false;
 
-    // Check if driver already has an active job
-    final hasActive = _orders.any(
-      (o) => o.driverId == driverId && o.orderStatus == OrderStatus.onDelivery,
-    );
-    if (hasActive) return false;
-
     _orders[index].driverId = driverId;
     _orders[index].driverName = driverName;
     _orders[index].orderStatus = OrderStatus.onDelivery;
@@ -618,6 +612,54 @@ class OrderProvider extends ChangeNotifier {
     return true;
   }
 
+  Future<int> acceptAllAssignedJobs({
+    required String driverId,
+    required String driverName,
+  }) async {
+    if (driverId.isEmpty) return 0;
+    final assignedOrders = _orders
+        .where(
+          (o) =>
+              o.orderStatus == OrderStatus.assigned && o.driverId == driverId,
+        )
+        .toList();
+
+    if (assignedOrders.isEmpty) return 0;
+
+    final acceptedIds = <String>[];
+    for (var o in assignedOrders) {
+      o.orderStatus = OrderStatus.onDelivery;
+      o.driverName = driverName;
+      acceptedIds.add(o.id);
+    }
+
+    // Start live GPS broadcasting for first active order
+    LocationService().startBroadcasting(
+      driverId: driverId,
+      driverName: driverName,
+      orderId: acceptedIds.first,
+    );
+
+    if (_isSupabaseConfigured) {
+      try {
+        final client = Supabase.instance.client;
+        await client
+            .from('orders')
+            .update({
+              'driverName': driverName,
+              'orderStatus': OrderStatus.onDelivery.name,
+            })
+            .inFilter('id', acceptedIds);
+        await fetchSupabaseOrders(silent: true);
+      } catch (e) {
+        debugPrint('Supabase accept all assigned orders error: $e');
+      }
+    }
+
+    notifyListeners();
+    return acceptedIds.length;
+  }
+
   Future<bool> completeJob({
     required String orderId,
     required String driverId,
@@ -631,8 +673,16 @@ class OrderProvider extends ChangeNotifier {
     _orders[index].paymentStatus = 'Paid';
     _orders[index].completedAt = DateTime.now();
 
-    // Stop GPS broadcasting
-    LocationService().stopBroadcasting();
+    // Check if any other active delivery jobs remain for this driver before stopping GPS
+    final hasRemainingActive = _orders.any(
+      (o) =>
+          o.id != orderId &&
+          o.driverId == driverId &&
+          o.orderStatus == OrderStatus.onDelivery,
+    );
+    if (!hasRemainingActive) {
+      LocationService().stopBroadcasting();
+    }
 
     if (_isSupabaseConfigured) {
       try {
@@ -824,11 +874,28 @@ class OrderProvider extends ChangeNotifier {
         .toList();
   }
 
+  List<OrderModel> getAssignedDriverJobs(String driverId) {
+    if (driverId.isEmpty) return [];
+    return _orders
+        .where(
+          (o) =>
+              o.orderStatus == OrderStatus.assigned && o.driverId == driverId,
+        )
+        .toList();
+  }
+
+  List<OrderModel> getActiveDriverJobs(String driverId) {
+    if (driverId.isEmpty) return [];
+    return _orders
+        .where(
+          (o) =>
+              o.driverId == driverId && o.orderStatus == OrderStatus.onDelivery,
+        )
+        .toList();
+  }
+
   OrderModel? getActiveDriverJob(String driverId) {
-    if (driverId.isEmpty) return null;
-    final list = _orders.where(
-      (o) => o.driverId == driverId && o.orderStatus == OrderStatus.onDelivery,
-    );
+    final list = getActiveDriverJobs(driverId);
     return list.isNotEmpty ? list.first : null;
   }
 

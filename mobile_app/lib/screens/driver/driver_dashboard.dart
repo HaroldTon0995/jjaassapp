@@ -42,6 +42,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
     text: 'ABC-1234',
   );
   String _selectedVehicleType = 'Motorcycle with Rack';
+  String? _selectedActiveOrderId;
 
   @override
   void initState() {
@@ -97,20 +98,136 @@ class _DriverDashboardState extends State<DriverDashboard> {
     if (success) {
       if (mounted) {
         setState(() {
+          _selectedActiveOrderId = order.id;
           _selectedTab = 1; // Auto navigate to GPS Map Tab
           _activeSidebarMenu = 1;
         });
         Helpers.showSnackBar(
           context,
-          'Job ${order.id} accepted! Navigate via GPS Deliveries Map.',
+          'Job ${order.id} accepted! Added to active deliveries.',
         );
       }
     } else {
       if (mounted) {
         Helpers.showSnackBar(
           context,
-          'You currently have an active delivery job. Complete it first!',
+          'Could not accept order ${order.id}.',
           isError: true,
+        );
+      }
+    }
+  }
+
+  void _confirmAndAcceptAllAssignedJobs() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+    final user = auth.currentUser;
+    final driverId = user?.id ?? '';
+    final assignedJobs = orderProvider.getAssignedDriverJobs(driverId);
+
+    if (assignedJobs.isEmpty) {
+      Helpers.showSnackBar(
+        context,
+        'No pending assigned orders to accept.',
+      );
+      return;
+    }
+
+    final totalPayout = assignedJobs.fold<double>(
+      0.0,
+      (sum, job) => sum + (job.totalAmount * 0.5),
+    );
+
+    final shouldAccept = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: const [
+            Icon(Icons.playlist_add_check_circle_rounded, color: AppTheme.primaryColor),
+            SizedBox(width: 8),
+            Text('Accept All Assigned', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Accept all ${assignedJobs.length} delivery order${assignedJobs.length > 1 ? 's' : ''} assigned to you?',
+              style: const TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Total Orders:', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                      Text('${assignedJobs.length}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Total Estimated Payout:', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                      Text(
+                        '₱${totalPayout.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          color: Color(0xFF10B981),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Confirm & Accept All'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldAccept == true) {
+      final count = await orderProvider.acceptAllAssignedJobs(
+        driverId: driverId,
+        driverName: user?.name ?? 'Driver',
+      );
+
+      if (mounted) {
+        final activeJobs = orderProvider.getActiveDriverJobs(driverId);
+        setState(() {
+          if (activeJobs.isNotEmpty) {
+            _selectedActiveOrderId = activeJobs.first.id;
+          }
+          _selectedTab = 1; // Go to Deliveries Map
+          _activeSidebarMenu = 1;
+        });
+        Helpers.showSnackBar(
+          context,
+          'Successfully accepted $count assigned order${count > 1 ? 's' : ''}! View routes on map.',
         );
       }
     }
@@ -120,21 +237,28 @@ class _DriverDashboardState extends State<DriverDashboard> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
     final user = auth.currentUser;
+    final driverId = user?.id ?? '';
 
     final success = await orderProvider.completeJob(
       orderId: activeOrder.id,
-      driverId: user?.id ?? '',
+      driverId: driverId,
     );
 
     if (success && mounted) {
       final payoutVal = activeOrder.totalAmount * 0.5;
+      final remainingActive = orderProvider.getActiveDriverJobs(driverId);
       setState(() {
-        _selectedTab = 0; // Go back to dashboard
-        _activeSidebarMenu = 0;
+        if (remainingActive.isEmpty) {
+          _selectedActiveOrderId = null;
+          _selectedTab = 0; // Go back to dashboard when all jobs complete
+          _activeSidebarMenu = 0;
+        } else {
+          _selectedActiveOrderId = remainingActive.first.id;
+        }
       });
       Helpers.showSnackBar(
         context,
-        'Delivery completed successfully! +₱${payoutVal.toStringAsFixed(2)} earnings added.',
+        'Delivery ${activeOrder.id} completed! +₱${payoutVal.toStringAsFixed(2)} earned (${remainingActive.length} remaining).',
       );
     }
   }
@@ -705,7 +829,8 @@ class _DriverDashboardState extends State<DriverDashboard> {
     final driverId = user?.id ?? '';
 
     final availableJobs = orderProvider.getAvailableDriverJobs(driverId);
-    final activeJob = orderProvider.getActiveDriverJob(driverId);
+    final assignedJobs = orderProvider.getAssignedDriverJobs(driverId);
+    final activeJobs = orderProvider.getActiveDriverJobs(driverId);
 
     return Container(
       padding: const EdgeInsets.all(20.0),
@@ -713,76 +838,111 @@ class _DriverDashboardState extends State<DriverDashboard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Available Job Invitations',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF1E293B),
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  'Available Job Invitations',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: isDark ? Colors.white : const Color(0xFF1E293B),
+                  ),
+                ),
+              ),
+              if (assignedJobs.isNotEmpty)
+                ElevatedButton.icon(
+                  onPressed: _confirmAndAcceptAllAssignedJobs,
+                  icon: const Icon(Icons.playlist_add_check_rounded, size: 18),
+                  label: Text(
+                    'Accept All (${assignedJobs.length})',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF10B981),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    elevation: 1,
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 16),
-          if (availableJobs.isEmpty && activeJob == null)
+          if (availableJobs.isEmpty && activeJobs.isEmpty)
             const Padding(
               padding: EdgeInsets.all(24.0),
               child: Center(child: Text('No job invitations at the moment.')),
             )
           else ...[
-            if (activeJob != null) ...[
+            if (activeJobs.isNotEmpty) ...[
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.06),
+                  color: AppTheme.primaryColor.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.2),
+                    color: AppTheme.primaryColor.withValues(alpha: 0.25),
                   ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(
-                      Icons.directions_bike_rounded,
-                      color: AppTheme.primaryColor,
-                      size: 28,
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.directions_bike_rounded,
+                        color: AppTheme.primaryColor,
+                        size: 24,
+                      ),
                     ),
-                    const SizedBox(width: 14),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Active Job: ${activeJob.id}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            'Active Deliveries: ${activeJobs.length} In Progress',
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
+                              fontSize: 13,
                               color: AppTheme.primaryColor,
                             ),
                           ),
                           Text(
-                            'Customer: ${activeJob.customerName}',
+                            activeJobs.length == 1
+                                ? 'Destination: ${activeJobs.first.deliveryAddress}'
+                                : 'Next stop: ${activeJobs.first.customerName} • ${activeJobs.length - 1} more order(s)',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                          Text(
-                            'Dest: ${activeJob.deliveryAddress}',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 12),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark ? Colors.white70 : const Color(0xFF475569),
+                            ),
                           ),
                         ],
                       ),
                     ),
                     ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
                       onPressed: () => setState(() {
                         _selectedTab = 1;
                         _activeSidebarMenu = 1;
                       }),
                       child: const Text(
-                        'Go to Map',
-                        style: TextStyle(fontSize: 11),
+                        'View Map',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],
@@ -834,6 +994,27 @@ class _DriverDashboardState extends State<DriverDashboard> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              if (job.orderStatus == OrderStatus.assigned && job.driverId == driverId)
+                                Container(
+                                  margin: const EdgeInsets.only(bottom: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFEF3C7),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(color: const Color(0xFFF59E0B)),
+                                  ),
+                                  child: const Text(
+                                    '⭐ Assigned directly to you',
+                                    style: TextStyle(
+                                      color: Color(0xFFB45309),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
                               Text(
                                 '${job.customerName} (${job.id})',
                                 maxLines: 1,
@@ -1169,181 +1350,381 @@ class _DriverDashboardState extends State<DriverDashboard> {
     );
   }
 
-  // TAB 1: DELIVERIES MAP (Google Maps tracking)
+  // TAB 1: DELIVERIES MAP (Google Maps tracking with multi-order support)
   Widget _buildDeliveriesMapTab(bool isDark) {
     final auth = Provider.of<AuthProvider>(context);
     final orderProvider = Provider.of<OrderProvider>(context);
     final user = auth.currentUser;
     final driverId = user?.id ?? '';
-    final activeJob = orderProvider.getActiveDriverJob(driverId);
+    final activeJobs = orderProvider.getActiveDriverJobs(driverId);
+
+    if (activeJobs.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppTheme.darkSurface : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+            ),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(Icons.map_rounded, size: 48, color: Colors.grey),
+                SizedBox(height: 12),
+                Text(
+                  'No active delivery jobs.',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey,
+                  ),
+                ),
+                Text(
+                  'Accept jobs on the Dashboard to view routes.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final focusedJob = activeJobs.firstWhere(
+      (o) => o.id == _selectedActiveOrderId,
+      orElse: () => activeJobs.first,
+    );
+    final otherJobs = activeJobs.where((o) => o.id != focusedJob.id).toList();
 
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (activeJob == null)
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: isDark ? AppTheme.darkSurface : Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+          // Header with count badge
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.navigation_rounded, color: AppTheme.primaryColor, size: 22),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Active Deliveries (${activeJobs.length})',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : const Color(0xFF1E293B),
+                    ),
                   ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFF10B981)),
                 ),
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(Icons.map_rounded, size: 48, color: Colors.grey),
-                      SizedBox(height: 12),
-                      Text(
-                        'No active delivery job.',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      Text(
-                        'Accept a job on the Dashboard to view route.',
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                    ],
+                child: Text(
+                  'Focus: #${focusedJob.id}',
+                  style: const TextStyle(
+                    color: Color(0xFF047857),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
                   ),
                 ),
               ),
-            )
-          else ...[
-            Container(
-              padding: const EdgeInsets.all(16),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Horizontal Order Selector Chips (if > 1 order)
+          if (activeJobs.length > 1) ...[
+            SizedBox(
+              height: 38,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: activeJobs.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                itemBuilder: (context, idx) {
+                  final job = activeJobs[idx];
+                  final isFocused = job.id == focusedJob.id;
+                  return ChoiceChip(
+                    label: Text(
+                      'Stop ${idx + 1}: ${job.customerName}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: isFocused ? FontWeight.bold : FontWeight.normal,
+                        color: isFocused
+                            ? Colors.white
+                            : (isDark ? Colors.white70 : const Color(0xFF334155)),
+                      ),
+                    ),
+                    selected: isFocused,
+                    selectedColor: AppTheme.primaryColor,
+                    backgroundColor: isDark ? Colors.white10 : const Color(0xFFF1F5F9),
+                    onSelected: (selected) {
+                      if (selected) {
+                        setState(() {
+                          _selectedActiveOrderId = job.id;
+                        });
+                      }
+                    },
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          // Map Area (Multi-pin map)
+          Expanded(
+            flex: 6,
+            child: Container(
               decoration: BoxDecoration(
                 color: isDark ? AppTheme.darkSurface : Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
                 ),
               ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.location_on_rounded,
-                    color: AppTheme.primaryColor,
-                    size: 28,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: GoogleMapWidget(
+                  destinationLat: focusedJob.latitude,
+                  destinationLng: focusedJob.longitude,
+                  destinationAddress: focusedJob.deliveryAddress,
+                  customerName: focusedJob.customerName,
+                  customerPhone: focusedJob.customerPhone,
+                  isDriverView: true,
+                  orderId: focusedJob.id,
+                  otherActiveOrders: otherJobs,
+                  onOrderPinTapped: (orderId) {
+                    setState(() {
+                      _selectedActiveOrderId = orderId;
+                    });
+                  },
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Scrollable List of Collapsible Active Delivery Cards
+          Expanded(
+            flex: 5,
+            child: ListView.separated(
+              itemCount: activeJobs.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 10),
+              itemBuilder: (context, index) {
+                final job = activeJobs[index];
+                final isFocused = job.id == focusedJob.id;
+
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppTheme.darkSurface : Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isFocused
+                          ? AppTheme.primaryColor
+                          : (isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
+                      width: isFocused ? 2.0 : 1.0,
+                    ),
+                    boxShadow: isFocused
+                        ? [
+                            BoxShadow(
+                              color: AppTheme.primaryColor.withValues(alpha: 0.12),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ]
+                        : null,
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Customer: ${activeJob.customerName} (${activeJob.id})',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          'Address: ${activeJob.deliveryAddress}',
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                        Text(
-                          'Items: ${activeJob.itemsSummary}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppTheme.primaryColor,
-                          ),
-                        ),
-                        if (activeJob.deliveryNote != null)
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
                           Container(
-                            margin: const EdgeInsets.only(top: 6),
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFEF3C7),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: const Color(0xFFF59E0B),
-                              ),
+                              color: isFocused
+                                  ? AppTheme.primaryColor.withValues(alpha: 0.15)
+                                  : (isDark ? Colors.white10 : const Color(0xFFF1F5F9)),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.location_on_rounded,
+                              color: isFocused ? AppTheme.primaryColor : Colors.grey,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        'Stop ${index + 1}: ${job.customerName} (${job.id})',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                        ),
+                                      ),
+                                    ),
+                                    if (isFocused)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: AppTheme.primaryColor,
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: const Text(
+                                          'NAVIGATING',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  job.deliveryAddress,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isDark ? Colors.white70 : const Color(0xFF475569),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppTheme.secondaryColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              '📝 Customer Note: ${activeJob.deliveryNote}',
+                              'Items: ${job.itemsSummary} • Dist: ${job.distance}',
                               style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF78350F),
+                                color: AppTheme.secondaryColor,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
-                      ],
-                    ),
-                  ),
-                  Column(
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          final double lat = activeJob.latitude ?? 14.5995;
-                          final double lng = activeJob.longitude ?? 120.9842;
-                          NavigationLauncher.showNavigationSheet(
-                            context,
-                            lat: lat,
-                            lng: lng,
-                            customerName: activeJob.customerName,
-                            address: activeJob.deliveryAddress,
-                            phone: activeJob.customerPhone,
-                          );
-                        },
-                        icon: const Icon(Icons.navigation_rounded, size: 16),
-                        label: const Text('Navigate'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF1D63B8),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                        ),
+                          const Spacer(),
+                          Text(
+                            'Earn: ₱${(job.totalAmount * 0.5).toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              color: Color(0xFF10B981),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 8),
-                      ElevatedButton(
-                        onPressed: () => _completeActiveJob(activeJob),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF10B981),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      if (job.deliveryNote != null && job.deliveryNote!.trim().isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '📝 Note: ${job.deliveryNote}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF78350F),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         ),
-                        child: const Text('Delivered'),
+                      ],
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          if (!isFocused)
+                            OutlinedButton.icon(
+                              onPressed: () {
+                                setState(() {
+                                  _selectedActiveOrderId = job.id;
+                                });
+                              },
+                              icon: const Icon(Icons.center_focus_strong_rounded, size: 14),
+                              label: const Text('Focus Map'),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                textStyle: const TextStyle(fontSize: 11),
+                              ),
+                            ),
+                          if (!isFocused) const SizedBox(width: 8),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              final double lat = job.latitude ?? 14.5995;
+                              final double lng = job.longitude ?? 120.9842;
+                              NavigationLauncher.showNavigationSheet(
+                                context,
+                                lat: lat,
+                                lng: lng,
+                                customerName: job.customerName,
+                                address: job.deliveryAddress,
+                                phone: job.customerPhone,
+                              );
+                            },
+                            icon: const Icon(Icons.navigation_rounded, size: 14),
+                            label: const Text('Navigate'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF1D63B8),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton.icon(
+                            onPressed: () => _completeActiveJob(job),
+                            icon: const Icon(Icons.check_circle_rounded, size: 14),
+                            label: const Text('Delivered'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF10B981),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
+                );
+              },
             ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: isDark ? AppTheme.darkSurface : Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
-                  ),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: GoogleMapWidget(
-                    destinationLat: activeJob.latitude,
-                    destinationLng: activeJob.longitude,
-                    destinationAddress: activeJob.deliveryAddress,
-                    customerName: activeJob.customerName,
-                    customerPhone: activeJob.customerPhone,
-                    isDriverView: true,
-                    orderId: activeJob.id,
-                  ),
-                ),
-              ),
-            ),
-          ],
+          ),
         ],
       ),
     );
