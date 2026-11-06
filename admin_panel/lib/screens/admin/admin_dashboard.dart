@@ -45,6 +45,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
   // Search/filter states for Inventory
   final TextEditingController _inventorySearchController =
       TextEditingController();
+  final TextEditingController _borrowSearchController =
+      TextEditingController();
+  int _inventorySubTab = 0; // 0: Container Items, 1: Customer Borrowed Gallons Log
+  String _borrowFilter = 'all'; // 'all', 'active', 'returned', 'slim', 'round'
 
   // State variables for interactive support chat
   final List<Map<String, dynamic>> _supportMessages = [
@@ -374,6 +378,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
   void dispose() {
     _profilesSubscription?.cancel();
     _searchController.dispose();
+    _inventorySearchController.dispose();
+    _borrowSearchController.dispose();
     _supportInputController.dispose();
     _chatScrollController.dispose();
     _paymentsSearchController.dispose();
@@ -5468,6 +5474,239 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
+  // Return Gallon Dialog
+  void _showReturnGallonDialog(bool isDark, Map<String, dynamic> borrow) {
+    final qtyController = TextEditingController(
+      text: '${borrow['quantity'] ?? 1}',
+    );
+    final customerName = borrow['customerName'] ?? 'Customer';
+    final gallonType = borrow['gallonType'] ?? '5-Gallon Slim';
+    final int borrowedQty = (borrow['quantity'] as num?)?.toInt() ?? 1;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.assignment_return_rounded,
+                  color: Colors.green,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Return Containers',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : const Color(0xFF1E293B),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.person_rounded, size: 16, color: AppTheme.primaryColor),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            customerName,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: isDark ? Colors.white : const Color(0xFF1E293B),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(Icons.water_drop_rounded, size: 16, color: Colors.cyan),
+                        const SizedBox(width: 6),
+                        Text(
+                          '$gallonType • Borrowed: $borrowedQty unit(s)',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (borrow['deliveryAddress'] != null && borrow['deliveryAddress'].toString().isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          const Icon(Icons.location_on_rounded, size: 16, color: Colors.amber),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              borrow['deliveryAddress'].toString(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark ? Colors.white60 : Colors.grey.shade600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Confirm Return Quantity:',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white70 : const Color(0xFF475569),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: qtyController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Units to return to inventory',
+                  prefixIcon: const Icon(Icons.pin_outlined),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Returning will automatically increase available inventory stock.',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isDark ? Colors.white54 : Colors.grey.shade600,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final qty = int.tryParse(qtyController.text) ?? borrowedQty;
+                if (qty <= 0) {
+                  Helpers.showSnackBar(
+                    context,
+                    'Please enter a valid return quantity.',
+                    isError: true,
+                  );
+                  return;
+                }
+                final orderProvider = Provider.of<OrderProvider>(
+                  context,
+                  listen: false,
+                );
+                orderProvider.returnBorrowedGallons(
+                  orderId: borrow['orderId'] as String,
+                  gallonType: gallonType,
+                  quantity: qty,
+                );
+                Navigator.of(context).pop();
+                Helpers.showSnackBar(
+                  context,
+                  'Returned $qty x $gallonType from $customerName into inventory stock!',
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text(
+                'Confirm & Return to Stock',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildBorrowFilterChip(
+    String label,
+    String value,
+    IconData icon,
+    bool isDark,
+  ) {
+    final isSelected = _borrowFilter == value;
+    return ChoiceChip(
+      avatar: Icon(
+        icon,
+        size: 14,
+        color: isSelected
+            ? Colors.white
+            : (isDark ? Colors.white70 : const Color(0xFF64748B)),
+      ),
+      label: Text(label),
+      labelStyle: TextStyle(
+        fontSize: 12,
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        color: isSelected
+            ? Colors.white
+            : (isDark ? Colors.white70 : const Color(0xFF334155)),
+      ),
+      selected: isSelected,
+      selectedColor: AppTheme.primaryColor,
+      backgroundColor: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF1F5F9),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: isSelected
+              ? AppTheme.primaryColor
+              : (isDark ? Colors.white10 : const Color(0xFFCBD5E1)),
+        ),
+      ),
+      onSelected: (selected) {
+        if (selected) {
+          setState(() {
+            _borrowFilter = value;
+          });
+        }
+      },
+    );
+  }
+
   // TAB 4: INVENTORY & RESERVES (Comprehensive Catalog, Full CRUD, Filters & Stocks)
   Widget _buildInventoryTab(bool isDark) {
     final orderProvider = Provider.of<OrderProvider>(context);
@@ -5480,7 +5719,21 @@ class _AdminDashboardState extends State<AdminDashboard> {
         .where((i) => i['category'] == 'container')
         .toList();
 
-    // Filter by search query
+    // Gallon Metrics
+    final slimRemaining = orderProvider.remainingSlimGallons;
+    final slimCap = orderProvider.slimGallonCapacity;
+    final slimRatio = slimCap > 0 ? (slimRemaining / slimCap).clamp(0.0, 1.0) : 0.0;
+    final activeSlimBorrows = orderProvider.activeSlimBorrowedGallons;
+
+    final roundRemaining = orderProvider.remainingRoundGallons;
+    final roundCap = orderProvider.roundGallonCapacity;
+    final roundRatio = roundCap > 0 ? (roundRemaining / roundCap).clamp(0.0, 1.0) : 0.0;
+    final activeRoundBorrows = orderProvider.activeRoundBorrowedGallons;
+
+    final totalActiveBorrows = orderProvider.totalActiveBorrowedGallons;
+    final customerBorrows = orderProvider.customerBorrows;
+
+    // Filter by search query for Container Items tab
     final query = _inventorySearchController.text.trim().toLowerCase();
     final filteredItems = query.isEmpty
         ? allItems
@@ -5489,6 +5742,32 @@ class _AdminDashboardState extends State<AdminDashboard> {
             final desc = (i['description'] as String? ?? '').toLowerCase();
             return name.contains(query) || desc.contains(query);
           }).toList();
+
+    // Filter Borrows tab
+    final borrowQuery = _borrowSearchController.text.trim().toLowerCase();
+    final filteredBorrows = customerBorrows.where((b) {
+      if (_borrowFilter == 'active' && b['isReturned'] == true) return false;
+      if (_borrowFilter == 'returned' && b['isReturned'] == false) return false;
+      if (_borrowFilter == 'slim' && !(b['gallonType'] as String).toLowerCase().contains('slim')) return false;
+      if (_borrowFilter == 'round' && !(b['gallonType'] as String).toLowerCase().contains('round')) return false;
+
+      if (borrowQuery.isNotEmpty) {
+        final custName = (b['customerName'] as String? ?? '').toLowerCase();
+        final phone = (b['customerPhone'] as String? ?? '').toLowerCase();
+        final addr = (b['deliveryAddress'] as String? ?? '').toLowerCase();
+        final gType = (b['gallonType'] as String? ?? '').toLowerCase();
+        final txn = (b['txnId'] as String? ?? '').toLowerCase();
+        final ordId = (b['orderId'] as String? ?? '').toLowerCase();
+        return custName.contains(borrowQuery) ||
+            phone.contains(borrowQuery) ||
+            addr.contains(borrowQuery) ||
+            gType.contains(borrowQuery) ||
+            txn.contains(borrowQuery) ||
+            ordId.contains(borrowQuery);
+      }
+      return true;
+    }).toList();
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Column(
@@ -5502,7 +5781,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Inventory & Stock Operations',
+                    'Inventory & Gallon Tracking',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -5511,7 +5790,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Manage container reserves, gallon bottles, and live stock levels.',
+                    'Track remaining Round & Slim gallons and monitor active customer gallon borrows.',
                     style: TextStyle(fontSize: 12, color: titleTextColor),
                   ),
                 ],
@@ -5546,304 +5825,1097 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ),
           const SizedBox(height: 20),
 
-          // Search Bar
+          // TOP HERO CARDS: Remaining Slim & Round Gallons
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth > 700;
+              return Flex(
+                direction: isWide ? Axis.horizontal : Axis.vertical,
+                children: [
+                  // CARD 1: 5-Gallon Slim Container
+                  Expanded(
+                    flex: isWide ? 1 : 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: cardBgColor,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: slimRemaining <= 10
+                              ? Colors.red.withValues(alpha: 0.5)
+                              : (slimRemaining <= 25 ? Colors.orange.withValues(alpha: 0.5) : borderColor),
+                          width: slimRemaining <= 25 ? 1.5 : 1.0,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.03),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                clipBehavior: Clip.antiAlias,
+                                child: Image.asset(
+                                  'assets/images/slim_gallon.png',
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (_, __, ___) => const Icon(
+                                    Icons.water_drop_rounded,
+                                    color: Colors.blue,
+                                    size: 24,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '5-Gallon Slim Container',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: valueTextColor,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Faucet & Handle Dispenser Model',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: titleTextColor,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: (slimRemaining <= 10
+                                          ? Colors.red
+                                          : (slimRemaining <= 25 ? Colors.orange : Colors.green))
+                                      .withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  slimRemaining <= 10
+                                      ? 'Low Stock'
+                                      : (slimRemaining <= 0 ? 'Out of Stock' : 'In Stock'),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: slimRemaining <= 10
+                                        ? Colors.red
+                                        : (slimRemaining <= 25 ? Colors.orange : Colors.green),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                '${slimRemaining.toInt()}',
+                                style: TextStyle(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.w900,
+                                  color: isDark ? Colors.blueAccent : const Color(0xFF1D4ED8),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 6, left: 6),
+                                child: Text(
+                                  '/ ${slimCap.toInt()} Remaining Stock',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: titleTextColor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: LinearProgressIndicator(
+                              value: slimRatio,
+                              minHeight: 8,
+                              backgroundColor: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                slimRemaining <= 10
+                                    ? Colors.red
+                                    : (slimRemaining <= 25 ? Colors.orange : Colors.blue),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.people_alt_rounded, size: 14, color: Colors.amber),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Borrowed by Customers: ${activeSlimBorrows} Gallons',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark ? Colors.amberAccent : const Color(0xFFB45309),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              TextButton.icon(
+                                onPressed: () {
+                                  final slimItem = allItems.firstWhere(
+                                    (i) => i['id'] == 'item_slim_gallon' || i['name'].toString().toLowerCase().contains('slim'),
+                                    orElse: () => allItems.isNotEmpty ? allItems.first : <String, dynamic>{},
+                                  );
+                                  if (slimItem.isNotEmpty) {
+                                    _showRestockDialog(isDark, slimItem);
+                                  }
+                                },
+                                icon: const Icon(Icons.add_shopping_cart_rounded, size: 16),
+                                label: const Text('Restock Slim', style: TextStyle(fontSize: 12)),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (isWide) const SizedBox(width: 16) else const SizedBox(height: 16),
+
+                  // CARD 2: 5-Gallon Round Container
+                  Expanded(
+                    flex: isWide ? 1 : 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: cardBgColor,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: roundRemaining <= 10
+                              ? Colors.red.withValues(alpha: 0.5)
+                              : (roundRemaining <= 25 ? Colors.orange.withValues(alpha: 0.5) : borderColor),
+                          width: roundRemaining <= 25 ? 1.5 : 1.0,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.03),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: Colors.indigo.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                clipBehavior: Clip.antiAlias,
+                                child: Image.asset(
+                                  'assets/images/round_gallon.png',
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (_, __, ___) => const Icon(
+                                    Icons.water_drop_rounded,
+                                    color: Colors.indigo,
+                                    size: 24,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '5-Gallon Round Container',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: valueTextColor,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Standard Water Dispenser Model',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: titleTextColor,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: (roundRemaining <= 10
+                                          ? Colors.red
+                                          : (roundRemaining <= 25 ? Colors.orange : Colors.green))
+                                      .withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  roundRemaining <= 10
+                                      ? 'Low Stock'
+                                      : (roundRemaining <= 0 ? 'Out of Stock' : 'In Stock'),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: roundRemaining <= 10
+                                        ? Colors.red
+                                        : (roundRemaining <= 25 ? Colors.orange : Colors.green),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                '${roundRemaining.toInt()}',
+                                style: TextStyle(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.w900,
+                                  color: isDark ? Colors.indigoAccent : const Color(0xFF4338CA),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 6, left: 6),
+                                child: Text(
+                                  '/ ${roundCap.toInt()} Remaining Stock',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: titleTextColor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: LinearProgressIndicator(
+                              value: roundRatio,
+                              minHeight: 8,
+                              backgroundColor: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                roundRemaining <= 10
+                                    ? Colors.red
+                                    : (roundRemaining <= 25 ? Colors.orange : Colors.indigo),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.people_alt_rounded, size: 14, color: Colors.amber),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Borrowed by Customers: ${activeRoundBorrows} Gallons',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark ? Colors.amberAccent : const Color(0xFFB45309),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              TextButton.icon(
+                                onPressed: () {
+                                  final roundItem = allItems.firstWhere(
+                                    (i) => i['id'] == 'item_round_gallon' || i['name'].toString().toLowerCase().contains('round'),
+                                    orElse: () => allItems.isNotEmpty ? allItems.first : <String, dynamic>{},
+                                  );
+                                  if (roundItem.isNotEmpty) {
+                                    _showRestockDialog(isDark, roundItem);
+                                  }
+                                },
+                                icon: const Icon(Icons.add_shopping_cart_rounded, size: 16),
+                                label: const Text('Restock Round', style: TextStyle(fontSize: 12)),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 24),
+
+          // SUBTAB SWITCHER: Container Catalog vs Customer Gallon Borrows Log
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: cardBgColor,
-              borderRadius: BorderRadius.circular(14),
+              color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: borderColor),
             ),
-            child: TextField(
-              controller: _inventorySearchController,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(
-                hintText: 'Search containers & jugs by name or description...',
-                prefixIcon: const Icon(Icons.search_rounded),
-                suffixIcon: _inventorySearchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, size: 18),
-                        onPressed: () {
-                          _inventorySearchController.clear();
-                          setState(() {});
-                        },
-                      )
-                    : null,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
+            child: Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () => setState(() => _inventorySubTab = 0),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: _inventorySubTab == 0
+                            ? (isDark ? AppTheme.darkSurface : Colors.white)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: _inventorySubTab == 0
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.05),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      alignment: Alignment.center,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.inventory_2_rounded,
+                            size: 16,
+                            color: _inventorySubTab == 0 ? AppTheme.primaryColor : titleTextColor,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Container Inventory Stock',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: _inventorySubTab == 0 ? FontWeight.bold : FontWeight.w500,
+                              color: _inventorySubTab == 0 ? valueTextColor : titleTextColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+                Expanded(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () => setState(() => _inventorySubTab = 1),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: _inventorySubTab == 1
+                            ? (isDark ? AppTheme.darkSurface : Colors.white)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: _inventorySubTab == 1
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.05),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      alignment: Alignment.center,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.assignment_ind_rounded,
+                            size: 16,
+                            color: _inventorySubTab == 1 ? AppTheme.primaryColor : titleTextColor,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Customer Borrowed Gallons Log',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: _inventorySubTab == 1 ? FontWeight.bold : FontWeight.w500,
+                              color: _inventorySubTab == 1 ? valueTextColor : titleTextColor,
+                            ),
+                          ),
+                          if (totalActiveBorrows > 0) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.amber,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '$totalActiveBorrows',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 20),
 
-          // Inventory Grid Items
-          if (filteredItems.isEmpty)
+          // SUBTAB CONTENT
+          if (_inventorySubTab == 0) ...[
+            // Container Catalog Search Bar
             Container(
-              padding: const EdgeInsets.all(40),
-              alignment: Alignment.center,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: cardBgColor,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: borderColor),
+              ),
+              child: TextField(
+                controller: _inventorySearchController,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  hintText: 'Search containers & jugs by name or description...',
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  suffixIcon: _inventorySearchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, size: 18),
+                          onPressed: () {
+                            _inventorySearchController.clear();
+                            setState(() {});
+                          },
+                        )
+                      : null,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Container Items Grid
+            if (filteredItems.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(40),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: cardBgColor,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: borderColor),
+                ),
+                child: Column(
+                  children: [
+                    const Icon(
+                      Icons.inventory_2_outlined,
+                      size: 48,
+                      color: Color(0xFF64748B),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'No inventory items match your search.',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: titleTextColor,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ElevatedButton.icon(
+                      onPressed: () => _showAddEditInventoryItemDialog(isDark),
+                      icon: const Icon(Icons.add, size: 16),
+                      label: const Text('Add Container Item'),
+                    ),
+                  ],
+                ),
+              )
+            else
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: filteredItems.length,
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 420,
+                  mainAxisExtent: 220,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                ),
+                itemBuilder: (context, index) {
+                  final prod = filteredItems[index];
+                  final String name = prod['name'] as String;
+                  final double stock = (prod['stock'] as num).toDouble();
+                  final double capacity = (prod['capacity'] as num).toDouble();
+                  final double price = (prod['price'] as num).toDouble();
+                  final String unit = prod['unit'] as String? ?? 'Units';
+                  final String description = prod['description'] as String? ?? '';
+                  final Color color =
+                      prod['color'] as Color? ?? AppTheme.primaryColor;
+                  final String? imagePath = prod['image'] as String?;
+                  final IconData icon =
+                      prod['icon'] as IconData? ?? Icons.inventory_2_rounded;
+
+                  final ratio = capacity > 0
+                      ? (stock / capacity).clamp(0.0, 1.0)
+                      : 0.0;
+                  final bool isOutOfStock = stock <= 0;
+                  final bool isLowStock = !isOutOfStock && ratio < 0.3;
+
+                  String statusLabel = 'In Stock';
+                  Color statusColor = Colors.green;
+                  if (isOutOfStock) {
+                    statusLabel = 'Out of Stock';
+                    statusColor = Colors.red;
+                  } else if (isLowStock) {
+                    statusLabel = 'Low Stock';
+                    statusColor = Colors.orange;
+                  }
+
+                  String categoryBadgeText = '🪣 Container';
+                  if (description.isNotEmpty) {
+                    categoryBadgeText = '$categoryBadgeText • $description';
+                  }
+
+                  return Container(
+                    padding: const EdgeInsets.all(16.0),
+                    decoration: BoxDecoration(
+                      color: cardBgColor,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isLowStock
+                            ? Colors.orange.withValues(alpha: 0.4)
+                            : (isOutOfStock
+                                  ? Colors.red.withValues(alpha: 0.4)
+                                  : borderColor),
+                        width: (isLowStock || isOutOfStock) ? 1.5 : 1.0,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header Row
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color: color.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    clipBehavior: Clip.antiAlias,
+                                    child: imagePath != null
+                                        ? Image.asset(
+                                            imagePath,
+                                            fit: BoxFit.contain,
+                                            errorBuilder:
+                                                (context, error, stackTrace) =>
+                                                    Icon(
+                                                      icon,
+                                                      color: color,
+                                                      size: 20,
+                                                    ),
+                                          )
+                                        : Icon(icon, color: color, size: 20),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          name,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: valueTextColor,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          categoryBadgeText,
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: titleTextColor,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: statusColor.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                statusLabel,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: statusColor,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+
+                        // Stock Available Text
+                        Text(
+                          '${stock.toStringAsFixed(stock % 1 == 0 ? 0 : 1)} / ${capacity.toStringAsFixed(0)} $unit Available',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                            color: valueTextColor,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+
+                        // Progress Indicator
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: ratio,
+                            minHeight: 6,
+                            backgroundColor: isDark
+                                ? Colors.white10
+                                : Colors.grey.shade200,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              statusColor,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Price and actions row
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              '₱${price.toStringAsFixed(2)} / $unit',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: isDark
+                                    ? Colors.cyanAccent
+                                    : AppTheme.primaryColor,
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                IconButton(
+                                  tooltip: 'Restock',
+                                  icon: Icon(
+                                    Icons.add_shopping_cart_rounded,
+                                    size: 18,
+                                    color: color,
+                                  ),
+                                  visualDensity: VisualDensity.compact,
+                                  onPressed: () =>
+                                      _showRestockDialog(isDark, prod),
+                                ),
+                                IconButton(
+                                  tooltip: 'Edit Details',
+                                  icon: const Icon(Icons.edit_outlined, size: 18),
+                                  visualDensity: VisualDensity.compact,
+                                  onPressed: () =>
+                                      _showAddEditInventoryItemDialog(
+                                        isDark,
+                                        prod,
+                                      ),
+                                ),
+                                IconButton(
+                                  tooltip: 'Delete Item',
+                                  icon: const Icon(
+                                    Icons.delete_outline_rounded,
+                                    size: 18,
+                                    color: Colors.red,
+                                  ),
+                                  visualDensity: VisualDensity.compact,
+                                  onPressed: () =>
+                                      _showDeleteItemDialog(isDark, prod),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+          ] else ...[
+            // CUSTOMER BORROWED GALLONS LOG VIEW
+            Container(
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: cardBgColor,
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: borderColor),
               ),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.inventory_2_outlined,
-                    size: 48,
-                    color: const Color(0xFF64748B),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'No inventory items match your search or filter.',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: titleTextColor,
+                  // Search Input
+                  TextField(
+                    controller: _borrowSearchController,
+                    onChanged: (_) => setState(() {}),
+                    decoration: InputDecoration(
+                      hintText: 'Search borrowers by customer name, phone, address, or order ID...',
+                      prefixIcon: const Icon(Icons.search_rounded),
+                      suffixIcon: _borrowSearchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 18),
+                              onPressed: () {
+                                _borrowSearchController.clear();
+                                setState(() {});
+                              },
+                            )
+                          : null,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  ElevatedButton.icon(
-                    onPressed: () => _showAddEditInventoryItemDialog(isDark),
-                    icon: const Icon(Icons.add, size: 16),
-                    label: const Text('Add First Item'),
+                  const SizedBox(height: 12),
+                  // Filter Chips
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildBorrowFilterChip('All Records', 'all', Icons.list_alt_rounded, isDark),
+                        const SizedBox(width: 8),
+                        _buildBorrowFilterChip('Currently Holding Gallons', 'active', Icons.pending_actions_rounded, isDark),
+                        const SizedBox(width: 8),
+                        _buildBorrowFilterChip('Returned Gallons', 'returned', Icons.check_circle_outline_rounded, isDark),
+                        const SizedBox(width: 8),
+                        _buildBorrowFilterChip('Slim Gallons', 'slim', Icons.water_drop_rounded, isDark),
+                        const SizedBox(width: 8),
+                        _buildBorrowFilterChip('Round Gallons', 'round', Icons.radio_button_checked_rounded, isDark),
+                      ],
+                    ),
                   ),
                 ],
               ),
-            )
-          else
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: filteredItems.length,
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 420,
-                mainAxisExtent: 220,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-              ),
-              itemBuilder: (context, index) {
-                final prod = filteredItems[index];
-                final String name = prod['name'] as String;
-                final double stock = (prod['stock'] as num).toDouble();
-                final double capacity = (prod['capacity'] as num).toDouble();
-                final double price = (prod['price'] as num).toDouble();
-                final String unit = prod['unit'] as String? ?? 'Units';
-                final String description = prod['description'] as String? ?? '';
-                final Color color =
-                    prod['color'] as Color? ?? AppTheme.primaryColor;
-                final String? imagePath = prod['image'] as String?;
-                final IconData icon =
-                    prod['icon'] as IconData? ?? Icons.inventory_2_rounded;
+            ),
+            const SizedBox(height: 16),
 
-                final ratio = capacity > 0
-                    ? (stock / capacity).clamp(0.0, 1.0)
-                    : 0.0;
-                final bool isOutOfStock = stock <= 0;
-                final bool isLowStock = !isOutOfStock && ratio < 0.3;
-
-                String statusLabel = 'In Stock';
-                Color statusColor = Colors.green;
-                if (isOutOfStock) {
-                  statusLabel = 'Out of Stock';
-                  statusColor = Colors.red;
-                } else if (isLowStock) {
-                  statusLabel = 'Low Stock';
-                  statusColor = Colors.orange;
-                }
-
-                String categoryBadgeText = '🪣 Container';
-                if (description.isNotEmpty) {
-                  categoryBadgeText = '$categoryBadgeText • $description';
-                }
-
-                return Container(
-                  padding: const EdgeInsets.all(16.0),
-                  decoration: BoxDecoration(
-                    color: cardBgColor,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: isLowStock
-                          ? Colors.orange.withValues(alpha: 0.4)
-                          : (isOutOfStock
-                                ? Colors.red.withValues(alpha: 0.4)
-                                : borderColor),
-                      width: (isLowStock || isOutOfStock) ? 1.5 : 1.0,
+            // Borrows List
+            if (filteredBorrows.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(48),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: cardBgColor,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: borderColor),
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.assignment_turned_in_outlined,
+                      size: 52,
+                      color: const Color(0xFF64748B).withValues(alpha: 0.5),
                     ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Header Row
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: color.withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  clipBehavior: Clip.antiAlias,
-                                  child: imagePath != null
-                                      ? Image.asset(
-                                          imagePath,
-                                          fit: BoxFit.contain,
-                                          errorBuilder:
-                                              (context, error, stackTrace) =>
-                                                  Icon(
-                                                    icon,
-                                                    color: color,
-                                                    size: 20,
-                                                  ),
-                                        )
-                                      : Icon(icon, color: color, size: 20),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        name,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                          color: valueTextColor,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        categoryBadgeText,
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: titleTextColor,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: statusColor.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              statusLabel,
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: statusColor,
-                              ),
-                            ),
-                          ),
-                        ],
+                    const SizedBox(height: 12),
+                    Text(
+                      'No borrowed gallons match this filter.',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: valueTextColor,
                       ),
-                      const SizedBox(height: 10),
-
-                      // Stock Available Text
-                      Text(
-                        '${stock.toStringAsFixed(stock % 1 == 0 ? 0 : 1)} / ${capacity.toStringAsFixed(0)} $unit Available',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w900,
-                          color: valueTextColor,
-                        ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'When customers place orders with gallon containers, their borrowing log will appear here automatically.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: titleTextColor,
                       ),
-                      const SizedBox(height: 6),
+                    ),
+                  ],
+                ),
+              )
+            else
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: filteredBorrows.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final borrow = filteredBorrows[index];
+                  final String custName = borrow['customerName'] as String? ?? 'Customer';
+                  final String phone = borrow['customerPhone'] as String? ?? 'No phone';
+                  final String address = borrow['deliveryAddress'] as String? ?? 'No address';
+                  final String gType = borrow['gallonType'] as String? ?? '5-Gallon Container';
+                  final int qty = (borrow['quantity'] as num?)?.toInt() ?? 1;
+                  final bool isReturned = borrow['isReturned'] as bool? ?? false;
+                  final String txn = borrow['txnId'] as String? ?? '';
+                  final DateTime? date = borrow['borrowedAt'] as DateTime?;
+                  final dateStr = date != null
+                      ? '${date.month}/${date.day}/${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}'
+                      : 'Recent';
 
-                      // Progress Indicator
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: ratio,
-                          minHeight: 6,
-                          backgroundColor: isDark
-                              ? Colors.white10
-                              : Colors.grey.shade200,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            statusColor,
+                  final isSlim = gType.toLowerCase().contains('slim');
+
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: cardBgColor,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: isReturned
+                            ? borderColor
+                            : Colors.amber.withValues(alpha: 0.4),
+                        width: isReturned ? 1.0 : 1.5,
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // Container Icon
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: isSlim
+                                ? Colors.blue.withValues(alpha: 0.12)
+                                : Colors.indigo.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: Image.asset(
+                            isSlim ? 'assets/images/slim_gallon.png' : 'assets/images/round_gallon.png',
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => Icon(
+                              Icons.water_drop_rounded,
+                              color: isSlim ? Colors.blue : Colors.indigo,
+                              size: 24,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
+                        const SizedBox(width: 14),
 
-                      // Price and actions row
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            '₱${price.toStringAsFixed(2)} / $unit',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: isDark
-                                  ? Colors.cyanAccent
-                                  : AppTheme.primaryColor,
-                            ),
-                          ),
-                          Row(
+                        // Customer & Container Details
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Quick Restock Button
-                              IconButton(
-                                tooltip: 'Restock',
-                                icon: Icon(
-                                  Icons.add_shopping_cart_rounded,
-                                  size: 18,
-                                  color: color,
-                                ),
-                                visualDensity: VisualDensity.compact,
-                                onPressed: () =>
-                                    _showRestockDialog(isDark, prod),
-                              ),
-                              // Edit Button
-                              IconButton(
-                                tooltip: 'Edit Details',
-                                icon: const Icon(Icons.edit_outlined, size: 18),
-                                visualDensity: VisualDensity.compact,
-                                onPressed: () =>
-                                    _showAddEditInventoryItemDialog(
-                                      isDark,
-                                      prod,
+                              Row(
+                                children: [
+                                  Text(
+                                    custName,
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      color: valueTextColor,
                                     ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: (isSlim ? Colors.blue : Colors.indigo).withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      gType,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: isSlim ? Colors.blue : Colors.indigo,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.purple.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      'Qty: $qty',
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.purple,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              // Delete Button
-                              IconButton(
-                                tooltip: 'Delete Item',
-                                icon: const Icon(
-                                  Icons.delete_outline_rounded,
-                                  size: 18,
-                                  color: Colors.red,
-                                ),
-                                visualDensity: VisualDensity.compact,
-                                onPressed: () =>
-                                    _showDeleteItemDialog(isDark, prod),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(Icons.phone_rounded, size: 12, color: titleTextColor),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    phone,
+                                    style: TextStyle(fontSize: 12, color: titleTextColor),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Icon(Icons.location_on_rounded, size: 12, color: titleTextColor),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      address,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(fontSize: 12, color: titleTextColor),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Text(
+                                    'Order: $txn',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: isDark ? Colors.white54 : Colors.grey.shade500,
+                                      fontFamily: 'monospace',
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '• $dateStr',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: isDark ? Colors.white54 : Colors.grey.shade500,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
+                        ),
+                        const SizedBox(width: 12),
+
+                        // Return Status & Action
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: (isReturned ? Colors.green : Colors.amber).withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    isReturned ? Icons.check_circle_rounded : Icons.pending_rounded,
+                                    size: 13,
+                                    color: isReturned ? Colors.green : Colors.amber.shade800,
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    isReturned ? 'Returned' : 'Holding Gallons',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: isReturned ? Colors.green : (isDark ? Colors.amberAccent : Colors.amber.shade900),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            if (!isReturned)
+                              ElevatedButton.icon(
+                                onPressed: () => _showReturnGallonDialog(isDark, borrow),
+                                icon: const Icon(Icons.assignment_return_rounded, size: 14, color: Colors.white),
+                                label: const Text('Return Gallons', style: TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+          ],
         ],
       ),
     );

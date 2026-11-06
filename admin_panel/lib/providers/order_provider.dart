@@ -208,17 +208,171 @@ class OrderProvider extends ChangeNotifier {
   void refillWaterProduct(String id, double amount) {
     restockInventoryItem(id, amount);
   }
+  final Set<String> _returnedGallonOrderIds = {};
+
+  bool isGallonReturned(String orderId) => _returnedGallonOrderIds.contains(orderId);
+
+  // Gallon remaining stock getters
+  double get remainingSlimGallons {
+    final item = _inventoryItems.firstWhere(
+      (i) => i['id'] == 'item_slim_gallon' || i['name'].toString().toLowerCase().contains('slim'),
+      orElse: () => {'stock': 0.0},
+    );
+    return (item['stock'] as num).toDouble();
+  }
+
+  double get remainingRoundGallons {
+    final item = _inventoryItems.firstWhere(
+      (i) => i['id'] == 'item_round_gallon' || i['name'].toString().toLowerCase().contains('round'),
+      orElse: () => {'stock': 0.0},
+    );
+    return (item['stock'] as num).toDouble();
+  }
+
+  double get slimGallonCapacity {
+    final item = _inventoryItems.firstWhere(
+      (i) => i['id'] == 'item_slim_gallon' || i['name'].toString().toLowerCase().contains('slim'),
+      orElse: () => {'capacity': 100.0},
+    );
+    return (item['capacity'] as num).toDouble();
+  }
+
+  double get roundGallonCapacity {
+    final item = _inventoryItems.firstWhere(
+      (i) => i['id'] == 'item_round_gallon' || i['name'].toString().toLowerCase().contains('round'),
+      orElse: () => {'capacity': 100.0},
+    );
+    return (item['capacity'] as num).toDouble();
+  }
+
+  // Borrowed gallons list
+  List<Map<String, dynamic>> get customerBorrows {
+    final list = <Map<String, dynamic>>[];
+    for (final order in _orders) {
+      if (order.orderStatus == OrderStatus.cancelled) continue;
+
+      final lower = order.waterType.toLowerCase();
+      String gallonType = '5-Gallon Slim';
+      if (lower.contains('round')) {
+        gallonType = '5-Gallon Round';
+      }
+
+      final isReturned = _returnedGallonOrderIds.contains(order.id);
+
+      list.add({
+        'orderId': order.id,
+        'txnId': order.txnId,
+        'customerId': order.customerId,
+        'customerName': order.customerName,
+        'customerPhone': order.customerPhone,
+        'deliveryAddress': order.deliveryAddress,
+        'gallonType': gallonType,
+        'quantity': order.quantity,
+        'orderStatus': order.orderStatus,
+        'borrowedAt': order.createdAt,
+        'isReturned': isReturned,
+      });
+    }
+    return list;
+  }
+
+  int get totalActiveBorrowedGallons {
+    return customerBorrows
+        .where((b) => b['isReturned'] == false)
+        .fold<int>(0, (sum, b) => sum + (b['quantity'] as int));
+  }
+
+  int get activeSlimBorrowedGallons {
+    return customerBorrows
+        .where((b) => b['isReturned'] == false && (b['gallonType'] as String).contains('Slim'))
+        .fold<int>(0, (sum, b) => sum + (b['quantity'] as int));
+  }
+
+  int get activeRoundBorrowedGallons {
+    return customerBorrows
+        .where((b) => b['isReturned'] == false && (b['gallonType'] as String).contains('Round'))
+        .fold<int>(0, (sum, b) => sum + (b['quantity'] as int));
+  }
+
+  void returnBorrowedGallons({
+    required String orderId,
+    required String gallonType,
+    required int quantity,
+  }) {
+    final lower = gallonType.toLowerCase();
+    if (lower.contains('slim')) {
+      final slimIdx = _inventoryItems.indexWhere(
+        (p) => p['id'] == 'item_slim_gallon' || p['name'].toString().toLowerCase().contains('slim'),
+      );
+      if (slimIdx != -1) {
+        final capacity = (_inventoryItems[slimIdx]['capacity'] as num).toDouble();
+        final currentStock = (_inventoryItems[slimIdx]['stock'] as num).toDouble();
+        _inventoryItems[slimIdx]['stock'] = min(capacity, currentStock + quantity);
+        _syncInventoryToSupabase(_inventoryItems[slimIdx], action: 'update');
+      }
+    } else if (lower.contains('round')) {
+      final roundIdx = _inventoryItems.indexWhere(
+        (p) => p['id'] == 'item_round_gallon' || p['name'].toString().toLowerCase().contains('round'),
+      );
+      if (roundIdx != -1) {
+        final capacity = (_inventoryItems[roundIdx]['capacity'] as num).toDouble();
+        final currentStock = (_inventoryItems[roundIdx]['stock'] as num).toDouble();
+        _inventoryItems[roundIdx]['stock'] = min(capacity, currentStock + quantity);
+        _syncInventoryToSupabase(_inventoryItems[roundIdx], action: 'update');
+      }
+    }
+
+    _returnedGallonOrderIds.add(orderId);
+    adjustContainerReserves(emptyChange: -quantity, refilledChange: quantity);
+    notifyListeners();
+  }
 
   void deductProductStock(String name, int qty) {
-    final idx = _inventoryItems.indexWhere((p) => p['name'] == name);
-    if (idx != -1) {
-      final currentStock = (_inventoryItems[idx]['stock'] as num).toDouble();
-      _inventoryItems[idx]['stock'] = max(0.0, currentStock - qty);
-      notifyListeners();
-      _syncInventoryToSupabase(_inventoryItems[idx], action: 'update');
+    // 1. Deduct water refill product (19L Purified Water)
+    final waterIdx = _inventoryItems.indexWhere(
+      (p) =>
+          p['category'] == 'water' &&
+          (p['name'] == name || name.toLowerCase().contains('purified')),
+    );
+    if (waterIdx != -1) {
+      final currentStock = (_inventoryItems[waterIdx]['stock'] as num).toDouble();
+      _inventoryItems[waterIdx]['stock'] = max(0.0, currentStock - qty);
+      _syncInventoryToSupabase(_inventoryItems[waterIdx], action: 'update');
     }
+
+    // 2. Automatically deduct specific gallon container inventory (Slim or Round)
+    final lowerName = name.toLowerCase();
+    if (lowerName.contains('slim')) {
+      final slimIdx = _inventoryItems.indexWhere(
+        (p) => p['id'] == 'item_slim_gallon' || p['name'].toString().toLowerCase().contains('slim'),
+      );
+      if (slimIdx != -1) {
+        final currentStock = (_inventoryItems[slimIdx]['stock'] as num).toDouble();
+        _inventoryItems[slimIdx]['stock'] = max(0.0, currentStock - qty);
+        _syncInventoryToSupabase(_inventoryItems[slimIdx], action: 'update');
+      }
+    } else if (lowerName.contains('round')) {
+      final roundIdx = _inventoryItems.indexWhere(
+        (p) => p['id'] == 'item_round_gallon' || p['name'].toString().toLowerCase().contains('round'),
+      );
+      if (roundIdx != -1) {
+        final currentStock = (_inventoryItems[roundIdx]['stock'] as num).toDouble();
+        _inventoryItems[roundIdx]['stock'] = max(0.0, currentStock - qty);
+        _syncInventoryToSupabase(_inventoryItems[roundIdx], action: 'update');
+      }
+    } else {
+      // Default to 5-Gallon Slim if unspecified
+      final slimIdx = _inventoryItems.indexWhere((p) => p['id'] == 'item_slim_gallon');
+      if (slimIdx != -1) {
+        final currentStock = (_inventoryItems[slimIdx]['stock'] as num).toDouble();
+        _inventoryItems[slimIdx]['stock'] = max(0.0, currentStock - qty);
+        _syncInventoryToSupabase(_inventoryItems[slimIdx], action: 'update');
+      }
+    }
+
     // Also update container reserves
     adjustContainerReserves(emptyChange: qty, refilledChange: -qty);
+    notifyListeners();
   }
 
   Future<void> _syncInventoryToSupabase(Map<String, dynamic> item, {required String action}) async {
