@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/constants/app_constants.dart';
 import '../models/order_model.dart';
 import '../services/location_service.dart';
+import '../services/inventory_storage.dart';
 
 class OrderProvider extends ChangeNotifier {
   final List<OrderModel> _orders = [];
@@ -132,6 +133,7 @@ class OrderProvider extends ChangeNotifier {
     };
     _inventoryItems.add(newItem);
     notifyListeners();
+    InventoryStorage.saveInventory(_inventoryItems);
     _syncInventoryToSupabase(newItem, action: 'insert');
   }
 
@@ -184,6 +186,7 @@ class OrderProvider extends ChangeNotifier {
         'description': description,
       };
       notifyListeners();
+      InventoryStorage.saveInventory(_inventoryItems);
       _syncInventoryToSupabase(_inventoryItems[idx], action: 'update');
     }
   }
@@ -191,6 +194,7 @@ class OrderProvider extends ChangeNotifier {
   void deleteInventoryItem(String id) {
     _inventoryItems.removeWhere((p) => p['id'] == id);
     notifyListeners();
+    InventoryStorage.saveInventory(_inventoryItems);
     _syncInventoryToSupabase({'id': id}, action: 'delete');
   }
 
@@ -227,6 +231,8 @@ class OrderProvider extends ChangeNotifier {
       _restockLogs.insert(0, logEntry);
 
       notifyListeners();
+      InventoryStorage.saveInventory(_inventoryItems);
+      InventoryStorage.saveRestockLogs(_restockLogs);
       _syncInventoryToSupabase(_inventoryItems[idx], action: 'update');
       _syncRestockLogToSupabase(logEntry);
     }
@@ -369,6 +375,8 @@ class OrderProvider extends ChangeNotifier {
     _returnedGallonOrderIds.add(orderId);
     adjustContainerReserves(emptyChange: -quantity, refilledChange: quantity);
     notifyListeners();
+    InventoryStorage.saveInventory(_inventoryItems);
+    InventoryStorage.saveRestockLogs(_restockLogs);
   }
 
   void deductProductStock(String name, int qty) {
@@ -417,6 +425,7 @@ class OrderProvider extends ChangeNotifier {
     // Also update container reserves
     adjustContainerReserves(emptyChange: qty, refilledChange: -qty);
     notifyListeners();
+    InventoryStorage.saveInventory(_inventoryItems);
   }
 
   Future<void> _syncInventoryToSupabase(Map<String, dynamic> item, {required String action}) async {
@@ -503,7 +512,38 @@ class OrderProvider extends ChangeNotifier {
 
   StreamSubscription? _ordersSubscription;
 
+  void _loadLocalInventoryCache() {
+    final cachedItems = InventoryStorage.loadInventory();
+    if (cachedItems != null && cachedItems.isNotEmpty) {
+      for (final cached in cachedItems) {
+        final id = cached['id'];
+        final idx = _inventoryItems.indexWhere((i) => i['id'] == id);
+        if (idx != -1) {
+          if (cached['stock'] != null) {
+            _inventoryItems[idx]['stock'] = (cached['stock'] as num).toDouble();
+          }
+          if (cached['capacity'] != null) {
+            _inventoryItems[idx]['capacity'] = (cached['capacity'] as num).toDouble();
+          }
+          if (cached['price'] != null) {
+            _inventoryItems[idx]['price'] = (cached['price'] as num).toDouble();
+          }
+          if (cached['name'] != null) {
+            _inventoryItems[idx]['name'] = cached['name'];
+          }
+        }
+      }
+    }
+
+    final cachedLogs = InventoryStorage.loadRestockLogs();
+    if (cachedLogs != null && cachedLogs.isNotEmpty) {
+      _restockLogs.clear();
+      _restockLogs.addAll(cachedLogs);
+    }
+  }
+
   OrderProvider() {
+    _loadLocalInventoryCache();
     if (_isSupabaseConfigured) {
       // 1. Initial direct fetch
       fetchSupabaseOrders();
