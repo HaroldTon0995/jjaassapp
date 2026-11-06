@@ -6746,7 +6746,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   );
                 },
               ),
-          ] else ...[
+          ] else if (_inventorySubTab == 1) ...[
             // CUSTOMER BORROWED GALLONS LOG VIEW
             Container(
               padding: const EdgeInsets.all(16),
