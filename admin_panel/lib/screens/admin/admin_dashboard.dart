@@ -5310,6 +5310,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
+            final addAmt = double.tryParse(amountController.text) ?? 0.0;
+            final projectedStock = stock + (addAmt > 0 ? addAmt : 0.0);
+
             return AlertDialog(
               backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
               title: Row(
@@ -5332,28 +5335,56 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Current Stock: ${stock.toStringAsFixed(1)} / ${capacity.toStringAsFixed(0)} $unit',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white70 : Colors.grey.shade700,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Current Stock: ${stock.toStringAsFixed(0)} / ${capacity.toStringAsFixed(0)} $unit',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white70 : Colors.grey.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.trending_up_rounded, size: 16, color: Colors.green),
+                        const SizedBox(width: 6),
+                        Text(
+                          'New Stock will be: ${projectedStock.toStringAsFixed(0)} $unit',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Text(
+                  const Text(
                     'Quick Add Amount:',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF475569),
+                      color: Color(0xFF475569),
                     ),
                   ),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: [5.0, 10.0, 15.0, 25.0, 50.0].map((amt) {
+                    children: [5.0, 10.0, 15.0, 25.0, 50.0, 100.0].map((amt) {
                       return ActionChip(
                         label: Text('+$amt $unit'),
                         onPressed: () {
@@ -5367,6 +5398,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   const SizedBox(height: 16),
                   TextField(
                     controller: amountController,
+                    onChanged: (_) => setDialogState(() {}),
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
@@ -5400,11 +5432,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     orderProvider.restockInventoryItem(
                       item['id'] as String,
                       amt,
+                      restockedBy: 'harold borbo (Admin)',
+                      notes: 'Manual inventory restock',
                     );
                     Navigator.of(context).pop();
+                    setState(() {});
                     Helpers.showSnackBar(
                       context,
-                      'Restocked +$amt $unit to $name!',
+                      'Restocked +$amt $unit to $name! Stock updated automatically.',
                     );
                   },
                   style: ElevatedButton.styleFrom(
@@ -5457,6 +5492,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 );
                 orderProvider.deleteInventoryItem(item['id'] as String);
                 Navigator.of(context).pop();
+                setState(() {});
                 Helpers.showSnackBar(
                   context,
                   'Removed "$name" from inventory.',
@@ -5641,11 +5677,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   orderId: borrow['orderId'] as String,
                   gallonType: gallonType,
                   quantity: qty,
+                  customerName: customerName,
                 );
                 Navigator.of(context).pop();
+                setState(() {});
                 Helpers.showSnackBar(
                   context,
-                  'Returned $qty x $gallonType from $customerName into inventory stock!',
+                  'Returned $qty x $gallonType from $customerName into inventory stock! Live stock updated.',
                 );
               },
               style: ElevatedButton.styleFrom(
@@ -6312,6 +6350,68 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     ),
                   ),
                 ),
+                Expanded(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () => setState(() => _inventorySubTab = 2),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: _inventorySubTab == 2
+                            ? (isDark ? AppTheme.darkSurface : Colors.white)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: _inventorySubTab == 2
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.05),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      alignment: Alignment.center,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.history_rounded,
+                            size: 16,
+                            color: _inventorySubTab == 2 ? AppTheme.primaryColor : titleTextColor,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Restock Activity History',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: _inventorySubTab == 2 ? FontWeight.bold : FontWeight.w500,
+                              color: _inventorySubTab == 2 ? valueTextColor : titleTextColor,
+                            ),
+                          ),
+                          if (orderProvider.restockLogs.isNotEmpty) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.green,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '${orderProvider.restockLogs.length}',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -6319,6 +6419,38 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
           // SUBTAB CONTENT
           if (_inventorySubTab == 0) ...[
+            // Recent Restock Quick Alert Banner
+            if (orderProvider.restockLogs.isNotEmpty) ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Latest Restock: +${orderProvider.restockLogs.first['amount'].toInt()} ${orderProvider.restockLogs.first['unit']} to ${orderProvider.restockLogs.first['itemName']} (Now: ${orderProvider.restockLogs.first['newStock'].toInt()} ${orderProvider.restockLogs.first['unit']}) • ${orderProvider.restockLogs.first['restockedBy']}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.greenAccent : const Color(0xFF15803D),
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => setState(() => _inventorySubTab = 2),
+                      child: const Text('View Full History', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             // Container Catalog Search Bar
             Container(
               padding: const EdgeInsets.all(16),
@@ -6908,6 +7040,227 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                 ),
                               ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+          ] else if (_inventorySubTab == 2) ...[
+            // RESTOCK ACTIVITY HISTORY VIEW
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: cardBgColor,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: borderColor),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Restock & Inventory Audit Trail',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: valueTextColor,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Live chronological log of all container replenishments and returns.',
+                        style: TextStyle(fontSize: 12, color: titleTextColor),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${orderProvider.restockLogs.length} Total Logs',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            if (orderProvider.restockLogs.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(48),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: cardBgColor,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: borderColor),
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.history_rounded,
+                      size: 52,
+                      color: const Color(0xFF64748B).withValues(alpha: 0.5),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'No restock history logged yet.',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: valueTextColor,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Click "Restock Slim" or "Restock Round" above. Whenever you add containers, they will appear here automatically.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: titleTextColor,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: orderProvider.restockLogs.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final log = orderProvider.restockLogs[index];
+                  final itemName = log['itemName'] ?? 'Container';
+                  final amount = (log['amount'] as num?)?.toInt() ?? 0;
+                  final prev = (log['previousStock'] as num?)?.toInt() ?? 0;
+                  final newStk = (log['newStock'] as num?)?.toInt() ?? 0;
+                  final unit = log['unit'] ?? 'Units';
+                  final by = log['restockedBy'] ?? 'Admin';
+                  final notes = log['notes'] ?? '';
+                  final DateTime? ts = log['timestamp'] as DateTime?;
+                  final dateStr = ts != null
+                      ? '${ts.month}/${ts.day}/${ts.year} ${ts.hour.toString().padLeft(2, '0')}:${ts.minute.toString().padLeft(2, '0')}'
+                      : 'Just now';
+
+                  final isReturn = log['id'].toString().startsWith('return');
+
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: cardBgColor,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: isReturn
+                            ? Colors.blue.withValues(alpha: 0.3)
+                            : Colors.green.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: (isReturn ? Colors.blue : Colors.green).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            isReturn ? Icons.assignment_return_rounded : Icons.add_shopping_cart_rounded,
+                            color: isReturn ? Colors.blue : Colors.green,
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    itemName,
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      color: valueTextColor,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: (isReturn ? Colors.blue : Colors.green).withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      '+$amount $unit',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: isReturn ? Colors.blue : Colors.green,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Stock Change: $prev $unit ➔ $newStk $unit Available',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: titleTextColor,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'By: $by • Notes: $notes',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: isDark ? Colors.white54 : Colors.grey.shade500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: (isReturn ? Colors.blue : Colors.green).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                isReturn ? 'Return Restock' : 'Admin Restock',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: isReturn ? Colors.blue : Colors.green,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              dateStr,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark ? Colors.white54 : Colors.grey.shade500,
+                              ),
+                            ),
                           ],
                         ),
                       ],

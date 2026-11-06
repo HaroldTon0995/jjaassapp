@@ -194,14 +194,41 @@ class OrderProvider extends ChangeNotifier {
     _syncInventoryToSupabase({'id': id}, action: 'delete');
   }
 
-  void restockInventoryItem(String id, double amount) {
+  final List<Map<String, dynamic>> _restockLogs = [];
+  List<Map<String, dynamic>> get restockLogs => List.unmodifiable(_restockLogs);
+
+  void restockInventoryItem(
+    String id,
+    double amount, {
+    String? restockedBy,
+    String? notes,
+  }) {
     final idx = _inventoryItems.indexWhere((p) => p['id'] == id);
     if (idx != -1) {
       final capacity = (_inventoryItems[idx]['capacity'] as num).toDouble();
       final currentStock = (_inventoryItems[idx]['stock'] as num).toDouble();
-      _inventoryItems[idx]['stock'] = min(capacity, currentStock + amount);
+      final newStock = currentStock + amount;
+      final newCapacity = max(capacity, newStock);
+      _inventoryItems[idx]['capacity'] = newCapacity;
+      _inventoryItems[idx]['stock'] = newStock;
+
+      final logEntry = {
+        'id': 'restock_${DateTime.now().millisecondsSinceEpoch}',
+        'itemId': id,
+        'itemName': _inventoryItems[idx]['name'],
+        'amount': amount,
+        'previousStock': currentStock,
+        'newStock': newStock,
+        'unit': _inventoryItems[idx]['unit'] ?? 'Units',
+        'timestamp': DateTime.now(),
+        'restockedBy': restockedBy ?? 'Administrator',
+        'notes': notes ?? 'Inventory stock replenished',
+      };
+      _restockLogs.insert(0, logEntry);
+
       notifyListeners();
       _syncInventoryToSupabase(_inventoryItems[idx], action: 'update');
+      _syncRestockLogToSupabase(logEntry);
     }
   }
 
@@ -298,27 +325,43 @@ class OrderProvider extends ChangeNotifier {
     required String orderId,
     required String gallonType,
     required int quantity,
+    String? customerName,
   }) {
     final lower = gallonType.toLowerCase();
+    String? matchedId;
     if (lower.contains('slim')) {
-      final slimIdx = _inventoryItems.indexWhere(
-        (p) => p['id'] == 'item_slim_gallon' || p['name'].toString().toLowerCase().contains('slim'),
-      );
-      if (slimIdx != -1) {
-        final capacity = (_inventoryItems[slimIdx]['capacity'] as num).toDouble();
-        final currentStock = (_inventoryItems[slimIdx]['stock'] as num).toDouble();
-        _inventoryItems[slimIdx]['stock'] = min(capacity, currentStock + quantity);
-        _syncInventoryToSupabase(_inventoryItems[slimIdx], action: 'update');
-      }
+      matchedId = 'item_slim_gallon';
     } else if (lower.contains('round')) {
-      final roundIdx = _inventoryItems.indexWhere(
-        (p) => p['id'] == 'item_round_gallon' || p['name'].toString().toLowerCase().contains('round'),
+      matchedId = 'item_round_gallon';
+    }
+
+    if (matchedId != null) {
+      final idx = _inventoryItems.indexWhere(
+        (p) => p['id'] == matchedId || p['name'].toString().toLowerCase().contains(matchedId!.contains('slim') ? 'slim' : 'round'),
       );
-      if (roundIdx != -1) {
-        final capacity = (_inventoryItems[roundIdx]['capacity'] as num).toDouble();
-        final currentStock = (_inventoryItems[roundIdx]['stock'] as num).toDouble();
-        _inventoryItems[roundIdx]['stock'] = min(capacity, currentStock + quantity);
-        _syncInventoryToSupabase(_inventoryItems[roundIdx], action: 'update');
+      if (idx != -1) {
+        final capacity = (_inventoryItems[idx]['capacity'] as num).toDouble();
+        final currentStock = (_inventoryItems[idx]['stock'] as num).toDouble();
+        final newStock = currentStock + quantity;
+        final newCapacity = max(capacity, newStock);
+        _inventoryItems[idx]['capacity'] = newCapacity;
+        _inventoryItems[idx]['stock'] = newStock;
+        _syncInventoryToSupabase(_inventoryItems[idx], action: 'update');
+
+        final logEntry = {
+          'id': 'return_${DateTime.now().millisecondsSinceEpoch}',
+          'itemId': matchedId,
+          'itemName': _inventoryItems[idx]['name'],
+          'amount': quantity.toDouble(),
+          'previousStock': currentStock,
+          'newStock': newStock,
+          'unit': _inventoryItems[idx]['unit'] ?? 'Units',
+          'timestamp': DateTime.now(),
+          'restockedBy': customerName != null ? 'Return from $customerName' : 'Customer Container Return',
+          'notes': 'Order reference: $orderId',
+        };
+        _restockLogs.insert(0, logEntry);
+        _syncRestockLogToSupabase(logEntry);
       }
     }
 
@@ -379,8 +422,8 @@ class OrderProvider extends ChangeNotifier {
     if (!_isSupabaseConfigured) return;
     try {
       final client = Supabase.instance.client;
-      if (action == 'insert') {
-        await client.from('inventory').insert({
+      if (action == 'insert' || action == 'update') {
+        await client.from('inventory').upsert({
           'id': item['id'],
           'name': item['name'],
           'category': item['category'],
@@ -390,21 +433,63 @@ class OrderProvider extends ChangeNotifier {
           'capacity': item['capacity'],
           'description': item['description'] ?? '',
         });
-      } else if (action == 'update') {
-        await client.from('inventory').update({
-          'name': item['name'],
-          'category': item['category'],
-          'unit': item['unit'],
-          'price': item['price'],
-          'stock': item['stock'],
-          'capacity': item['capacity'],
-          'description': item['description'] ?? '',
-        }).eq('id', item['id']);
       } else if (action == 'delete') {
         await client.from('inventory').delete().eq('id', item['id']);
       }
     } catch (e) {
       debugPrint('Supabase inventory sync: $e');
+    }
+  }
+
+  Future<void> _syncRestockLogToSupabase(Map<String, dynamic> log) async {
+    if (!_isSupabaseConfigured) return;
+    try {
+      final client = Supabase.instance.client;
+      await client.from('inventory_logs').insert({
+        'item_id': log['itemId'],
+        'item_name': log['itemName'],
+        'amount': log['amount'],
+        'previous_stock': log['previousStock'],
+        'new_stock': log['newStock'],
+        'unit': log['unit'],
+        'restocked_by': log['restockedBy'],
+        'notes': log['notes'],
+        'created_at': (log['timestamp'] as DateTime).toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('Supabase restock log sync (optional table): $e');
+    }
+  }
+
+  Future<void> fetchSupabaseInventory({bool silent = false}) async {
+    if (!_isSupabaseConfigured) return;
+    try {
+      final client = Supabase.instance.client;
+      final List<dynamic> response = await client.from('inventory').select();
+      if (response.isNotEmpty) {
+        bool hasChanges = false;
+        for (final row in response) {
+          final id = row['id']?.toString() ?? '';
+          final idx = _inventoryItems.indexWhere((i) => i['id'] == id);
+          if (idx != -1) {
+            final newStock = (row['stock'] as num?)?.toDouble();
+            final newCap = (row['capacity'] as num?)?.toDouble();
+            if (newStock != null && _inventoryItems[idx]['stock'] != newStock) {
+              _inventoryItems[idx]['stock'] = newStock;
+              hasChanges = true;
+            }
+            if (newCap != null && _inventoryItems[idx]['capacity'] != newCap) {
+              _inventoryItems[idx]['capacity'] = newCap;
+              hasChanges = true;
+            }
+          }
+        }
+        if (hasChanges && !silent) {
+          notifyListeners();
+        }
+      }
+    } catch (e) {
+      debugPrint('Supabase direct fetch inventory error: $e');
     }
   }
 
@@ -421,11 +506,13 @@ class OrderProvider extends ChangeNotifier {
     if (_isSupabaseConfigured) {
       // 1. Initial direct fetch
       fetchSupabaseOrders();
+      fetchSupabaseInventory();
       // 2. Realtime Stream
       _listenToSupabaseOrders();
       // 3. Fallback sync polling every 3 seconds for guaranteed cross-device sync
       _pollingTimer = Timer.periodic(const Duration(seconds: 3), (_) {
         fetchSupabaseOrders(silent: true);
+        fetchSupabaseInventory(silent: true);
       });
     } else {
       _seedMockOrders();
