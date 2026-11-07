@@ -105,11 +105,17 @@ class ApiService {
     return List.from(_registeredUsersList);
   }
 
-  // Update a user role
+  // Update a user role (Admin accounts cannot be modified; only Driver and Customer roles can be set)
   Future<bool> updateUserRole(String userId, UserRole role) async {
+    if (role == UserRole.admin) return false;
+
     if (isSupabaseConfigured) {
       try {
         final client = Supabase.instance.client;
+        final check = await client.from('profiles').select('role').eq('id', userId).maybeSingle();
+        if (check != null && check['role'] == 'admin') {
+          return false;
+        }
         await client.from('profiles').update({'role': role.name}).eq('id', userId);
         return true;
       } catch (e) {
@@ -119,6 +125,9 @@ class ApiService {
     await Future.delayed(AppConstants.apiMockDelay);
     final index = _registeredUsersList.indexWhere((u) => u.id == userId);
     if (index != -1) {
+      if (_registeredUsersList[index].role == UserRole.admin) {
+        return false;
+      }
       final oldUser = _registeredUsersList[index];
       _registeredUsersList[index] = UserModel(
         id: oldUser.id,

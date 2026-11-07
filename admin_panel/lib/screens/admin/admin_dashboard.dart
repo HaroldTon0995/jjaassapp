@@ -524,6 +524,24 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Future<void> _handleUpdateRole(UserModel user, UserRole newRole) async {
+    // Admin role cannot be changed or reset; only Customer and Driver can be set
+    if (user.role == UserRole.admin) {
+      Helpers.showSnackBar(
+        context,
+        'Admin account is protected and cannot be changed.',
+        isError: true,
+      );
+      return;
+    }
+    if (newRole == UserRole.admin) {
+      Helpers.showSnackBar(
+        context,
+        'Cannot assign Admin role. Only Customer and Driver roles are allowed.',
+        isError: true,
+      );
+      return;
+    }
+
     setState(() {
       _isActionLoading = true;
     });
@@ -9372,38 +9390,78 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              _isActionLoading
-                                  ? const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : PopupMenuButton<UserRole>(
-                                      icon: const Icon(
-                                        Icons.more_vert_rounded,
-                                        size: 20,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      onSelected: (role) =>
-                                          _handleUpdateRole(user, role),
-                                      itemBuilder: (context) {
-                                        return UserRole.values.map((role) {
-                                          return PopupMenuItem<UserRole>(
-                                            value: role,
-                                            child: Text(
+                              if (user.role == UserRole.admin)
+                                Tooltip(
+                                  message: 'Admin account (Protected - Role cannot be changed)',
+                                  child: Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade100,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Icon(
+                                      Icons.lock_rounded,
+                                      size: 16,
+                                      color: Color(0xFF94A3B8),
+                                    ),
+                                  ),
+                                )
+                              else if (_isActionLoading)
+                                const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              else
+                                PopupMenuButton<UserRole>(
+                                  icon: const Icon(
+                                    Icons.more_vert_rounded,
+                                    size: 20,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  onSelected: (role) =>
+                                      _handleUpdateRole(user, role),
+                                  itemBuilder: (context) {
+                                    // Admin role is excluded: only Customer and Driver can be set
+                                    final assignableRoles = [
+                                      UserRole.customer,
+                                      UserRole.driver,
+                                    ];
+                                    return assignableRoles.map((role) {
+                                      final isCurrent = user.role == role;
+                                      return PopupMenuItem<UserRole>(
+                                        value: role,
+                                        enabled: !isCurrent,
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              _getRoleIcon(role),
+                                              size: 16,
+                                              color: _getRoleColor(role),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
                                               'Set to ${Helpers.capitalize(role.name)}',
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontSize: 13,
+                                                fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
+                                                color: isCurrent ? Colors.grey : null,
                                               ),
                                             ),
-                                          );
-                                        }).toList();
-                                      },
-                                    ),
+                                            if (isCurrent) ...[
+                                              const SizedBox(width: 6),
+                                              const Icon(Icons.check_rounded, size: 14, color: Colors.green),
+                                            ],
+                                          ],
+                                        ),
+                                      );
+                                    }).toList();
+                                  },
+                                ),
                             ],
                           ),
                         ),
