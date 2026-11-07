@@ -6366,7 +6366,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           // TOP HERO CARDS: Remaining Slim & Round Gallons
           LayoutBuilder(
             builder: (context, constraints) {
-              final isWide = constraints.maxWidth > 700;
+              final isWide = constraints.maxWidth > 850;
               return Flex(
                 direction: isWide ? Axis.horizontal : Axis.vertical,
                 children: [
@@ -6504,8 +6504,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             ),
                           ),
                           const SizedBox(height: 14),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          Wrap(
+                            alignment: WrapAlignment.spaceBetween,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 8,
+                            runSpacing: 8,
                             children: [
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -6519,7 +6522,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                     const Icon(Icons.people_alt_rounded, size: 14, color: Colors.amber),
                                     const SizedBox(width: 6),
                                     Text(
-                                      'Borrowed by Customers: $activeSlimBorrows Gallons',
+                                      'Borrowed: $activeSlimBorrows Gallons',
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
@@ -6529,11 +6532,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                   ],
                                 ),
                               ),
-                              Wrap(
-                                spacing: 4,
-                                crossAxisAlignment: WrapCrossAlignment.center,
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   TextButton.icon(
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      visualDensity: VisualDensity.compact,
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    ),
                                     onPressed: () {
                                       final slimItem = allItems.firstWhere(
                                         (i) => i['id'] == 'item_slim_gallon' || i['name'].toString().toLowerCase().contains('slim'),
@@ -6543,10 +6550,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                         _showSetStockDialog(isDark, slimItem);
                                       }
                                     },
-                                    icon: const Icon(Icons.tune_rounded, size: 15),
+                                    icon: const Icon(Icons.tune_rounded, size: 14),
                                     label: const Text('Set Stock', style: TextStyle(fontSize: 12)),
                                   ),
+                                  const SizedBox(width: 4),
                                   TextButton.icon(
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      visualDensity: VisualDensity.compact,
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    ),
                                     onPressed: () {
                                       final slimItem = allItems.firstWhere(
                                         (i) => i['id'] == 'item_slim_gallon' || i['name'].toString().toLowerCase().contains('slim'),
@@ -6556,7 +6569,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                         _showRestockDialog(isDark, slimItem);
                                       }
                                     },
-                                    icon: const Icon(Icons.add_shopping_cart_rounded, size: 15),
+                                    icon: const Icon(Icons.add_shopping_cart_rounded, size: 14),
                                     label: const Text('Restock Slim', style: TextStyle(fontSize: 12)),
                                   ),
                                 ],
@@ -6703,8 +6716,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             ),
                           ),
                           const SizedBox(height: 14),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          Wrap(
+                            alignment: WrapAlignment.spaceBetween,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 8,
+                            runSpacing: 8,
                             children: [
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -6718,7 +6734,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                     const Icon(Icons.people_alt_rounded, size: 14, color: Colors.amber),
                                     const SizedBox(width: 6),
                                     Text(
-                                      'Borrowed by Customers: $activeRoundBorrows Gallons',
+                                      'Borrowed: $activeRoundBorrows Gallons',
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
@@ -6728,11 +6744,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                   ],
                                 ),
                               ),
-                              Wrap(
-                                spacing: 4,
-                                crossAxisAlignment: WrapCrossAlignment.center,
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   TextButton.icon(
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      visualDensity: VisualDensity.compact,
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    ),
                                     onPressed: () {
                                       final roundItem = allItems.firstWhere(
                                         (i) => i['id'] == 'item_round_gallon' || i['name'].toString().toLowerCase().contains('round'),
@@ -6742,10 +6762,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                         _showSetStockDialog(isDark, roundItem);
                                       }
                                     },
-                                    icon: const Icon(Icons.tune_rounded, size: 15),
+                                    icon: const Icon(Icons.tune_rounded, size: 14),
                                     label: const Text('Set Stock', style: TextStyle(fontSize: 12)),
                                   ),
+                                  const SizedBox(width: 4),
                                   TextButton.icon(
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      visualDensity: VisualDensity.compact,
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    ),
                                     onPressed: () {
                                       final roundItem = allItems.firstWhere(
                                         (i) => i['id'] == 'item_round_gallon' || i['name'].toString().toLowerCase().contains('round'),
@@ -6755,7 +6781,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                         _showRestockDialog(isDark, roundItem);
                                       }
                                     },
-                                    icon: const Icon(Icons.add_shopping_cart_rounded, size: 15),
+                                    icon: const Icon(Icons.add_shopping_cart_rounded, size: 14),
                                     label: const Text('Restock Round', style: TextStyle(fontSize: 12)),
                                   ),
                                 ],
