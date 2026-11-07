@@ -13,6 +13,7 @@ import '../../services/api_service.dart';
 import '../../services/payment_service.dart';
 import '../../services/psgc_service.dart';
 import '../../services/ai_support_service.dart';
+import '../../services/customer_location_storage.dart';
 import '../../widgets/water_widgets.dart';
 import '../../widgets/google_map_widget.dart';
 import '../../widgets/gcash_payment_modal.dart';
@@ -48,6 +49,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   final TextEditingController _deliveryNoteController = TextEditingController();
   final TextEditingController _orderAddressController = TextEditingController();
   LatLng? _pinnedLocation;
+  bool _showManualAddressFields = false;
   String _selectedPaymentMethod = 'Cash on Delivery';
 
   // Support Chat States
@@ -95,6 +97,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     });
 
     _loadDashboardData();
+    _loadSavedCustomerLocation();
   }
 
   @override
@@ -106,6 +109,51 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     _profileNameController.dispose();
     _profilePhoneController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadSavedCustomerLocation() async {
+    try {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      final saved = await CustomerLocationStorage.loadPinnedLocation(
+        userId: auth.currentUser?.id,
+      );
+      if (saved != null && mounted) {
+        setState(() {
+          _pinnedLocation = LatLng(saved.latitude, saved.longitude);
+          if (saved.landmark != null &&
+              saved.landmark!.isNotEmpty &&
+              _deliveryNoteController.text.trim().isEmpty) {
+            _deliveryNoteController.text = saved.landmark!;
+          }
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _updatePinnedLocation(LatLng newCoord, {String? landmark}) async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    setState(() {
+      _pinnedLocation = newCoord;
+    });
+    await CustomerLocationStorage.savePinnedLocation(
+      latitude: newCoord.latitude,
+      longitude: newCoord.longitude,
+      landmark: landmark ??
+          (_deliveryNoteController.text.trim().isNotEmpty
+              ? _deliveryNoteController.text.trim()
+              : null),
+      userId: auth.currentUser?.id,
+    );
+  }
+
+  Future<void> _clearPinnedLocation() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    setState(() {
+      _pinnedLocation = null;
+    });
+    await CustomerLocationStorage.clearPinnedLocation(
+      userId: auth.currentUser?.id,
+    );
   }
 
   Future<void> _loadDashboardData() async {
@@ -213,14 +261,37 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   }
 
   String _composeAddress() {
-    final cityName = _cities
-        .firstWhere((c) => c.code == _selectedCityCode)
-        .name;
-    final barangayName = _barangays
-        .firstWhere((b) => b.code == _selectedBarangayCode)
-        .name;
-    return '${_orderAddressController.text.trim()}, Brgy. $barangayName, '
-        '$cityName, $_selectedProvince';
+    // If manual address fields are fully filled, format standard address
+    if (_selectedProvince != null &&
+        _selectedCityCode != null &&
+        _selectedBarangayCode != null &&
+        _orderAddressController.text.trim().isNotEmpty) {
+      final cityMatch = _cities.where((c) => c.code == _selectedCityCode);
+      final cityName = cityMatch.isNotEmpty ? cityMatch.first.name : _selectedCityCode!;
+      final brgyMatch = _barangays.where((b) => b.code == _selectedBarangayCode);
+      final barangayName = brgyMatch.isNotEmpty ? brgyMatch.first.name : _selectedBarangayCode!;
+      final base = '${_orderAddressController.text.trim()}, Brgy. $barangayName, $cityName, $_selectedProvince';
+      if (_pinnedLocation != null) {
+        return '$base (GPS: ${_pinnedLocation!.latitude.toStringAsFixed(6)}, ${_pinnedLocation!.longitude.toStringAsFixed(6)})';
+      }
+      return base;
+    }
+
+    // If customer used map pin without filling manual address dropdowns
+    if (_pinnedLocation != null) {
+      final lat = _pinnedLocation!.latitude.toStringAsFixed(6);
+      final lng = _pinnedLocation!.longitude.toStringAsFixed(6);
+      final houseOrLandmark = _orderAddressController.text.trim().isNotEmpty
+          ? _orderAddressController.text.trim()
+          : _deliveryNoteController.text.trim();
+
+      if (houseOrLandmark.isNotEmpty) {
+        return '📍 Pinned GPS Delivery ($lat, $lng) — $houseOrLandmark';
+      }
+      return '📍 Pinned GPS Delivery ($lat, $lng)';
+    }
+
+    return 'Pending Delivery Pin';
   }
 
   void _resetOrderForm(OrderProvider orderProvider) {
@@ -238,34 +309,41 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     _loadingBarangays = false;
     _orderAddressController.clear();
     _deliveryNoteController.clear();
-    _pinnedLocation = null;
+    // Do NOT clear _pinnedLocation: customer's permanent pinned location is retained!
     _selectedPaymentMethod = 'Cash on Delivery';
   }
 
   void _submitWaterOrder() async {
-    if (_selectedProvince == null) {
-      Helpers.showSnackBar(context, 'Please select a province.', isError: true);
-      return;
-    }
-    if (_selectedCityCode == null) {
-      Helpers.showSnackBar(
-        context,
-        'Please select a city / municipality.',
-        isError: true,
-      );
-      return;
-    }
-    if (_selectedBarangayCode == null) {
-      Helpers.showSnackBar(context, 'Please select a barangay.', isError: true);
-      return;
-    }
-    if (_orderAddressController.text.trim().isEmpty) {
-      Helpers.showSnackBar(
-        context,
-        'Please enter your house no. / street.',
-        isError: true,
-      );
-      return;
+    // If GPS pin is NOT set, require manual address fields
+    if (_pinnedLocation == null) {
+      if (_selectedProvince == null) {
+        Helpers.showSnackBar(
+          context,
+          'Please pin your delivery location on the map or select a province.',
+          isError: true,
+        );
+        return;
+      }
+      if (_selectedCityCode == null) {
+        Helpers.showSnackBar(
+          context,
+          'Please select a city / municipality.',
+          isError: true,
+        );
+        return;
+      }
+      if (_selectedBarangayCode == null) {
+        Helpers.showSnackBar(context, 'Please select a barangay.', isError: true);
+        return;
+      }
+      if (_orderAddressController.text.trim().isEmpty) {
+        Helpers.showSnackBar(
+          context,
+          'Please enter your house no. / street or pin your location.',
+          isError: true,
+        );
+        return;
+      }
     }
 
     final auth = Provider.of<AuthProvider>(context, listen: false);
@@ -1942,239 +2020,407 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                 ),
                 const SizedBox(height: 20),
 
-                // Delivery Address
-                const Text(
-                  'Delivery Address',
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.navyColor,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Province',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF475569),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                DropdownButtonFormField<String>(
-                  key: ValueKey('province_$_selectedProvince'),
-                  initialValue: _selectedProvince,
-                  isExpanded: true,
-                  decoration: _boxedInputDecoration(hint: 'Select Province'),
-                  items: phProvincesSorted
-                      .map(
-                        (p) => DropdownMenuItem(
-                          value: p.name,
-                          child: Text(p.name, overflow: TextOverflow.ellipsis),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: _onProvinceChanged,
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'City / Municipality',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF475569),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                DropdownButtonFormField<String>(
-                  key: ValueKey('city_${_selectedProvince}_${_cities.length}'),
-                  initialValue: _selectedCityCode,
-                  isExpanded: true,
-                  decoration: _boxedInputDecoration(
-                    hint: _loadingCities
-                        ? 'Loading cities/municipalities...'
-                        : 'Select City / Municipality',
-                  ),
-                  items: _cities
-                      .map(
-                        (c) => DropdownMenuItem(
-                          value: c.code,
-                          child: Text(c.name, overflow: TextOverflow.ellipsis),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: _cities.isEmpty ? null : _onCityChanged,
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Barangay',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF475569),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                DropdownButtonFormField<String>(
-                  key: ValueKey(
-                    'brgy_${_selectedCityCode}_${_barangays.length}',
-                  ),
-                  initialValue: _selectedBarangayCode,
-                  isExpanded: true,
-                  decoration: _boxedInputDecoration(
-                    hint: _loadingBarangays
-                        ? 'Loading barangays...'
-                        : 'Select Barangay',
-                  ),
-                  items: _barangays
-                      .map(
-                        (b) => DropdownMenuItem(
-                          value: b.code,
-                          child: Text(b.name, overflow: TextOverflow.ellipsis),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: _barangays.isEmpty
-                      ? null
-                      : (val) => setState(() => _selectedBarangayCode = val),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'House No. / Street / Purok',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF475569),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: _orderAddressController,
-                  maxLines: 2,
-                  style: const TextStyle(color: Color(0xFF0F172A)),
-                  decoration: _boxedInputDecoration(
-                    hint: 'House no., street, purok / landmark',
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // Map Pinning Action / Status Box (Shopee-style)
-                InkWell(
-                  onTap: () async {
-                    final result = await LocationPickerModal.show(
-                      context,
-                      initialLocation: _pinnedLocation,
-                    );
-                    if (result != null) {
-                      setState(() => _pinnedLocation = result);
-                    }
-                  },
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _pinnedLocation != null
-                          ? const Color(0xFFF0FDF4)
-                          : const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: _pinnedLocation != null
-                            ? const Color(0xFF86EFAC)
-                            : const Color(0xFFCBD5E1),
-                        width: 1.2,
+                // Delivery Location Section
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Delivery Location',
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.navyColor,
                       ),
                     ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: _pinnedLocation != null
-                                ? const Color(
-                                    0xFF22C55E,
-                                  ).withValues(alpha: 0.15)
-                                : AppTheme.primaryColor.withValues(alpha: 0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            _pinnedLocation != null
-                                ? Icons.location_on_rounded
-                                : Icons.add_location_alt_rounded,
-                            color: _pinnedLocation != null
-                                ? const Color(0xFF16A34A)
-                                : AppTheme.primaryColor,
-                            size: 20,
-                          ),
+                    if (_pinnedLocation != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFDCFCE7),
+                          borderRadius: BorderRadius.circular(6),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _pinnedLocation != null
-                                    ? 'Exact GPS Location Pinned'
-                                    : 'Pin Delivery Location on Map',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                  color: _pinnedLocation != null
-                                      ? const Color(0xFF15803D)
-                                      : const Color(0xFF0F172A),
-                                ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check_circle_rounded, size: 12, color: Color(0xFF15803D)),
+                            SizedBox(width: 4),
+                            Text(
+                              'Permanent Pin Active',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF15803D),
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                _pinnedLocation != null
-                                    ? 'Pin: ${_pinnedLocation!.latitude.toStringAsFixed(5)}, ${_pinnedLocation!.longitude.toStringAsFixed(5)}'
-                                    : 'Tap to point your exact house on the map for the rider',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: _pinnedLocation != null
-                                      ? const Color(0xFF166534)
-                                      : const Color(0xFF64748B),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                // Primary Address Summary Badge (when Pinned)
+                if (_pinnedLocation != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0FDF4),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF86EFAC), width: 1.2),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF22C55E).withValues(alpha: 0.15),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.location_on_rounded,
+                                color: Color(0xFF16A34A),
+                                size: 22,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Exact GPS Location Pinned',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13.5,
+                                      color: Color(0xFF15803D),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Pin: ${_pinnedLocation!.latitude.toStringAsFixed(6)}, ${_pinnedLocation!.longitude.toStringAsFixed(6)}',
+                                    style: const TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF166534),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            ElevatedButton.icon(
+                              onPressed: () async {
+                                final result = await LocationPickerModal.show(
+                                  context,
+                                  initialLocation: _pinnedLocation,
+                                );
+                                if (result != null) {
+                                  await _updatePinnedLocation(result);
+                                  if (!mounted) return;
+                                  Helpers.showSnackBar(
+                                    context,
+                                    'Permanent pin updated and saved successfully!',
+                                  );
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF16A34A),
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                              icon: const Icon(Icons.edit_location_alt_rounded, size: 14),
+                              label: const Text(
+                                'Edit Pin',
+                                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.8),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFBBF7D0)),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.check_circle_rounded, size: 14, color: Color(0xFF15803D)),
+                              SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  'Delivery is set to your map pin! No need to fill address dropdowns below.',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Color(0xFF166534),
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        TextButton(
-                          onPressed: () async {
-                            final result = await LocationPickerModal.show(
-                              context,
-                              initialLocation: _pinnedLocation,
-                            );
-                            if (result != null) {
-                              setState(() => _pinnedLocation = result);
-                            }
-                          },
-                          child: Text(
-                            _pinnedLocation != null ? 'Edit Pin' : 'Set Pin',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                        if (_pinnedLocation != null)
-                          IconButton(
-                            icon: const Icon(
-                              Icons.close_rounded,
-                              size: 16,
-                              color: Colors.grey,
-                            ),
-                            tooltip: 'Remove Pin',
-                            onPressed: () {
-                              setState(() => _pinnedLocation = null);
-                            },
-                          ),
                       ],
                     ),
                   ),
-                ),
+                  const SizedBox(height: 10),
+
+                  // Optional House / Landmark field
+                  const Text(
+                    'Landmark or House Note (optional)',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF475569),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _orderAddressController,
+                    maxLines: 1,
+                    style: const TextStyle(color: Color(0xFF0F172A)),
+                    decoration: _boxedInputDecoration(
+                      hint: 'e.g. Near blue gate, Purok 4, 2nd floor...',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Toggle to enter manual address if customer wants to override
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _showManualAddressFields = !_showManualAddressFields;
+                        });
+                      },
+                      style: TextButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        foregroundColor: const Color(0xFF475569),
+                      ),
+                      icon: Icon(
+                        _showManualAddressFields
+                            ? Icons.keyboard_arrow_up_rounded
+                            : Icons.keyboard_arrow_down_rounded,
+                        size: 18,
+                      ),
+                      label: Text(
+                        _showManualAddressFields
+                            ? 'Hide manual address dropdowns'
+                            : 'Or specify province / city manually (optional)',
+                        style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ] else ...[
+                  // When NOT pinned yet: Prompt to pin on map first (Recommended)
+                  InkWell(
+                    onTap: () async {
+                      final result = await LocationPickerModal.show(
+                        context,
+                        initialLocation: _pinnedLocation,
+                      );
+                      if (result != null) {
+                        await _updatePinnedLocation(result);
+                        if (!mounted) return;
+                        Helpers.showSnackBar(
+                          context,
+                          'Permanent delivery location saved! Address section auto-completed.',
+                        );
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.3), width: 1.2),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.add_location_alt_rounded,
+                              color: AppTheme.primaryColor,
+                              size: 22,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Pin Delivery Location on Map (Recommended)',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    color: AppTheme.primaryColor,
+                                  ),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Tap map to set your house once — permanent & no typing needed!',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Color(0xFF64748B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          ElevatedButton(
+                            onPressed: () async {
+                              final result = await LocationPickerModal.show(
+                                context,
+                                initialLocation: _pinnedLocation,
+                              );
+                              if (result != null) {
+                                await _updatePinnedLocation(result);
+                                if (!mounted) return;
+                                Helpers.showSnackBar(
+                                  context,
+                                  'Permanent delivery location saved! Address section auto-completed.',
+                                );
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                            child: const Text('Set Pin', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+
+                // Manual dropdowns: Shown if not pinned, OR if customer explicitly expanded manual address
+                if (_pinnedLocation == null || _showManualAddressFields) ...[
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Province',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF475569),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    key: ValueKey('province_$_selectedProvince'),
+                    initialValue: _selectedProvince,
+                    isExpanded: true,
+                    decoration: _boxedInputDecoration(hint: 'Select Province'),
+                    items: phProvincesSorted
+                        .map(
+                          (p) => DropdownMenuItem(
+                            value: p.name,
+                            child: Text(p.name, overflow: TextOverflow.ellipsis),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: _onProvinceChanged,
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'City / Municipality',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF475569),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    key: ValueKey('city_${_selectedProvince}_${_cities.length}'),
+                    initialValue: _selectedCityCode,
+                    isExpanded: true,
+                    decoration: _boxedInputDecoration(
+                      hint: _loadingCities
+                          ? 'Loading cities/municipalities...'
+                          : 'Select City / Municipality',
+                    ),
+                    items: _cities
+                        .map(
+                          (c) => DropdownMenuItem(
+                            value: c.code,
+                            child: Text(c.name, overflow: TextOverflow.ellipsis),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: _cities.isEmpty ? null : _onCityChanged,
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Barangay',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF475569),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    key: ValueKey(
+                      'brgy_${_selectedCityCode}_${_barangays.length}',
+                    ),
+                    initialValue: _selectedBarangayCode,
+                    isExpanded: true,
+                    decoration: _boxedInputDecoration(
+                      hint: _loadingBarangays
+                          ? 'Loading barangays...'
+                          : 'Select Barangay',
+                    ),
+                    items: _barangays
+                        .map(
+                          (b) => DropdownMenuItem(
+                            value: b.code,
+                            child: Text(b.name, overflow: TextOverflow.ellipsis),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: _barangays.isEmpty
+                        ? null
+                        : (val) => setState(() => _selectedBarangayCode = val),
+                  ),
+                  if (_pinnedLocation == null) ...[
+                    const SizedBox(height: 12),
+                    const Text(
+                      'House No. / Street / Purok',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF475569),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: _orderAddressController,
+                      maxLines: 2,
+                      style: const TextStyle(color: Color(0xFF0F172A)),
+                      decoration: _boxedInputDecoration(
+                        hint: 'House no., street, purok / landmark',
+                      ),
+                    ),
+                  ],
+                ],
                 const SizedBox(height: 20),
 
                 // Delivery Note / Preference
@@ -3104,6 +3350,178 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                     );
                   },
                   child: const Text('Save Changes'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Permanent Delivery Location',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.navyColor,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Your permanent pinned location is used automatically across all orders without having to re-enter your address.',
+            style: TextStyle(
+              fontSize: 12,
+              color: isDark ? Colors.white70 : const Color(0xFF64748B),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(16.0),
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.darkSurface : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _pinnedLocation != null
+                    ? const Color(0xFF86EFAC)
+                    : (isDark ? Colors.white10 : const Color(0xFFCBD5E1)),
+                width: 1.2,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: _pinnedLocation != null
+                            ? const Color(0xFF22C55E).withValues(alpha: 0.15)
+                            : AppTheme.primaryColor.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        _pinnedLocation != null
+                            ? Icons.location_on_rounded
+                            : Icons.add_location_alt_rounded,
+                        color: _pinnedLocation != null
+                            ? const Color(0xFF16A34A)
+                            : AppTheme.primaryColor,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _pinnedLocation != null
+                                ? 'Saved Permanent Pin'
+                                : 'No Location Pinned Yet',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: _pinnedLocation != null
+                                  ? const Color(0xFF15803D)
+                                  : (isDark ? Colors.white : AppTheme.navyColor),
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            _pinnedLocation != null
+                                ? 'Coordinates: ${_pinnedLocation!.latitude.toStringAsFixed(6)}, ${_pinnedLocation!.longitude.toStringAsFixed(6)}'
+                                : 'Pin your house/building on the map to enable fast 1-tap ordering.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: _pinnedLocation != null
+                                  ? const Color(0xFF166534)
+                                  : const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        final result = await LocationPickerModal.show(
+                          context,
+                          initialLocation: _pinnedLocation,
+                        );
+                        if (result != null) {
+                          await _updatePinnedLocation(result);
+                          if (!mounted) return;
+                          Helpers.showSnackBar(
+                            context,
+                            'Permanent delivery location saved successfully!',
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      icon: Icon(
+                        _pinnedLocation != null
+                            ? Icons.edit_location_alt_rounded
+                            : Icons.pin_drop_rounded,
+                        size: 16,
+                      ),
+                      label: Text(
+                        _pinnedLocation != null
+                            ? 'Change Permanent Pin'
+                            : 'Set Permanent Pin',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    if (_pinnedLocation != null)
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          await _clearPinnedLocation();
+                          if (!mounted) return;
+                          Helpers.showSnackBar(
+                            context,
+                            'Saved permanent location cleared.',
+                          );
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red.shade600,
+                          side: BorderSide(color: Colors.red.shade300),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        icon: const Icon(
+                          Icons.delete_outline_rounded,
+                          size: 16,
+                        ),
+                        label: const Text(
+                          'Clear Pin',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ),
