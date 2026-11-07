@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/constants/app_constants.dart';
 import '../models/user_model.dart';
@@ -163,7 +164,6 @@ class ApiService {
             final tempClient = SupabaseClient(
               AppConstants.supabaseUrl,
               AppConstants.supabaseAnonKey,
-              authFlowType: AuthFlowType.implicit,
             );
             final authRes = await tempClient.auth.signUp(
               email: email.trim(),

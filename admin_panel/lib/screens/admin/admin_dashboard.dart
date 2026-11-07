@@ -596,9 +596,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return StatefulBuilder(
-          builder: (context, setDialogState) {
+          builder: (subContext, setDialogState) {
             final isDriver = selectedRole == UserRole.driver;
             final activeColor = isDriver ? AppTheme.secondaryColor : const Color(0xFF10B981);
 
@@ -818,7 +818,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ),
               actions: [
                 TextButton(
-                  onPressed: isSubmitting ? null : () => Navigator.of(context).pop(),
+                  onPressed: isSubmitting ? null : () => Navigator.of(dialogContext).pop(),
                   child: const Text('Cancel'),
                 ),
                 ElevatedButton.icon(
@@ -856,21 +856,24 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               address: address.isNotEmpty ? address : null,
                             );
 
-                            if (mounted) {
-                              Navigator.of(context).pop();
-                              if (newUser != null) {
-                                Helpers.showSnackBar(
-                                  context,
-                                  '${newUser.roleDisplayName} "${newUser.name}" created successfully without needing to sign up!',
-                                );
-                                await _loadAllDashboardData();
-                              } else {
-                                Helpers.showSnackBar(context, 'Failed to create user account.', isError: true);
-                              }
+                            if (dialogContext.mounted) {
+                              Navigator.of(dialogContext).pop();
+                            }
+                            if (!mounted) return;
+                            if (newUser != null) {
+                              Helpers.showSnackBar(
+                                context,
+                                '${newUser.roleDisplayName} "${newUser.name}" created successfully without needing to sign up!',
+                              );
+                              await _loadAllDashboardData();
+                            } else {
+                              Helpers.showSnackBar(context, 'Failed to create user account.', isError: true);
                             }
                           } catch (e) {
-                            if (mounted) {
+                            if (subContext.mounted) {
                               setDialogState(() => isSubmitting = false);
+                            }
+                            if (mounted) {
                               Helpers.showSnackBar(context, 'Error creating account: $e', isError: true);
                             }
                           }
