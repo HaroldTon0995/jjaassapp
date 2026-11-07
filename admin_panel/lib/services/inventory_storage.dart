@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'inventory_storage_stub.dart'
-    if (dart.library.js_interop) 'inventory_storage_web.dart';
+    if (dart.library.js_interop) 'inventory_storage_web.dart'
+    if (dart.library.html) 'inventory_storage_web.dart';
 
 class InventoryStorage {
   static const String _inventoryKey = 'jjaass_inventory_items_v2';
@@ -57,7 +58,8 @@ class InventoryStorage {
         return decoded.map((item) {
           final map = Map<String, dynamic>.from(item as Map);
           if (map['timestamp'] is String) {
-            map['timestamp'] = DateTime.tryParse(map['timestamp']) ?? DateTime.now();
+            map['timestamp'] =
+                DateTime.tryParse(map['timestamp']) ?? DateTime.now();
           }
           return map;
         }).toList();
