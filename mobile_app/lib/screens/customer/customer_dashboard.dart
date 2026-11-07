@@ -75,6 +75,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   ];
   final TextEditingController _chatInputController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
+  final ScrollController _faqScrollController = ScrollController();
   bool _isChatLoading = false;
 
   // Settings profile fields (persisted across rebuilds and sessions until changed again)
@@ -120,6 +121,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     _deliveryNoteController.dispose();
     _chatInputController.dispose();
     _chatScrollController.dispose();
+    _faqScrollController.dispose();
     _profileNameController.dispose();
     _profilePhoneController.dispose();
     super.dispose();
@@ -3469,7 +3471,6 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                   child: Theme(
                     data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
                     child: ExpansionTile(
-                      key: const PageStorageKey('ai_inquiry_accordion_main'),
                       initiallyExpanded: false,
                       tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
                       childrenPadding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
@@ -3506,8 +3507,11 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                             maxHeight: maxAccordionHeight,
                           ),
                           child: Scrollbar(
+                            controller: _faqScrollController,
                             thumbVisibility: true,
                             child: SingleChildScrollView(
+                              controller: _faqScrollController,
+                              primary: false,
                               padding: const EdgeInsets.only(right: 6),
                               physics: const BouncingScrollPhysics(),
                               child: Column(
@@ -3777,7 +3781,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
-          dense: true,
+          visualDensity: VisualDensity.compact,
           tilePadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
           childrenPadding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
           title: Text(
