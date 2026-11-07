@@ -5908,7 +5908,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 child: Image.asset(
                                   'assets/images/slim_gallon.png',
                                   fit: BoxFit.contain,
-                                  errorBuilder: (_, __, ___) => const Icon(
+                                  errorBuilder: (_, _, _) => const Icon(
                                     Icons.water_drop_rounded,
                                     color: Colors.blue,
                                     size: 24,
@@ -6019,7 +6019,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                     const Icon(Icons.people_alt_rounded, size: 14, color: Colors.amber),
                                     const SizedBox(width: 6),
                                     Text(
-                                      'Borrowed by Customers: ${activeSlimBorrows} Gallons',
+                                      'Borrowed by Customers: $activeSlimBorrows Gallons',
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
@@ -6088,7 +6088,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 child: Image.asset(
                                   'assets/images/round_gallon.png',
                                   fit: BoxFit.contain,
-                                  errorBuilder: (_, __, ___) => const Icon(
+                                  errorBuilder: (_, _, _) => const Icon(
                                     Icons.water_drop_rounded,
                                     color: Colors.indigo,
                                     size: 24,
@@ -6199,7 +6199,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                     const Icon(Icons.people_alt_rounded, size: 14, color: Colors.amber),
                                     const SizedBox(width: 6),
                                     Text(
-                                      'Borrowed by Customers: ${activeRoundBorrows} Gallons',
+                                      'Borrowed by Customers: $activeRoundBorrows Gallons',
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
@@ -6846,7 +6846,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: filteredBorrows.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                separatorBuilder: (_, _) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
                   final borrow = filteredBorrows[index];
                   final String custName = borrow['customerName'] as String? ?? 'Customer';
@@ -6892,7 +6892,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           child: Image.asset(
                             isSlim ? 'assets/images/slim_gallon.png' : 'assets/images/round_gallon.png',
                             fit: BoxFit.contain,
-                            errorBuilder: (_, __, ___) => Icon(
+                            errorBuilder: (_, _, _) => Icon(
                               Icons.water_drop_rounded,
                               color: isSlim ? Colors.blue : Colors.indigo,
                               size: 24,
@@ -7139,7 +7139,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: orderProvider.restockLogs.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                separatorBuilder: (_, _) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
                   final log = orderProvider.restockLogs[index];
                   final itemName = log['itemName'] ?? 'Container';
