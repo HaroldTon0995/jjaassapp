@@ -1049,6 +1049,8 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                 ),
                                 child: Text(
                                   'Items: ${job.itemsSummary} • Dist: ${job.distance}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
                                     color: AppTheme.secondaryColor,
                                     fontSize: 10,
@@ -1406,22 +1408,22 @@ class _DriverDashboardState extends State<DriverDashboard> {
         children: [
           // Header with count badge
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.navigation_rounded, color: AppTheme.primaryColor, size: 22),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Active Deliveries (${activeJobs.length})',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : const Color(0xFF1E293B),
-                    ),
+              const Icon(Icons.navigation_rounded, color: AppTheme.primaryColor, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Active Deliveries (${activeJobs.length})',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : const Color(0xFF1E293B),
                   ),
-                ],
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
@@ -1430,11 +1432,11 @@ class _DriverDashboardState extends State<DriverDashboard> {
                   border: Border.all(color: const Color(0xFF10B981)),
                 ),
                 child: Text(
-                  'Focus: #${focusedJob.id}',
+                  'Focus: #${focusedJob.id.length > 8 ? '${focusedJob.id.substring(0, 8)}...' : focusedJob.id}',
                   style: const TextStyle(
                     color: Color(0xFF047857),
                     fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                    fontSize: 11,
                   ),
                 ),
               ),
@@ -1574,7 +1576,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                   children: [
                                     Expanded(
                                       child: Text(
-                                        'Stop ${index + 1}: ${job.customerName} (${job.id})',
+                                        'Stop ${index + 1}: ${job.customerName}',
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
@@ -1584,6 +1586,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                         ),
                                       ),
                                     ),
+                                    const SizedBox(width: 6),
                                     if (isFocused)
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -1620,22 +1623,26 @@ class _DriverDashboardState extends State<DriverDashboard> {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppTheme.secondaryColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              'Items: ${job.itemsSummary} • Dist: ${job.distance}',
-                              style: const TextStyle(
-                                color: AppTheme.secondaryColor,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppTheme.secondaryColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                'Items: ${job.itemsSummary} • Dist: ${job.distance}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: AppTheme.secondaryColor,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ),
-                          const Spacer(),
+                          const SizedBox(width: 8),
                           Text(
                             'Earn: ₱${(job.totalAmount * 0.5).toStringAsFixed(2)}',
                             style: const TextStyle(
@@ -1656,6 +1663,8 @@ class _DriverDashboardState extends State<DriverDashboard> {
                           ),
                           child: Text(
                             '📝 Note: ${job.deliveryNote}',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontSize: 11,
                               color: Color(0xFF78350F),
@@ -1665,8 +1674,11 @@ class _DriverDashboardState extends State<DriverDashboard> {
                         ),
                       ],
                       const SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
+                      Wrap(
+                        alignment: WrapAlignment.end,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 8,
+                        runSpacing: 8,
                         children: [
                           if (!isFocused)
                             OutlinedButton.icon(
@@ -1680,9 +1692,9 @@ class _DriverDashboardState extends State<DriverDashboard> {
                               style: OutlinedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                 textStyle: const TextStyle(fontSize: 11),
+                                visualDensity: VisualDensity.compact,
                               ),
                             ),
-                          if (!isFocused) const SizedBox(width: 8),
                           ElevatedButton.icon(
                             onPressed: () {
                               final double lat = job.latitude ?? 14.5995;
@@ -1703,9 +1715,9 @@ class _DriverDashboardState extends State<DriverDashboard> {
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                              visualDensity: VisualDensity.compact,
                             ),
                           ),
-                          const SizedBox(width: 8),
                           ElevatedButton.icon(
                             onPressed: () => _completeActiveJob(job),
                             icon: const Icon(Icons.check_circle_rounded, size: 14),
@@ -1715,6 +1727,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                              visualDensity: VisualDensity.compact,
                             ),
                           ),
                         ],
