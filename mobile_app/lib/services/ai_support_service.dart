@@ -239,7 +239,26 @@ class AiSupportService {
           "Current status: **${hasConfiguredApiKey ? 'Connected to Gemini 2.5 Flash ✅' : 'Smart Built-in Mode (No API key set yet)'}**";
     }
 
-    // 4. Store Location / Address / Hours / Contact
+    // 4. Specific Refill vs Set A query
+    if (query.contains('set a') ||
+        (query.contains('refill') && (query.contains('set') || query.contains('230') || query.contains('difference')))) {
+      return "💧 **Refill (₱30) vs Set A with New Container (₱230)**\n\n"
+          "Here is the detailed breakdown of each product option:\n\n"
+          "1. **19L Purified Water Refill (₱30.00)**:\n"
+          "   • **What it is**: 19 Liters of pure multi-stage filtered drinking water for customers who already own a 5-gallon jug.\n"
+          "   • **How it works**: Our delivery rider arrives with a sanitized, sealed 19L bottle and exchanges it for your empty container.\n"
+          "   • **Best for**: Routine weekly household replenishment at the most affordable price.\n\n"
+          "2. **19L Water + New Container Set A (₱230.00)**:\n"
+          "   • **What it is**: A complete starter set including a **brand-new BPA-free 5-gallon jug** filled with freshly purified drinking water.\n"
+          "   • **How it works**: You purchase and own the brand new container outright. **No empty container exchange is required**!\n"
+          "   • **Best for**: First-time customers, new homes, offices, or adding extra backup containers to your household.\n\n"
+          "💡 **Step-by-Step Ordering Guide**:\n"
+          "1. Open the **Order Water** tab.\n"
+          "2. Tap either **19L Purified Water** (₱30) or **Set A** (₱230).\n"
+          "3. Select your preferred container style: **5-Gallon Slim** (with faucet) or **5-Gallon Round** (for dispenser) using the quantity steppers!";
+    }
+
+    // 5. Store Location / Address / Hours / Contact
     if (query.contains('address') ||
         query.contains('location') ||
         query.contains('located') ||
@@ -251,23 +270,62 @@ class AiSupportService {
         query.contains('pick up') ||
         query.contains('hours') ||
         query.contains('open') ||
+        query.contains('contact') ||
+        query.contains('hotline') ||
         query.contains('market')) {
-      return "📍 **JJAASS Water Market Location & Hours**\n\n"
-          "- **Address**: **$marketAddress**\n"
-          "- **Operating Hours**: Monday – Sunday, **7:00 AM to 7:00 PM**\n"
-          "- **Service**: Door-to-door refill delivery & walk-in station refills.";
+      return "📍 **JJAASS Water Market Store Details & Hours**\n\n"
+          "• **Physical Station**: **$marketAddress**\n"
+          "• **Operating Hours**: Monday – Sunday, **7:00 AM to 7:00 PM**\n"
+          "• **Delivery Cut-off**: Orders placed before 6:30 PM are delivered same-day.\n"
+          "• **Customer Service Hotline**: **+63 912 345 6789** / **(052) 742-1234**\n"
+          "• **Services Available**: Fast home delivery, walk-in jug refills, and spare dispenser accessories.";
     }
 
-    // 5. Jug / Container Types
+    // 6. Jug / Container Types (Slim vs Round)
     if (query.contains('jug') ||
         query.contains('slim') ||
         query.contains('round') ||
         query.contains('container') ||
         query.contains('gallon')) {
-      return "🏺 **Available 5-Gallon (19L) Jug Types**\n\n"
-          "1. **5-Gallon Slim Jug** – Rectangular blue container with built-in faucet and carry handle (great for tabletop use).\n"
-          "2. **5-Gallon Round Jug** – Standard cylindrical dispenser gallon (designed for hot & cold water dispensers).\n\n"
-          "You can choose either jug type along with your preferred water type in the **Order Water** tab!";
+      return "🏺 **5-Gallon Slim vs 5-Gallon Round Jugs Comparison**\n\n"
+          "Both containers hold 19 Liters (5 Gallons) of fresh purified water. Choose the best design for your home or office:\n\n"
+          "1. **5-Gallon Slim Container** (Tabletop & Standalone):\n"
+          "   • **Design**: Space-saving rectangular profile with built-in side carrying handle.\n"
+          "   • **Dispensing**: Includes an integrated front twist faucet for easy direct pouring.\n"
+          "   • **Ideal for**: Kitchen countertops, refrigerators, study tables, or camping without needing an external dispenser.\n\n"
+          "2. **5-Gallon Round Container** (Inverted Dispenser):\n"
+          "   • **Design**: Heavy-duty cylindrical body with non-spill bottle cap.\n"
+          "   • **Dispensing**: Designed specifically to be inverted upside-down on hot/cold water dispensers or electric pumps.\n"
+          "   • **Ideal for**: Offices, homes with stand-up hot & cold dispensers, and high-volume usage.\n\n"
+          "💡 **Pro Tip**: You can order **both types at the same time** by simply setting the quantity on each jug card in the Order Water tab!";
+    }
+
+    // 7. Permanent GPS Location Pin Guide
+    if (query.contains('pin') ||
+        query.contains('gps') ||
+        query.contains('permanent') ||
+        query.contains('map')) {
+      return "📍 **How Permanent GPS Location Pinning Works**\n\n"
+          "Our system saves your exact GPS coordinates so our delivery riders can navigate straight to your doorstep without phone calls or delays:\n\n"
+          "• **Step-by-Step Guide**:\n"
+          "  1. Go to the **Order Water** tab or **Profile Settings**.\n"
+          "  2. Tap the green **Edit Pin** button to launch the Google Map.\n"
+          "  3. Drag the map until the red delivery marker is positioned directly over your house or gate.\n"
+          "  4. Tap **Confirm & Save Pin**.\n\n"
+          "• **Key Benefits**:\n"
+          "  • **Permanently Saved**: Your coordinates are saved to your account and automatically pre-filled for every future order.\n"
+          "  • **No Typing Required**: You never have to re-enter long province/city/barangay dropdowns!\n"
+          "  • **Fully Editable**: Moving or ordering to another location? Simply tap **Edit Pin** anytime to update your saved spot!";
+    }
+
+    // 8. Maximum Quantity Limit
+    if (query.contains('max') ||
+        query.contains('limit') ||
+        query.contains('how many jugs')) {
+      return "📦 **Order Quantity & Limits**\n\n"
+          "• **Maximum Per Delivery Trip**: Up to **20 jugs total** per order (Slim and Round combined).\n"
+          "• **Why 20 Jugs?**: Ensures driver safety, motorcycle stability, and timely turnaround across Tabaco City.\n"
+          "• **Need More Than 20 Jugs?**: If your business, canteen, or event requires 30, 50, or 100+ jugs, simply submit multiple orders and our dispatch console will assign multiple delivery riders simultaneously!";
     }
 
     // 6. Water Types comparison (Purified vs Alkaline vs Mineral)
@@ -406,19 +464,42 @@ class AiSupportService {
     if (query.contains('point') ||
         query.contains('reward') ||
         query.contains('coupon') ||
-        query.contains('loyalty')) {
+        query.contains('loyalty') ||
+        query.contains('aqualoyalty')) {
       final pts = orderProvider.getCustomerRewardPoints(userId);
-      return "⭐ **AquaLoyalty Rewards**\n\nYou currently have **$pts reward points** (+10 points per 5-gallon jug delivered). Keep ordering to unlock free refill rewards!";
+      return "⭐ **AquaLoyalty Rewards Program Details**\n\n"
+          "• **Your Current Balance**: **$pts points**\n"
+          "• **How You Earn**: Earn **+10 points** automatically for each 5-gallon jug delivered.\n\n"
+          "🎁 **Reward Milestones & Perks**:\n"
+          "  • **50 Points**: Free jug deep sanitization & nozzle inspection\n"
+          "  • **100 Points**: 1 Free 19L Purified Refill voucher\n"
+          "  • **250 Points**: 50% discount on Set A brand new container\n"
+          "  • **500 Points**: Free USB rechargeable electric dispenser pump!\n\n"
+          "💡 **Tip**: Points never expire! They accumulate automatically with every completed delivery to your account.";
+    }
+
+    if (query.contains('gcash') || query.contains('paymongo')) {
+      return "💳 **How to Pay with GCash (Step-by-Step Guide)**\n\n"
+          "1. **Select Payment**: On checkout, select **GCash Mobile Payment**.\n"
+          "2. **Confirm Order**: Tap **Confirm Order Delivery**.\n"
+          "3. **PayMongo Portal**: The official, secure PayMongo checkout dialog will appear.\n"
+          "4. **Complete Payment**: Scan the GCash QR code or enter your GCash mobile number and MPIN.\n"
+          "5. **Instant Sync**: Your order immediately flags as **Paid**, and dispatch begins!\n\n"
+          "💡 **Missed Paying?**: Open the **Track Deliveries** tab anytime to tap the **Pay Now (GCash)** button.";
     }
 
     if (query.contains('payment') ||
         query.contains('pay') ||
-        query.contains('gcash') ||
         query.contains('cod') ||
         query.contains('cash')) {
-      return "💳 **Accepted Payment Methods**\n\n"
-          "- **Cash on Delivery (COD)** – Pay the rider directly when your water jugs arrive.\n"
-          "- **GCash Mobile Payment** – Instant online checkout powered by PayMongo.";
+      return "💵 **Payment Methods & Guidelines**\n\n"
+          "1. **Cash on Delivery (COD)**:\n"
+          "   • Pay our rider directly upon physical delivery at your door.\n"
+          "   • Digital proof of transaction is recorded instantly on the driver's app.\n"
+          "   • *Tip*: Preparing exact change speeds up the delivery process!\n\n"
+          "2. **GCash Mobile Payment (PayMongo)**:\n"
+          "   • Secure cashless instant checkout.\n"
+          "   • Real-time payment confirmation and zero contact required.";
     }
 
     final orders = orderProvider.getCustomerOrders(userId);

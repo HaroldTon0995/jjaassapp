@@ -69,7 +69,8 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   final List<Map<String, dynamic>> _chatMessages = [
     {
       'sender': 'AquaBot',
-      'message': "Hello! I'm AquaBot 💧 How can I help you today?",
+      'message':
+          "Hello! I'm **AquaBot 💧**, your JJAASS Water Market virtual assistant.\n\nTap any inquiry topic in the **Quick Inquiry Guide** above or type your question below for instant detailed assistance!",
     },
   ];
   final TextEditingController _chatInputController = TextEditingController();
@@ -3324,13 +3325,12 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     );
   }
 
-  // TAB 4: POINTS & REWARDS STORE
-  // TAB 4: AI SUPPORT DESK (Full chat interface)
+  // TAB 4: AI SUPPORT DESK (Selection-type inquiry accordion & Logo-themed interface)
   Widget _buildAiSupportTab(bool isDark) {
     final isSmall = MediaQuery.of(context).size.width < 600;
 
     return Padding(
-      padding: EdgeInsets.all(isSmall ? 12.0 : 24.0),
+      padding: EdgeInsets.all(isSmall ? 10.0 : 20.0),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -3338,116 +3338,469 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
           border: Border.all(color: const Color(0xFFCBD5E1), width: 1.2),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
+              color: AppTheme.navyColor.withValues(alpha: 0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: Column(
           children: [
+            // JJAASS Water Market Logo Brand Header
             Container(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
               decoration: const BoxDecoration(
-                border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+                gradient: LinearGradient(
+                  colors: [AppTheme.navyColor, AppTheme.primaryColor],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(15),
+                  topRight: Radius.circular(15),
+                ),
               ),
               child: Row(
-                children: const [
-                  CircleAvatar(
-                    backgroundColor: AppTheme.primaryColor,
-                    child: Icon(Icons.psychology_rounded, color: Colors.white),
-                  ),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'AquaBot Virtual Support',
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 15,
-                        color: AppTheme.navyColor,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white,
+                      border: Border.all(color: Colors.white, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 5,
+                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/images/logo_icon.jpg',
+                        fit: BoxFit.cover,
+                        errorBuilder: (ctx, error, stackTrace) => const Icon(
+                          Icons.water_drop_rounded,
+                          color: AppTheme.primaryColor,
+                          size: 22,
+                        ),
                       ),
                     ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'AquaBot AI Assistant',
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 15,
+                            color: Colors.white,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Row(
+                          children: [
+                            DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: Color(0xFF10B981),
+                                shape: BoxShape.circle,
+                              ),
+                              child: SizedBox(width: 7, height: 7),
+                            ),
+                            SizedBox(width: 5),
+                            Expanded(
+                              child: Text(
+                                'JJAASS Water Market • Online',
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFFBAE6FD),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Reset Chat',
+                    icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 20),
+                    onPressed: () {
+                      setState(() {
+                        _chatMessages.clear();
+                        _chatMessages.add({
+                          'sender': 'AquaBot',
+                          'message':
+                              "Hello! I'm **AquaBot 💧**, your JJAASS Water Market assistant.\n\nChoose any topic from the **Quick Inquiry Guide** above, or type your question below for instant detailed guidance!",
+                        });
+                      });
+                    },
                   ),
                 ],
               ),
             ),
+
+            // Collapsible Quick Inquiry FAQ Accordion (Selection-Type Inquiries)
+            Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFFF8FAFC),
+                border: Border(
+                  bottom: BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+              ),
+              child: Theme(
+                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  key: const PageStorageKey('ai_inquiry_accordion_main'),
+                  initiallyExpanded: false,
+                  tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
+                  childrenPadding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+                  leading: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.quiz_rounded,
+                      color: AppTheme.navyColor,
+                      size: 18,
+                    ),
+                  ),
+                  title: const Text(
+                    'Quick Inquiry Guide (FAQs)',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.navyColor,
+                    ),
+                  ),
+                  subtitle: const Text(
+                    'Tap to view 5 inquiry categories for instant answers',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                  children: [
+                    _buildInquiryCategoryTile(
+                      title: '💧 Products & Pricing',
+                      color: const Color(0xFF0284C7),
+                      questions: [
+                        'What is the difference between Refill (₱30) and Set A (₱230)?',
+                        'Should I choose 5-Gallon Slim or 5-Gallon Round?',
+                        'What are all your water products and prices?',
+                      ],
+                    ),
+                    _buildInquiryCategoryTile(
+                      title: '🚚 Live Orders & Tracking',
+                      color: const Color(0xFF1D63B8),
+                      questions: [
+                        'Where is my order / delivery right now?',
+                        'How does the permanent GPS location pin work?',
+                        'What is the maximum quantity of jugs per order?',
+                      ],
+                    ),
+                    _buildInquiryCategoryTile(
+                      title: '💳 Payment & Checkout',
+                      color: const Color(0xFF0F2B5C),
+                      questions: [
+                        'How do I pay using GCash (PayMongo)?',
+                        'What are the guidelines for Cash on Delivery (COD)?',
+                      ],
+                    ),
+                    _buildInquiryCategoryTile(
+                      title: '📍 Store Location & Hours',
+                      color: const Color(0xFF0369A1),
+                      questions: [
+                        'Where is JJAASS Water Market located and what are your store hours?',
+                        'What are the customer service hotlines?',
+                      ],
+                    ),
+                    _buildInquiryCategoryTile(
+                      title: '⭐ AquaLoyalty Points & Perks',
+                      color: const Color(0xFFD97706),
+                      questions: [
+                        'How do AquaLoyalty points work and how do I earn rewards?',
+                        'How many points do I currently have?',
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Scrollable Chat Message List with JJAASS Logo-Themed Bubbles
             Expanded(
               child: ListView.builder(
                 controller: _chatScrollController,
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(14.0),
                 itemCount: _chatMessages.length,
                 itemBuilder: (context, index) {
                   final msg = _chatMessages[index];
                   final isBot = msg['sender'] == 'AquaBot';
                   return Align(
-                    alignment: isBot
-                        ? Alignment.centerLeft
-                        : Alignment.centerRight,
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: isBot
-                            ? const Color(0xFFF1F9FB)
-                            : AppTheme.primaryColor,
-                        borderRadius: BorderRadius.only(
-                          topLeft: const Radius.circular(12),
-                          topRight: const Radius.circular(12),
-                          bottomLeft: isBot
-                              ? Radius.zero
-                              : const Radius.circular(12),
-                          bottomRight: isBot
-                              ? const Radius.circular(12)
-                              : Radius.zero,
-                        ),
-                        border: isBot
-                            ? Border.all(color: const Color(0xFFE2F0F3))
-                            : null,
-                      ),
-                      child: Text(
-                        msg['message'] as String,
-                        style: TextStyle(
-                          color: isBot ? const Color(0xFF1F2937) : Colors.white,
-                          fontSize: 12,
-                          height: 1.3,
-                        ),
-                      ),
-                    ),
+                    alignment: isBot ? Alignment.centerLeft : Alignment.centerRight,
+                    child: isBot
+                        ? Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(12),
+                            constraints: BoxConstraints(
+                              maxWidth: MediaQuery.of(context).size.width * 0.85,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(4),
+                                topRight: Radius.circular(16),
+                                bottomLeft: Radius.circular(16),
+                                bottomRight: Radius.circular(16),
+                              ),
+                              border: Border.all(
+                                color: const Color(0xFFBAE6FD),
+                                width: 1.2,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF0284C7).withValues(alpha: 0.06),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    ClipOval(
+                                      child: Image.asset(
+                                        'assets/images/logo_icon.jpg',
+                                        width: 14,
+                                        height: 14,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (ctx, error, stackTrace) => const Icon(
+                                          Icons.water_drop_rounded,
+                                          size: 14,
+                                          color: AppTheme.primaryColor,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    const Text(
+                                      'AquaBot',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppTheme.primaryColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                SelectableText(
+                                  msg['message'] as String,
+                                  style: const TextStyle(
+                                    color: Color(0xFF0F2B5C),
+                                    fontSize: 12.5,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            constraints: BoxConstraints(
+                              maxWidth: MediaQuery.of(context).size.width * 0.82,
+                            ),
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [AppTheme.primaryColor, AppTheme.navyColor],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(16),
+                                topRight: Radius.circular(4),
+                                bottomLeft: Radius.circular(16),
+                                bottomRight: Radius.circular(16),
+                              ),
+                            ),
+                            child: Text(
+                              msg['message'] as String,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w500,
+                                height: 1.35,
+                              ),
+                            ),
+                          ),
                   );
                 },
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
+
+            // Chat Input Bar with Logo Colors
+            Container(
+              padding: const EdgeInsets.all(12.0),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(15),
+                  bottomRight: Radius.circular(15),
+                ),
+              ),
               child: Row(
                 children: [
                   Expanded(
                     child: TextField(
                       controller: _chatInputController,
                       onSubmitted: _sendSupportMessage,
-                      style: const TextStyle(color: Color(0xFF0F172A)),
-                      decoration: _boxedInputDecoration(
-                        hint: 'Type your message...',
+                      style: const TextStyle(color: Color(0xFF0F172A), fontSize: 13),
+                      decoration: InputDecoration(
+                        hintText: 'Type your question here...',
+                        hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12.5),
+                        prefixIcon: const Icon(
+                          Icons.chat_bubble_outline_rounded,
+                          size: 18,
+                          color: AppTheme.primaryColor,
+                        ),
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: AppTheme.primaryColor, width: 1.5),
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  FloatingActionButton(
-                    onPressed: () =>
-                        _sendSupportMessage(_chatInputController.text),
-                    backgroundColor: AppTheme.primaryColor,
-                    mini: true,
-                    child: const Icon(
-                      Icons.send_rounded,
-                      color: Colors.white,
-                      size: 18,
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: () => _sendSupportMessage(_chatInputController.text),
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.all(11),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [AppTheme.primaryColor, AppTheme.navyColor],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.navyColor.withValues(alpha: 0.25),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.send_rounded,
+                        color: Colors.white,
+                        size: 18,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInquiryCategoryTile({
+    required String title,
+    required Color color,
+    required List<String> questions,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          dense: true,
+          tilePadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+          childrenPadding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+          title: Text(
+            title,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+          children: questions.map((q) {
+            return InkWell(
+              onTap: () => _sendSupportMessage(q),
+              borderRadius: BorderRadius.circular(6),
+              child: Container(
+                margin: const EdgeInsets.symmetric(vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0F9FF),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: const Color(0xFFBAE6FD)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.help_outline_rounded,
+                      size: 14,
+                      color: AppTheme.primaryColor,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        q,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.navyColor,
+                        ),
+                      ),
+                    ),
+                    const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 11,
+                      color: AppTheme.primaryColor,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
         ),
       ),
     );
