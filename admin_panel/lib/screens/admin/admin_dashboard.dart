@@ -5223,17 +5223,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     final name = nameController.text.trim();
                     final price = double.tryParse(priceController.text) ?? 0.0;
                     final stock = double.tryParse(stockController.text) ?? 0.0;
-                    final capacity =
-                        double.tryParse(capacityController.text) ?? 100.0;
+                    final rawCap = double.tryParse(capacityController.text.trim());
+                    final capacity = (rawCap == null || rawCap < stock) ? stock : rawCap;
                     final desc = descController.text.trim();
 
-                    if (name.isEmpty ||
-                        price < 0 ||
-                        stock < 0 ||
-                        capacity < stock) {
+                    if (name.isEmpty || price < 0 || stock < 0) {
                       Helpers.showSnackBar(
                         context,
-                        'Please enter valid item details. Stock cannot exceed max capacity.',
+                        'Please enter valid item details.',
                         isError: true,
                       );
                       return;
@@ -5291,6 +5288,485 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ],
             );
           },
+        );
+      },
+    );
+  }
+
+  // Direct Set Stock & Capacity Dialog (Admin input directly sets inventory & capacity)
+  void _showSetStockDialog(bool isDark, Map<String, dynamic> item) {
+    final currentStock = (item['stock'] as num).toDouble();
+    final currentCap = (item['capacity'] as num).toDouble();
+    final currentPrice = (item['price'] as num?)?.toDouble() ?? 0.0;
+    final String name = item['name'] as String;
+    final String unit = item['unit'] as String? ?? 'Units';
+    final Color color = item['color'] as Color? ?? AppTheme.primaryColor;
+
+    final stockController = TextEditingController(
+      text: currentStock == 0 ? '0' : currentStock.toStringAsFixed(currentStock % 1 == 0 ? 0 : 1),
+    );
+    final capacityController = TextEditingController(
+      text: currentCap == 0 ? '100' : currentCap.toStringAsFixed(0),
+    );
+    final priceController = TextEditingController(
+      text: currentPrice.toStringAsFixed(2),
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.tune_rounded, color: color, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Set Stock & Capacity',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : const Color(0xFF1E293B),
+                          ),
+                        ),
+                        Text(
+                          name,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? Colors.white70 : Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: 420,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.info_outline_rounded, size: 18, color: Colors.blue),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Directly set your inventory count and max storage capacity. Replaces hardcoded defaults and persists permanently.',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark ? Colors.blue.shade200 : const Color(0xFF1E40AF),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: stockController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      autofocus: true,
+                      decoration: InputDecoration(
+                        labelText: 'Current Available Stock ($unit)',
+                        hintText: 'Enter real available stock',
+                        prefixIcon: const Icon(Icons.inventory_2_outlined),
+                        helperText: 'Recorded stock: ${currentStock.toStringAsFixed(0)} $unit',
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: capacityController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                        labelText: 'Max Storage Capacity',
+                        hintText: 'e.g. 100, 200, 500',
+                        prefixIcon: Icon(Icons.warehouse_rounded),
+                        helperText: 'Capacity automatically expands if stock exceeds it',
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: priceController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                        labelText: 'Unit Price (₱)',
+                        prefixIcon: Icon(Icons.payments_outlined),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    final newStock = double.tryParse(stockController.text.trim());
+                    final newCap = double.tryParse(capacityController.text.trim());
+                    final newPrice = double.tryParse(priceController.text.trim());
+
+                    if (newStock == null || newStock < 0) {
+                      Helpers.showSnackBar(context, 'Please enter a valid stock amount.', isError: true);
+                      return;
+                    }
+                    final safeCap = (newCap == null || newCap < newStock) ? newStock : newCap;
+
+                    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+                    orderProvider.setInventoryStockAndCapacity(
+                      item['id'] as String,
+                      stock: newStock,
+                      capacity: safeCap,
+                      price: newPrice,
+                    );
+
+                    Navigator.of(context).pop();
+                    Helpers.showSnackBar(
+                      context,
+                      'Updated $name: ${newStock.toInt()} / ${safeCap.toInt()} $unit available.',
+                    );
+                  },
+                  icon: const Icon(Icons.check_rounded, size: 16),
+                  label: const Text('Save Stock & Capacity'),
+                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // Set Container Reserves Dialog (Empty vs Refilled Reserves)
+  void _showSetReservesDialog(bool isDark) {
+    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+    final emptyController = TextEditingController(text: orderProvider.emptyContainerStocks.toString());
+    final refilledController = TextEditingController(text: orderProvider.refilledContainerStocks.toString());
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.warehouse_rounded, color: Colors.amber, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Configure Container Reserves',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : const Color(0xFF1E293B),
+                ),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 400,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Set your warehouse reserve counts for empty jugs awaiting refill and ready-to-dispatch refilled jugs.',
+                  style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : Colors.grey.shade600),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: emptyController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Empty Containers in Warehouse',
+                    hintText: 'e.g. 100',
+                    prefixIcon: Icon(Icons.delete_sweep_rounded),
+                    helperText: 'Awaiting cleaning or refill in storage',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: refilledController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Refilled Containers Ready for Dispatch',
+                    hintText: 'e.g. 150',
+                    prefixIcon: Icon(Icons.check_circle_outline_rounded),
+                    helperText: 'Pre-filled jugs ready for delivery',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final emptyVal = int.tryParse(emptyController.text.trim()) ?? 0;
+                final refilledVal = int.tryParse(refilledController.text.trim()) ?? 0;
+                orderProvider.setContainerReserves(
+                  emptyStocks: max(0, emptyVal),
+                  refilledStocks: max(0, refilledVal),
+                );
+                Navigator.of(context).pop();
+                Helpers.showSnackBar(context, 'Container reserves updated successfully!');
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor),
+              child: const Text('Save Reserves'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Set All Inventory Stocks Dialog (All-in-one Quick Table)
+  void _showSetAllInventoryDialog(bool isDark) {
+    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+    final items = orderProvider.inventoryItems;
+
+    final controllers = <String, Map<String, TextEditingController>>{};
+    for (final item in items) {
+      final id = item['id'] as String;
+      final stock = (item['stock'] as num).toDouble();
+      final cap = (item['capacity'] as num).toDouble();
+      final price = (item['price'] as num?)?.toDouble() ?? 0.0;
+      controllers[id] = {
+        'stock': TextEditingController(text: stock == 0 ? '0' : stock.toStringAsFixed(stock % 1 == 0 ? 0 : 1)),
+        'capacity': TextEditingController(text: cap == 0 ? '100' : cap.toStringAsFixed(0)),
+        'price': TextEditingController(text: price.toStringAsFixed(2)),
+      };
+    }
+
+    final emptyReserveCtrl = TextEditingController(text: orderProvider.emptyContainerStocks.toString());
+    final refilledReserveCtrl = TextEditingController(text: orderProvider.refilledContainerStocks.toString());
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.tune_rounded, color: AppTheme.primaryColor, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Set All Inventory Stocks & Reserves',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : const Color(0xFF1E293B),
+                      ),
+                    ),
+                    Text(
+                      'Input real inventory counts directly. Replaces any hardcoded defaults.',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark ? Colors.white70 : Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 650,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white10 : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Row(
+                      children: [
+                        Expanded(flex: 3, child: Text('Item Name', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                        Expanded(flex: 2, child: Text('Stock', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                        Expanded(flex: 2, child: Text('Max Cap', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                        Expanded(flex: 2, child: Text('Price (₱)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ...items.map((item) {
+                    final id = item['id'] as String;
+                    final name = item['name'] as String;
+                    final unit = item['unit'] as String? ?? 'Units';
+                    final ctrls = controllers[id]!;
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                                Text(unit, style: TextStyle(fontSize: 10, color: isDark ? Colors.white54 : Colors.grey)),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            flex: 2,
+                            child: TextField(
+                              controller: ctrls['stock'],
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              decoration: const InputDecoration(
+                                isDense: true,
+                                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            flex: 2,
+                            child: TextField(
+                              controller: ctrls['capacity'],
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              decoration: const InputDecoration(
+                                isDense: true,
+                                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            flex: 2,
+                            child: TextField(
+                              controller: ctrls['price'],
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              decoration: const InputDecoration(
+                                isDense: true,
+                                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                  const Divider(height: 24),
+                  const Text('Container Reserves', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: emptyReserveCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'Empty Containers',
+                            isDense: true,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: refilledReserveCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'Refilled Containers',
+                            isDense: true,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                final updatedList = <Map<String, dynamic>>[];
+                for (final item in items) {
+                  final id = item['id'] as String;
+                  final ctrls = controllers[id]!;
+                  final s = double.tryParse(ctrls['stock']!.text.trim()) ?? 0.0;
+                  final c = double.tryParse(ctrls['capacity']!.text.trim()) ?? s;
+                  final p = double.tryParse(ctrls['price']!.text.trim()) ?? (item['price'] as num).toDouble();
+                  updatedList.add({
+                    'id': id,
+                    'stock': max(0.0, s),
+                    'capacity': max(c, s),
+                    'price': p,
+                  });
+                }
+                final emptyVal = int.tryParse(emptyReserveCtrl.text.trim()) ?? 0;
+                final refilledVal = int.tryParse(refilledReserveCtrl.text.trim()) ?? 0;
+
+                orderProvider.setAllInventoryLevels(
+                  updatedList,
+                  emptyReserves: max(0, emptyVal),
+                  refilledReserves: max(0, refilledVal),
+                );
+
+                Navigator.of(context).pop();
+                Helpers.showSnackBar(context, 'All inventory stocks and reserves updated successfully!');
+              },
+              icon: const Icon(Icons.check_rounded, size: 16),
+              label: const Text('Save All Levels'),
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor),
+            ),
+          ],
         );
       },
     );
@@ -5833,31 +6309,55 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ),
                 ],
               ),
-              ElevatedButton.icon(
-                onPressed: () => _showAddEditInventoryItemDialog(isDark),
-                icon: const Icon(
-                  Icons.add_rounded,
-                  size: 18,
-                  color: Colors.white,
-                ),
-                label: const Text(
-                  'Add Product / Item',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () => _showSetReservesDialog(isDark),
+                    icon: const Icon(Icons.warehouse_rounded, size: 16),
+                    label: const Text('Reserves', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
                   ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 12,
+                  OutlinedButton.icon(
+                    onPressed: () => _showSetAllInventoryDialog(isDark),
+                    icon: const Icon(Icons.tune_rounded, size: 16),
+                    label: const Text('Set All Stock Levels', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                  ElevatedButton.icon(
+                    onPressed: () => _showAddEditInventoryItemDialog(isDark),
+                    icon: const Icon(
+                      Icons.add_rounded,
+                      size: 18,
+                      color: Colors.white,
+                    ),
+                    label: const Text(
+                      'Add Product / Item',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ],
           ),
@@ -6029,18 +6529,37 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                   ],
                                 ),
                               ),
-                              TextButton.icon(
-                                onPressed: () {
-                                  final slimItem = allItems.firstWhere(
-                                    (i) => i['id'] == 'item_slim_gallon' || i['name'].toString().toLowerCase().contains('slim'),
-                                    orElse: () => allItems.isNotEmpty ? allItems.first : <String, dynamic>{},
-                                  );
-                                  if (slimItem.isNotEmpty) {
-                                    _showRestockDialog(isDark, slimItem);
-                                  }
-                                },
-                                icon: const Icon(Icons.add_shopping_cart_rounded, size: 16),
-                                label: const Text('Restock Slim', style: TextStyle(fontSize: 12)),
+                              Wrap(
+                                spacing: 4,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  TextButton.icon(
+                                    onPressed: () {
+                                      final slimItem = allItems.firstWhere(
+                                        (i) => i['id'] == 'item_slim_gallon' || i['name'].toString().toLowerCase().contains('slim'),
+                                        orElse: () => allItems.isNotEmpty ? allItems.first : <String, dynamic>{},
+                                      );
+                                      if (slimItem.isNotEmpty) {
+                                        _showSetStockDialog(isDark, slimItem);
+                                      }
+                                    },
+                                    icon: const Icon(Icons.tune_rounded, size: 15),
+                                    label: const Text('Set Stock', style: TextStyle(fontSize: 12)),
+                                  ),
+                                  TextButton.icon(
+                                    onPressed: () {
+                                      final slimItem = allItems.firstWhere(
+                                        (i) => i['id'] == 'item_slim_gallon' || i['name'].toString().toLowerCase().contains('slim'),
+                                        orElse: () => allItems.isNotEmpty ? allItems.first : <String, dynamic>{},
+                                      );
+                                      if (slimItem.isNotEmpty) {
+                                        _showRestockDialog(isDark, slimItem);
+                                      }
+                                    },
+                                    icon: const Icon(Icons.add_shopping_cart_rounded, size: 15),
+                                    label: const Text('Restock Slim', style: TextStyle(fontSize: 12)),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -6209,18 +6728,37 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                   ],
                                 ),
                               ),
-                              TextButton.icon(
-                                onPressed: () {
-                                  final roundItem = allItems.firstWhere(
-                                    (i) => i['id'] == 'item_round_gallon' || i['name'].toString().toLowerCase().contains('round'),
-                                    orElse: () => allItems.isNotEmpty ? allItems.first : <String, dynamic>{},
-                                  );
-                                  if (roundItem.isNotEmpty) {
-                                    _showRestockDialog(isDark, roundItem);
-                                  }
-                                },
-                                icon: const Icon(Icons.add_shopping_cart_rounded, size: 16),
-                                label: const Text('Restock Round', style: TextStyle(fontSize: 12)),
+                              Wrap(
+                                spacing: 4,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  TextButton.icon(
+                                    onPressed: () {
+                                      final roundItem = allItems.firstWhere(
+                                        (i) => i['id'] == 'item_round_gallon' || i['name'].toString().toLowerCase().contains('round'),
+                                        orElse: () => allItems.isNotEmpty ? allItems.first : <String, dynamic>{},
+                                      );
+                                      if (roundItem.isNotEmpty) {
+                                        _showSetStockDialog(isDark, roundItem);
+                                      }
+                                    },
+                                    icon: const Icon(Icons.tune_rounded, size: 15),
+                                    label: const Text('Set Stock', style: TextStyle(fontSize: 12)),
+                                  ),
+                                  TextButton.icon(
+                                    onPressed: () {
+                                      final roundItem = allItems.firstWhere(
+                                        (i) => i['id'] == 'item_round_gallon' || i['name'].toString().toLowerCase().contains('round'),
+                                        orElse: () => allItems.isNotEmpty ? allItems.first : <String, dynamic>{},
+                                      );
+                                      if (roundItem.isNotEmpty) {
+                                        _showRestockDialog(isDark, roundItem);
+                                      }
+                                    },
+                                    icon: const Icon(Icons.add_shopping_cart_rounded, size: 15),
+                                    label: const Text('Restock Round', style: TextStyle(fontSize: 12)),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -6705,6 +7243,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             ),
                             Row(
                               children: [
+                                IconButton(
+                                  tooltip: 'Set Stock & Capacity',
+                                  icon: Icon(
+                                    Icons.tune_rounded,
+                                    size: 18,
+                                    color: color,
+                                  ),
+                                  visualDensity: VisualDensity.compact,
+                                  onPressed: () =>
+                                      _showSetStockDialog(isDark, prod),
+                                ),
                                 IconButton(
                                   tooltip: 'Restock',
                                   icon: Icon(

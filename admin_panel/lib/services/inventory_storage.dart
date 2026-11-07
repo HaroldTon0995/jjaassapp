@@ -5,8 +5,10 @@ import 'inventory_storage_stub.dart'
     if (dart.library.html) 'inventory_storage_web.dart';
 
 class InventoryStorage {
-  static const String _inventoryKey = 'jjaass_inventory_items_v2';
-  static const String _restockLogsKey = 'jjaass_restock_logs_v2';
+  static const String _inventoryKey = 'jjaass_inventory_items_v3';
+  static const String _restockLogsKey = 'jjaass_restock_logs_v3';
+  static const String _reservesKey = 'jjaass_container_reserves_v3';
+  static const String _returnedGallonsKey = 'jjaass_returned_gallons_v3';
 
   static void saveInventory(List<Map<String, dynamic>> items) {
     try {
@@ -17,8 +19,9 @@ class InventoryStorage {
         return copy;
       }).toList();
       InventoryStorageImpl.saveString(_inventoryKey, jsonEncode(cleanList));
+      debugPrint('InventoryStorage: saved ${cleanList.length} items to local storage.');
     } catch (e) {
-      debugPrint('LocalStorage save error: $e');
+      debugPrint('InventoryStorage save error: $e');
     }
   }
 
@@ -27,10 +30,61 @@ class InventoryStorage {
       final raw = InventoryStorageImpl.getString(_inventoryKey);
       if (raw != null && raw.isNotEmpty) {
         final decoded = jsonDecode(raw) as List<dynamic>;
-        return decoded.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        final list = decoded.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        debugPrint('InventoryStorage: loaded ${list.length} items from local storage.');
+        return list;
       }
     } catch (e) {
-      debugPrint('LocalStorage load error: $e');
+      debugPrint('InventoryStorage load error: $e');
+    }
+    return null;
+  }
+
+  static void saveReserves(int emptyStocks, int refilledStocks) {
+    try {
+      final data = jsonEncode({
+        'empty': emptyStocks,
+        'refilled': refilledStocks,
+      });
+      InventoryStorageImpl.saveString(_reservesKey, data);
+    } catch (e) {
+      debugPrint('InventoryStorage save reserves error: $e');
+    }
+  }
+
+  static Map<String, int>? loadReserves() {
+    try {
+      final raw = InventoryStorageImpl.getString(_reservesKey);
+      if (raw != null && raw.isNotEmpty) {
+        final decoded = jsonDecode(raw) as Map<String, dynamic>;
+        return {
+          'empty': (decoded['empty'] as num?)?.toInt() ?? 0,
+          'refilled': (decoded['refilled'] as num?)?.toInt() ?? 0,
+        };
+      }
+    } catch (e) {
+      debugPrint('InventoryStorage load reserves error: $e');
+    }
+    return null;
+  }
+
+  static void saveReturnedGallonOrders(Set<String> orderIds) {
+    try {
+      InventoryStorageImpl.saveString(_returnedGallonsKey, jsonEncode(orderIds.toList()));
+    } catch (e) {
+      debugPrint('InventoryStorage save returned orders error: $e');
+    }
+  }
+
+  static Set<String>? loadReturnedGallonOrders() {
+    try {
+      final raw = InventoryStorageImpl.getString(_returnedGallonsKey);
+      if (raw != null && raw.isNotEmpty) {
+        final decoded = jsonDecode(raw) as List<dynamic>;
+        return decoded.map((e) => e.toString()).toSet();
+      }
+    } catch (e) {
+      debugPrint('InventoryStorage load returned orders error: $e');
     }
     return null;
   }
@@ -46,7 +100,7 @@ class InventoryStorage {
       }).toList();
       InventoryStorageImpl.saveString(_restockLogsKey, jsonEncode(serialized));
     } catch (e) {
-      debugPrint('LocalStorage save logs error: $e');
+      debugPrint('InventoryStorage save logs error: $e');
     }
   }
 
@@ -65,7 +119,7 @@ class InventoryStorage {
         }).toList();
       }
     } catch (e) {
-      debugPrint('LocalStorage load logs error: $e');
+      debugPrint('InventoryStorage load logs error: $e');
     }
     return null;
   }

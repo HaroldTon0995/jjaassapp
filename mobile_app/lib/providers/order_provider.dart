@@ -14,6 +14,7 @@ class OrderProvider extends ChangeNotifier {
   Timer? _pollingTimer;
 
   // Shared dynamic inventory items catalog (Water Refills, Containers & Bottles, Accessories)
+  // Clean initialization: stocks start at 0.0 until configured by the Admin or loaded from storage.
   final List<Map<String, dynamic>> _inventoryItems = [
     {
       'id': 'prod_purified',
@@ -21,8 +22,8 @@ class OrderProvider extends ChangeNotifier {
       'category': 'water',
       'unit': 'Gallons',
       'price': 30.0,
-      'stock': 127.0,
-      'capacity': 150.0,
+      'stock': 0.0,
+      'capacity': 100.0,
       'color': Colors.blue,
       'icon': Icons.water_drop_rounded,
       'description': 'Multi-stage filtered pure drinking water refill',
@@ -33,7 +34,7 @@ class OrderProvider extends ChangeNotifier {
       'category': 'container',
       'unit': 'Units',
       'price': 220.0,
-      'stock': 45.0,
+      'stock': 0.0,
       'capacity': 100.0,
       'color': Colors.indigo,
       'icon': Icons.local_drink_rounded,
@@ -46,7 +47,7 @@ class OrderProvider extends ChangeNotifier {
       'category': 'container',
       'unit': 'Units',
       'price': 200.0,
-      'stock': 38.0,
+      'stock': 0.0,
       'capacity': 100.0,
       'color': Colors.deepPurple,
       'icon': Icons.crop_portrait_rounded,
@@ -59,7 +60,7 @@ class OrderProvider extends ChangeNotifier {
       'category': 'accessory',
       'unit': 'Pieces',
       'price': 350.0,
-      'stock': 18.0,
+      'stock': 0.0,
       'capacity': 50.0,
       'color': Colors.amber,
       'icon': Icons.power_rounded,
@@ -71,8 +72,8 @@ class OrderProvider extends ChangeNotifier {
       'category': 'accessory',
       'unit': 'Pieces',
       'price': 120.0,
-      'stock': 25.0,
-      'capacity': 60.0,
+      'stock': 0.0,
+      'capacity': 50.0,
       'color': Colors.orange,
       'icon': Icons.touch_app_rounded,
       'description': 'Instant vacuum suction manual hand pump',
@@ -83,16 +84,16 @@ class OrderProvider extends ChangeNotifier {
       'category': 'accessory',
       'unit': 'Packs',
       'price': 60.0,
-      'stock': 60.0,
-      'capacity': 150.0,
+      'stock': 0.0,
+      'capacity': 100.0,
       'color': Colors.green,
       'icon': Icons.adjust_rounded,
       'description': 'Leak-proof anti-splash silicone replacement caps',
     },
   ];
 
-  int _emptyContainerStocks = 140;
-  int _refilledContainerStocks = 90;
+  int _emptyContainerStocks = 0;
+  int _refilledContainerStocks = 0;
 
   int get emptyContainerStocks => _emptyContainerStocks;
   int get refilledContainerStocks => _refilledContainerStocks;
@@ -101,6 +102,65 @@ class OrderProvider extends ChangeNotifier {
     _emptyContainerStocks = max(0, _emptyContainerStocks + emptyChange);
     _refilledContainerStocks = max(0, _refilledContainerStocks + refilledChange);
     notifyListeners();
+    InventoryStorage.saveReserves(_emptyContainerStocks, _refilledContainerStocks);
+  }
+
+  void setContainerReserves({required int emptyStocks, required int refilledStocks}) {
+    _emptyContainerStocks = max(0, emptyStocks);
+    _refilledContainerStocks = max(0, refilledStocks);
+    notifyListeners();
+    InventoryStorage.saveReserves(_emptyContainerStocks, _refilledContainerStocks);
+  }
+
+  void setInventoryStockAndCapacity(
+    String id, {
+    required double stock,
+    required double capacity,
+    double? price,
+    String? name,
+  }) {
+    final idx = _inventoryItems.indexWhere((p) => p['id'] == id);
+    if (idx != -1) {
+      final safeCapacity = max(capacity, stock);
+      _inventoryItems[idx]['stock'] = max(0.0, stock);
+      _inventoryItems[idx]['capacity'] = safeCapacity;
+      if (price != null) _inventoryItems[idx]['price'] = price;
+      if (name != null && name.isNotEmpty) _inventoryItems[idx]['name'] = name;
+
+      notifyListeners();
+      InventoryStorage.saveInventory(_inventoryItems);
+      _syncInventoryToSupabase(_inventoryItems[idx], action: 'update');
+    }
+  }
+
+  void setAllInventoryLevels(
+    List<Map<String, dynamic>> itemsList, {
+    int? emptyReserves,
+    int? refilledReserves,
+  }) {
+    for (final updated in itemsList) {
+      final id = updated['id'];
+      final idx = _inventoryItems.indexWhere((p) => p['id'] == id);
+      if (idx != -1) {
+        final stock = (updated['stock'] as num?)?.toDouble() ?? 0.0;
+        final cap = (updated['capacity'] as num?)?.toDouble() ?? stock;
+        _inventoryItems[idx]['stock'] = max(0.0, stock);
+        _inventoryItems[idx]['capacity'] = max(cap, stock);
+        if (updated['price'] != null) {
+          _inventoryItems[idx]['price'] = (updated['price'] as num).toDouble();
+        }
+        if (updated['name'] != null) {
+          _inventoryItems[idx]['name'] = updated['name'];
+        }
+        _syncInventoryToSupabase(_inventoryItems[idx], action: 'update');
+      }
+    }
+    if (emptyReserves != null) _emptyContainerStocks = max(0, emptyReserves);
+    if (refilledReserves != null) _refilledContainerStocks = max(0, refilledReserves);
+
+    notifyListeners();
+    InventoryStorage.saveInventory(_inventoryItems);
+    InventoryStorage.saveReserves(_emptyContainerStocks, _refilledContainerStocks);
   }
 
   List<Map<String, dynamic>> get inventoryItems => _inventoryItems;
@@ -266,7 +326,7 @@ class OrderProvider extends ChangeNotifier {
   double get slimGallonCapacity {
     final item = _inventoryItems.firstWhere(
       (i) => i['id'] == 'item_slim_gallon' || i['name'].toString().toLowerCase().contains('slim'),
-      orElse: () => {'capacity': 100.0},
+      orElse: () => {'capacity': 0.0},
     );
     return (item['capacity'] as num).toDouble();
   }
@@ -274,7 +334,7 @@ class OrderProvider extends ChangeNotifier {
   double get roundGallonCapacity {
     final item = _inventoryItems.firstWhere(
       (i) => i['id'] == 'item_round_gallon' || i['name'].toString().toLowerCase().contains('round'),
-      orElse: () => {'capacity': 100.0},
+      orElse: () => {'capacity': 0.0},
     );
     return (item['capacity'] as num).toDouble();
   }
@@ -377,6 +437,7 @@ class OrderProvider extends ChangeNotifier {
     notifyListeners();
     InventoryStorage.saveInventory(_inventoryItems);
     InventoryStorage.saveRestockLogs(_restockLogs);
+    InventoryStorage.saveReturnedGallonOrders(_returnedGallonOrderIds);
   }
 
   void deductProductStock(String name, int qty) {
@@ -531,8 +592,29 @@ class OrderProvider extends ChangeNotifier {
           if (cached['name'] != null) {
             _inventoryItems[idx]['name'] = cached['name'];
           }
+          if (cached['unit'] != null) {
+            _inventoryItems[idx]['unit'] = cached['unit'];
+          }
+        } else {
+          // Custom items previously saved
+          _inventoryItems.add({
+            ...cached,
+            'color': Colors.blueGrey,
+            'icon': Icons.inventory_2_rounded,
+          });
         }
       }
+    }
+
+    final cachedReserves = InventoryStorage.loadReserves();
+    if (cachedReserves != null) {
+      _emptyContainerStocks = cachedReserves['empty'] ?? 0;
+      _refilledContainerStocks = cachedReserves['refilled'] ?? 0;
+    }
+
+    final cachedReturns = InventoryStorage.loadReturnedGallonOrders();
+    if (cachedReturns != null) {
+      _returnedGallonOrderIds.addAll(cachedReturns);
     }
 
     final cachedLogs = InventoryStorage.loadRestockLogs();
