@@ -37,8 +37,21 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
 
   // Order Water Form States
   String _selectedWaterType = '19L Purified Water';
-  String _selectedJugType = '5-Gallon Slim';
-  int _orderQuantity = 2;
+  int _slimQuantity = 1;
+  int _roundQuantity = 0;
+
+  int get _totalOrderQuantity => _slimQuantity + _roundQuantity;
+
+  String get _jugSelectionSummary {
+    if (_slimQuantity > 0 && _roundQuantity > 0) {
+      return '$_slimQuantity Slim, $_roundQuantity Round';
+    } else if (_slimQuantity > 0) {
+      return '$_slimQuantity Slim';
+    } else if (_roundQuantity > 0) {
+      return '$_roundQuantity Round';
+    }
+    return '0 Jugs';
+  }
   String? _selectedProvince;
   String? _selectedCityCode;
   String? _selectedBarangayCode;
@@ -298,8 +311,8 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     _selectedWaterType = orderProvider.waterProducts.isNotEmpty
         ? orderProvider.waterProducts.first['name'] as String
         : '19L Purified Water';
-    _selectedJugType = '5-Gallon Slim';
-    _orderQuantity = 1;
+    _slimQuantity = 1;
+    _roundQuantity = 0;
     _selectedProvince = null;
     _selectedCityCode = null;
     _selectedBarangayCode = null;
@@ -346,6 +359,15 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
       }
     }
 
+    if (_totalOrderQuantity < 1) {
+      Helpers.showSnackBar(
+        context,
+        'Please select at least 1 container (Slim or Round).',
+        isError: true,
+      );
+      return;
+    }
+
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
     final user = auth.currentUser;
@@ -365,13 +387,17 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
         ? _savedProfilePhone
         : '+63 912 345 6789';
 
+    final jugDescription = _slimQuantity > 0 && _roundQuantity > 0
+        ? '($_slimQuantity Slim, $_roundQuantity Round)'
+        : (_slimQuantity > 0 ? '($_slimQuantity Slim)' : '($_roundQuantity Round)');
+
     final newOrder = await orderProvider.placeOrder(
       customerId: user?.id ?? '',
       customerName: customerName,
       customerPhone: customerPhone,
       deliveryAddress: _composeAddress(),
-      waterType: '$waterTypeName ($_selectedJugType)',
-      quantity: _orderQuantity,
+      waterType: '$waterTypeName $jugDescription',
+      quantity: _totalOrderQuantity,
       pricePerUnit: pricePerJug,
       paymentMethod: submittedPaymentMethod,
       deliveryNote: _deliveryNoteController.text.trim(),
@@ -1932,23 +1958,48 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                 ),
                 const SizedBox(height: 14),
 
-                // Jug Type Selection (2 Photos: Slim & Round)
-                const Text(
-                  'Select Jug Type',
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.navyColor,
-                  ),
+                // Jug Type Selection with Dedicated Quantities
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Select Jug Types & Quantity',
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.navyColor,
+                      ),
+                    ),
+                    Text(
+                      'Max: 20 jugs total',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 10),
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: _buildJugTypeOptionCard(
                         title: '5-Gallon Slim',
-                        subtitle: 'With Faucet & Handle',
+                        subtitle: 'Faucet & Handle',
                         imageAsset: 'assets/images/slim_container.jpg',
+                        quantity: _slimQuantity,
+                        onDecrement: () {
+                          if (_slimQuantity > 0) {
+                            setState(() => _slimQuantity--);
+                          }
+                        },
+                        onIncrement: () {
+                          if (_totalOrderQuantity < 20) {
+                            setState(() => _slimQuantity++);
+                          }
+                        },
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -1957,66 +2008,78 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                         title: '5-Gallon Round',
                         subtitle: 'For Dispenser',
                         imageAsset: 'assets/images/round_container.jpg',
+                        quantity: _roundQuantity,
+                        onDecrement: () {
+                          if (_roundQuantity > 0) {
+                            setState(() => _roundQuantity--);
+                          }
+                        },
+                        onIncrement: () {
+                          if (_totalOrderQuantity < 20) {
+                            setState(() => _roundQuantity++);
+                          }
+                        },
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 14),
 
-                // Quantity Row
-                Text(
-                  'Quantity ($_selectedJugType)',
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.navyColor,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.remove_circle_outline,
-                        color: AppTheme.navyColor,
-                      ),
-                      onPressed: () {
-                        if (_orderQuantity > 1) {
-                          setState(() => _orderQuantity--);
-                        }
-                      },
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 10,
-                      ),
+                // Simple Total Badge
+                Builder(
+                  builder: (context) {
+                    final match = orderProvider.waterProducts.firstWhere(
+                      (p) => p['name'] == _selectedWaterType,
+                      orElse: () => orderProvider.waterProducts.isNotEmpty
+                          ? orderProvider.waterProducts.first
+                          : {'price': 35.0},
+                    );
+                    final pricePerJug = (match['price'] as num?)?.toDouble() ?? 35.0;
+                    final totalCost = _totalOrderQuantity * pricePerJug;
+
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        border: Border.all(color: const Color(0xFFCBD5E1)),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '$_orderQuantity',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w900,
-                          fontSize: 16,
-                          color: AppTheme.navyColor,
+                        color: _totalOrderQuantity > 0
+                            ? AppTheme.primaryColor.withValues(alpha: 0.08)
+                            : const Color(0xFFFEF2F2),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: _totalOrderQuantity > 0
+                              ? AppTheme.primaryColor.withValues(alpha: 0.3)
+                              : const Color(0xFFFCA5A5),
                         ),
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.add_circle_outline,
-                        color: AppTheme.navyColor,
+                      child: Row(
+                        children: [
+                          Icon(
+                            _totalOrderQuantity > 0
+                                ? Icons.shopping_bag_outlined
+                                : Icons.warning_amber_rounded,
+                            size: 20,
+                            color: _totalOrderQuantity > 0
+                                ? AppTheme.navyColor
+                                : Colors.red.shade700,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              _totalOrderQuantity > 0
+                                  ? 'Total: $_totalOrderQuantity ${_totalOrderQuantity == 1 ? 'jug' : 'jugs'} ($_jugSelectionSummary) • ₱${totalCost.toStringAsFixed(2)}'
+                                  : 'Please select at least 1 jug above (Slim or Round)',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: _totalOrderQuantity > 0
+                                    ? AppTheme.navyColor
+                                    : Colors.red.shade700,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      onPressed: () {
-                        if (_orderQuantity < 20) {
-                          setState(() => _orderQuantity++);
-                        }
-                      },
-                    ),
-                  ],
+                    );
+                  },
                 ),
                 const SizedBox(height: 20),
 
@@ -2519,83 +2582,135 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     required String title,
     required String subtitle,
     required String imageAsset,
+    required int quantity,
+    required VoidCallback onDecrement,
+    required VoidCallback onIncrement,
   }) {
-    final isSelected = _selectedJugType == title;
-    return InkWell(
-      onTap: () {
-        setState(() {
-          _selectedJugType = title;
-        });
-      },
-      borderRadius: BorderRadius.circular(14),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppTheme.primaryColor.withValues(alpha: 0.08)
-              : const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isSelected ? AppTheme.navyColor : const Color(0xFFCBD5E1),
-            width: isSelected ? 2.0 : 1.2,
-          ),
+    final isSelected = quantity > 0;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isSelected
+            ? AppTheme.primaryColor.withValues(alpha: 0.08)
+            : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isSelected ? AppTheme.navyColor : const Color(0xFFCBD5E1),
+          width: isSelected ? 2.0 : 1.2,
         ),
-        child: Column(
-          children: [
-            Stack(
-              children: [
-                Container(
-                  width: double.infinity,
-                  height: 110,
-                  padding: const EdgeInsets.all(8),
+      ),
+      child: Column(
+        children: [
+          Stack(
+            children: [
+              Container(
+                width: double.infinity,
+                height: 105,
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: const Color(0xFFE2E8F0),
+                    width: 1,
+                  ),
+                ),
+                child: Image.asset(imageAsset, fit: BoxFit.contain),
+              ),
+              Positioned(
+                top: 6,
+                right: 6,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: isSelected ? AppTheme.navyColor : Colors.grey.shade400,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: const Color(0xFFE2E8F0),
-                      width: 1,
+                  ),
+                  child: Text(
+                    isSelected ? '$quantity Selected' : '0',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  child: Image.asset(imageAsset, fit: BoxFit.contain),
                 ),
-                Positioned(
-                  top: 6,
-                  right: 6,
-                  child: Icon(
-                    isSelected
-                        ? Icons.check_circle_rounded
-                        : Icons.radio_button_unchecked_rounded,
-                    color: isSelected
-                        ? AppTheme.navyColor
-                        : const Color(0xFF94A3B8),
-                    size: 20,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.navyColor,
+            ),
+          ),
+          const SizedBox(height: 1),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF475569),
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // Stepper Quantity Row for this Jug Type
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            decoration: BoxDecoration(
+              color: isSelected ? Colors.white : const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isSelected ? AppTheme.navyColor : const Color(0xFFCBD5E1),
+                width: 1.2,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                InkWell(
+                  onTap: quantity > 0 ? onDecrement : null,
+                  borderRadius: BorderRadius.circular(6),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4.0),
+                    child: Icon(
+                      Icons.remove_circle_outline,
+                      size: 22,
+                      color: quantity > 0 ? AppTheme.navyColor : Colors.grey.shade400,
+                    ),
+                  ),
+                ),
+                Text(
+                  '$quantity',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                    color: isSelected ? AppTheme.navyColor : const Color(0xFF64748B),
+                  ),
+                ),
+                InkWell(
+                  onTap: _totalOrderQuantity < 20 ? onIncrement : null,
+                  borderRadius: BorderRadius.circular(6),
+                  child: const Padding(
+                    padding: EdgeInsets.all(4.0),
+                    child: Icon(
+                      Icons.add_circle_outline,
+                      size: 22,
+                      color: AppTheme.navyColor,
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 10),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 13.5,
-                fontWeight: FontWeight.w800,
-                color: AppTheme.navyColor,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF475569),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
