@@ -223,7 +223,7 @@ class AiSupportService {
         final activeJob = orderProvider.getActiveDriverJob(userId);
         return "Hello Driver **$userName**! 🚚 I'm **AquaBot 💧**, your dispatch assistant.\n\n- **Active Delivery**: ${activeJob != null ? '${activeJob.id} (${activeJob.customerName})' : 'None right now'}\n- **Available Earnings**: ₱${orderProvider.getDriverEarnings(userId).toStringAsFixed(2)}\n\nAsk me to **optimize route**, check your **active job**, or view your **earnings**!";
       }
-      return "Hello **$userName**! 👋 Welcome to **JJAASS Water Market** 💧\n\nI can help you with:\n- 💧 **Water Types & Prices** (19L Purified ₱30)\n- 🏺 **Jug Types** (5-Gallon Slim with Faucet & 5-Gallon Round)\n- 📦 **Order Tracking & Delivery Status**\n- 💳 **GCash & COD Payments**\n- 📍 **Store Location & Hours**\n\nWhat would you like to know?";
+      return "Hello **$userName**! 👋 Welcome to **JJAASS Water Market** 💧\n\nI can help you with:\n- 💧 **Water Types & Prices** (19L Purified Refill ₱30, 19L Set A with New Container ₱230)\n- 🏺 **Jug Types** (5-Gallon Slim with Faucet & 5-Gallon Round)\n- 📦 **Order Tracking & Delivery Status**\n- 💳 **GCash & COD Payments**\n- 📍 **Store Location & Hours**\n\nWhat would you like to know?";
     }
 
     // 2. Gratitude / Closing
@@ -365,7 +365,7 @@ class AiSupportService {
         query.contains('buy water')) {
       return "🛒 **How to Order Fresh Water**\n\n"
           "1. Open the **Order Water** tab from the menu.\n"
-          "2. Select your **Water Type** (*Purified ₱30*, *Natural Mineral ₱55*, or *Alkaline ₱60*).\n"
+          "2. Select your **Product / Order Type** (*19L Purified Water Refill ₱30* or *19L Water + New Container Set A ₱230*).\n"
           "3. Choose your **Jug Type** (*5-Gallon Slim* or *5-Gallon Round*).\n"
           "4. Set the **quantity**, select your **Province, City/Municipality, & Barangay**, and optionally pin your exact house on the map.\n"
           "5. Choose **Cash on Delivery (COD)** or **GCash**, then tap **Confirm Order Delivery**!";
@@ -428,7 +428,7 @@ class AiSupportService {
 
     return "Hello **$userName**! 💧 I'm **AquaBot**, your JJAASS Water Market assistant.$latestInfo\n\n"
         "You can ask me:\n"
-        "- **'What are your water prices?'** (Purified ₱30, Mineral ₱55, Alkaline ₱60)\n"
+        "- **'What are your water prices?'** (19L Purified Refill ₱30, 19L Set A with New Container ₱230)\n"
         "- **'What jug types do you have?'** (5-Gallon Slim & Round)\n"
         "- **'Where is my order?'** to track your delivery\n"
         "- **'Where is your store located?'** ($marketAddress)";

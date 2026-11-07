@@ -376,7 +376,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
       (p) => p['name'] == _selectedWaterType,
       orElse: () => orderProvider.waterProducts.first,
     );
-    final pricePerJug = match['price'] as double;
+    final pricePerJug = (match['price'] as num).toDouble();
     final waterTypeName = match['name'] as String;
     final submittedPaymentMethod = _selectedPaymentMethod;
 
@@ -1844,9 +1844,9 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Water Type Selection (Cards with Water Drop Icon)
+                // Product / Order Type Selection (Refill vs Set A)
                 const Text(
-                  'Select Water Type',
+                  'Select Product / Order Type',
                   style: TextStyle(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w800,
@@ -1857,9 +1857,10 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                 Column(
                   children: orderProvider.waterProducts.map((prod) {
                     final name = prod['name'] as String;
-                    final price = prod['price'] as double;
+                    final price = (prod['price'] as num).toDouble();
                     final desc = (prod['description'] as String?) ?? '';
                     final isSelected = _selectedWaterType == name;
+                    final isSetA = name.toLowerCase().contains('set a');
 
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 10),
@@ -1901,7 +1902,9 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Icon(
-                                  Icons.water_drop_rounded,
+                                  isSetA
+                                      ? Icons.inventory_2_rounded
+                                      : Icons.water_drop_rounded,
                                   color: isSelected
                                       ? Colors.white
                                       : AppTheme.primaryColor,

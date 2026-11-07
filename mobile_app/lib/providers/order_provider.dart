@@ -29,6 +29,18 @@ class OrderProvider extends ChangeNotifier {
       'description': 'Multi-stage filtered pure drinking water refill',
     },
     {
+      'id': 'prod_set_a',
+      'name': '19L Water + New Container (Set A)',
+      'category': 'water',
+      'unit': 'Sets',
+      'price': 230.0,
+      'stock': 0.0,
+      'capacity': 100.0,
+      'color': Color(0xFF0284C7),
+      'icon': Icons.inventory_2_rounded,
+      'description': 'Brand new 5-gallon jug filled with pure drinking water',
+    },
+    {
       'id': 'item_slim_gallon',
       'name': '5-Gallon Slim Container',
       'category': 'container',
@@ -441,11 +453,14 @@ class OrderProvider extends ChangeNotifier {
   }
 
   void deductProductStock(String name, int qty) {
-    // 1. Deduct water refill product (19L Purified Water)
+    final lowerName = name.toLowerCase();
+    // 1. Deduct water product stock
     final waterIdx = _inventoryItems.indexWhere(
       (p) =>
           p['category'] == 'water' &&
-          (p['name'] == name || name.toLowerCase().contains('purified')),
+          (p['name'] == name ||
+              (lowerName.contains('set a') && p['id'] == 'prod_set_a') ||
+              lowerName.contains('purified')),
     );
     if (waterIdx != -1) {
       final currentStock = (_inventoryItems[waterIdx]['stock'] as num).toDouble();
@@ -454,7 +469,6 @@ class OrderProvider extends ChangeNotifier {
     }
 
     // 2. Automatically deduct specific gallon container inventory (Slim or Round)
-    final lowerName = name.toLowerCase();
     if (lowerName.contains('slim')) {
       final slimIdx = _inventoryItems.indexWhere(
         (p) => p['id'] == 'item_slim_gallon' || p['name'].toString().toLowerCase().contains('slim'),
@@ -483,8 +497,14 @@ class OrderProvider extends ChangeNotifier {
       }
     }
 
-    // Also update container reserves
-    adjustContainerReserves(emptyChange: qty, refilledChange: -qty);
+    // Update container reserves:
+    // If selling a brand new container (Set A), customer does not return an empty container
+    final isNewContainerSale = lowerName.contains('set a') || lowerName.contains('new container');
+    if (isNewContainerSale) {
+      adjustContainerReserves(emptyChange: 0, refilledChange: -qty);
+    } else {
+      adjustContainerReserves(emptyChange: qty, refilledChange: -qty);
+    }
     notifyListeners();
     InventoryStorage.saveInventory(_inventoryItems);
   }
