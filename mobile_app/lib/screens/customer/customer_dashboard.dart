@@ -3327,222 +3327,247 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
 
   // TAB 4: AI SUPPORT DESK (Selection-type inquiry accordion & Logo-themed interface)
   Widget _buildAiSupportTab(bool isDark) {
-    final isSmall = MediaQuery.of(context).size.width < 600;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmall = screenWidth < 600;
 
     return Padding(
-      padding: EdgeInsets.all(isSmall ? 10.0 : 20.0),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFCBD5E1), width: 1.2),
-          boxShadow: [
-            BoxShadow(
-              color: AppTheme.navyColor.withValues(alpha: 0.08),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+      padding: EdgeInsets.all(isSmall ? 8.0 : 20.0),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final totalHeight = constraints.maxHeight;
+          // Dynamically scale max accordion height so it NEVER exceeds available view space
+          final maxAccordionHeight = totalHeight > 550
+              ? (isSmall ? 180.0 : 230.0)
+              : (totalHeight * 0.32).clamp(110.0, 160.0);
+
+          return Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFCBD5E1), width: 1.2),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.navyColor.withValues(alpha: 0.08),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Column(
-          children: [
-            // JJAASS Water Market Logo Brand Header
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [AppTheme.navyColor, AppTheme.primaryColor],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(15),
-                  topRight: Radius.circular(15),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white,
-                      border: Border.all(color: Colors.white, width: 2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          blurRadius: 5,
-                        ),
-                      ],
+            child: Column(
+              children: [
+                // JJAASS Water Market Logo Brand Header
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [AppTheme.navyColor, AppTheme.primaryColor],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    child: ClipOval(
-                      child: Image.asset(
-                        'assets/images/logo_icon.jpg',
-                        fit: BoxFit.cover,
-                        errorBuilder: (ctx, error, stackTrace) => const Icon(
-                          Icons.water_drop_rounded,
-                          color: AppTheme.primaryColor,
-                          size: 22,
-                        ),
-                      ),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(15),
+                      topRight: Radius.circular(15),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'AquaBot AI Assistant',
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 15,
-                            color: Colors.white,
-                            letterSpacing: 0.2,
-                          ),
-                        ),
-                        SizedBox(height: 2),
-                        Row(
-                          children: [
-                            DecoratedBox(
-                              decoration: BoxDecoration(
-                                color: Color(0xFF10B981),
-                                shape: BoxShape.circle,
-                              ),
-                              child: SizedBox(width: 7, height: 7),
-                            ),
-                            SizedBox(width: 5),
-                            Expanded(
-                              child: Text(
-                                'JJAASS Water Market • Online',
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Color(0xFFBAE6FD),
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white,
+                          border: Border.all(color: Colors.white, width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.2),
+                              blurRadius: 5,
                             ),
                           ],
                         ),
-                      ],
-                    ),
+                        child: ClipOval(
+                          child: Image.asset(
+                            'assets/images/logo_icon.jpg',
+                            fit: BoxFit.cover,
+                            errorBuilder: (ctx, error, stackTrace) => const Icon(
+                              Icons.water_drop_rounded,
+                              color: AppTheme.primaryColor,
+                              size: 22,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'AquaBot AI Assistant',
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 15,
+                                color: Colors.white,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Row(
+                              children: [
+                                DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    color: Color(0xFF10B981),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: SizedBox(width: 7, height: 7),
+                                ),
+                                SizedBox(width: 5),
+                                Expanded(
+                                  child: Text(
+                                    'JJAASS Water Market • Online',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Color(0xFFBAE6FD),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Reset Chat',
+                        icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 20),
+                        onPressed: () {
+                          setState(() {
+                            _chatMessages.clear();
+                            _chatMessages.add({
+                              'sender': 'AquaBot',
+                              'message':
+                                  "Hello! I'm **AquaBot 💧**, your JJAASS Water Market assistant.\n\nChoose any topic from the **Quick Inquiry Guide** above, or type your question below for instant detailed guidance!",
+                            });
+                          });
+                        },
+                      ),
+                    ],
                   ),
-                  IconButton(
-                    tooltip: 'Reset Chat',
-                    icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 20),
-                    onPressed: () {
-                      setState(() {
-                        _chatMessages.clear();
-                        _chatMessages.add({
-                          'sender': 'AquaBot',
-                          'message':
-                              "Hello! I'm **AquaBot 💧**, your JJAASS Water Market assistant.\n\nChoose any topic from the **Quick Inquiry Guide** above, or type your question below for instant detailed guidance!",
-                        });
-                      });
-                    },
-                  ),
-                ],
-              ),
-            ),
-
-            // Collapsible Quick Inquiry FAQ Accordion (Selection-Type Inquiries)
-            Container(
-              decoration: const BoxDecoration(
-                color: Color(0xFFF8FAFC),
-                border: Border(
-                  bottom: BorderSide(color: Color(0xFFE2E8F0)),
                 ),
-              ),
-              child: Theme(
-                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-                child: ExpansionTile(
-                  key: const PageStorageKey('ai_inquiry_accordion_main'),
-                  initiallyExpanded: false,
-                  tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
-                  childrenPadding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-                  leading: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.quiz_rounded,
-                      color: AppTheme.navyColor,
-                      size: 18,
-                    ),
-                  ),
-                  title: const Text(
-                    'Quick Inquiry Guide (FAQs)',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      color: AppTheme.navyColor,
-                    ),
-                  ),
-                  subtitle: const Text(
-                    'Tap to view 5 inquiry categories for instant answers',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                  children: [
-                    _buildInquiryCategoryTile(
-                      title: '💧 Products & Pricing',
-                      color: const Color(0xFF0284C7),
-                      questions: [
-                        'What is the difference between Refill (₱30) and Set A (₱230)?',
-                        'Should I choose 5-Gallon Slim or 5-Gallon Round?',
-                        'What are all your water products and prices?',
-                      ],
-                    ),
-                    _buildInquiryCategoryTile(
-                      title: '🚚 Live Orders & Tracking',
-                      color: const Color(0xFF1D63B8),
-                      questions: [
-                        'Where is my order / delivery right now?',
-                        'How does the permanent GPS location pin work?',
-                        'What is the maximum quantity of jugs per order?',
-                      ],
-                    ),
-                    _buildInquiryCategoryTile(
-                      title: '💳 Payment & Checkout',
-                      color: const Color(0xFF0F2B5C),
-                      questions: [
-                        'How do I pay using GCash (PayMongo)?',
-                        'What are the guidelines for Cash on Delivery (COD)?',
-                      ],
-                    ),
-                    _buildInquiryCategoryTile(
-                      title: '📍 Store Location & Hours',
-                      color: const Color(0xFF0369A1),
-                      questions: [
-                        'Where is JJAASS Water Market located and what are your store hours?',
-                        'What are the customer service hotlines?',
-                      ],
-                    ),
-                    _buildInquiryCategoryTile(
-                      title: '⭐ AquaLoyalty Points & Perks',
-                      color: const Color(0xFFD97706),
-                      questions: [
-                        'How do AquaLoyalty points work and how do I earn rewards?',
-                        'How many points do I currently have?',
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
 
-            // Scrollable Chat Message List with JJAASS Logo-Themed Bubbles
-            Expanded(
-              child: ListView.builder(
-                controller: _chatScrollController,
+                // Collapsible Quick Inquiry FAQ Accordion with Safe Bounded Height
+                Container(
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF8FAFC),
+                    border: Border(
+                      bottom: BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
+                  ),
+                  child: Theme(
+                    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                    child: ExpansionTile(
+                      key: const PageStorageKey('ai_inquiry_accordion_main'),
+                      initiallyExpanded: false,
+                      tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
+                      childrenPadding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+                      leading: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.quiz_rounded,
+                          color: AppTheme.navyColor,
+                          size: 18,
+                        ),
+                      ),
+                      title: const Text(
+                        'Quick Inquiry Guide (FAQs)',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.navyColor,
+                        ),
+                      ),
+                      subtitle: const Text(
+                        'Tap to browse 5 inquiry topics for instant answers',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                      children: [
+                        ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxHeight: maxAccordionHeight,
+                          ),
+                          child: Scrollbar(
+                            thumbVisibility: true,
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.only(right: 6),
+                              physics: const BouncingScrollPhysics(),
+                              child: Column(
+                                children: [
+                                  _buildInquiryCategoryTile(
+                                    title: '💧 Products & Pricing',
+                                    color: const Color(0xFF0284C7),
+                                    questions: [
+                                      'What is the difference between Refill (₱30) and Set A (₱230)?',
+                                      'Should I choose 5-Gallon Slim or 5-Gallon Round?',
+                                      'What are all your water products and prices?',
+                                    ],
+                                  ),
+                                  _buildInquiryCategoryTile(
+                                    title: '🚚 Live Orders & Tracking',
+                                    color: const Color(0xFF1D63B8),
+                                    questions: [
+                                      'Where is my order / delivery right now?',
+                                      'How does the permanent GPS location pin work?',
+                                      'What is the maximum quantity of jugs per order?',
+                                    ],
+                                  ),
+                                  _buildInquiryCategoryTile(
+                                    title: '💳 Payment & Checkout',
+                                    color: const Color(0xFF0F2B5C),
+                                    questions: [
+                                      'How do I pay using GCash (PayMongo)?',
+                                      'What are the guidelines for Cash on Delivery (COD)?',
+                                    ],
+                                  ),
+                                  _buildInquiryCategoryTile(
+                                    title: '📍 Store Location & Hours',
+                                    color: const Color(0xFF0369A1),
+                                    questions: [
+                                      'Where is JJAASS Water Market located and what are your store hours?',
+                                      'What are the customer service hotlines?',
+                                    ],
+                                  ),
+                                  _buildInquiryCategoryTile(
+                                    title: '⭐ AquaLoyalty Points & Perks',
+                                    color: const Color(0xFFD97706),
+                                    questions: [
+                                      'How do AquaLoyalty points work and how do I earn rewards?',
+                                      'How many points do I currently have?',
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Scrollable Chat Message List with JJAASS Logo-Themed Bubbles
+                Expanded(
+                  child: ListView.builder(
+                    controller: _chatScrollController,
                 padding: const EdgeInsets.all(14.0),
                 itemCount: _chatMessages.length,
                 itemBuilder: (context, index) {
@@ -3731,9 +3756,11 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
             ),
           ],
         ),
-      ),
-    );
-  }
+      );
+    },
+  ),
+);
+}
 
   Widget _buildInquiryCategoryTile({
     required String title,
