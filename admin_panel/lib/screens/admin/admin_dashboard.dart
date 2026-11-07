@@ -583,6 +583,324 @@ class _AdminDashboardState extends State<AdminDashboard> {
     Navigator.of(context).pushReplacementNamed(AppRoutes.login);
   }
 
+  // Create Customer or Driver Account Directly from Admin Panel without public sign-up
+  void _showCreateUserDialog(bool isDark) {
+    UserRole selectedRole = UserRole.customer;
+    final nameController = TextEditingController();
+    final emailController = TextEditingController();
+    final passwordController = TextEditingController(text: 'Pass1234!');
+    final phoneController = TextEditingController();
+    final addressController = TextEditingController();
+    bool isSubmitting = false;
+    bool obscurePassword = true;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final isDriver = selectedRole == UserRole.driver;
+            final activeColor = isDriver ? AppTheme.secondaryColor : const Color(0xFF10B981);
+
+            return AlertDialog(
+              backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: activeColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      isDriver ? Icons.local_shipping_rounded : Icons.person_add_rounded,
+                      color: activeColor,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isDriver ? 'Create Driver Account' : 'Create Customer Account',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : const Color(0xFF1E293B),
+                          ),
+                        ),
+                        Text(
+                          'Direct account creation (no self sign-up required)',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDark ? Colors.white70 : Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: 460,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Role Selector Buttons
+                      const Text(
+                        'Select Account Role',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(10),
+                              onTap: () => setDialogState(() => selectedRole = UserRole.customer),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                                decoration: BoxDecoration(
+                                  color: selectedRole == UserRole.customer
+                                      ? const Color(0xFF10B981).withValues(alpha: 0.12)
+                                      : (isDark ? Colors.white10 : Colors.grey.shade100),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: selectedRole == UserRole.customer
+                                        ? const Color(0xFF10B981)
+                                        : Colors.transparent,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.person_rounded,
+                                      size: 18,
+                                      color: selectedRole == UserRole.customer ? const Color(0xFF10B981) : Colors.grey,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Customer',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: selectedRole == UserRole.customer ? const Color(0xFF10B981) : Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(10),
+                              onTap: () => setDialogState(() => selectedRole = UserRole.driver),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                                decoration: BoxDecoration(
+                                  color: selectedRole == UserRole.driver
+                                      ? AppTheme.secondaryColor.withValues(alpha: 0.12)
+                                      : (isDark ? Colors.white10 : Colors.grey.shade100),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: selectedRole == UserRole.driver
+                                        ? AppTheme.secondaryColor
+                                        : Colors.transparent,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.local_shipping_rounded,
+                                      size: 18,
+                                      color: selectedRole == UserRole.driver ? AppTheme.secondaryColor : Colors.grey,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Driver',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: selectedRole == UserRole.driver ? AppTheme.secondaryColor : Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Full Name
+                      TextField(
+                        controller: nameController,
+                        textCapitalization: TextCapitalization.words,
+                        decoration: InputDecoration(
+                          labelText: 'Full Name *',
+                          hintText: selectedRole == UserRole.driver ? 'e.g. Juan Perez (Driver)' : 'e.g. Maria Santos',
+                          prefixIcon: const Icon(Icons.badge_outlined),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Email Address
+                      TextField(
+                        controller: emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: const InputDecoration(
+                          labelText: 'Email Address *',
+                          hintText: 'e.g. user@example.com',
+                          prefixIcon: Icon(Icons.email_outlined),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Initial Password
+                      TextField(
+                        controller: passwordController,
+                        obscureText: obscurePassword,
+                        decoration: InputDecoration(
+                          labelText: 'Initial Login Password *',
+                          prefixIcon: const Icon(Icons.lock_outline_rounded),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                              size: 20,
+                            ),
+                            onPressed: () => setDialogState(() => obscurePassword = !obscurePassword),
+                          ),
+                          helperText: 'Password for login (at least 6 characters)',
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Phone Number
+                      TextField(
+                        controller: phoneController,
+                        keyboardType: TextInputType.phone,
+                        decoration: const InputDecoration(
+                          labelText: 'Phone Number (Optional)',
+                          hintText: 'e.g. 09171234567',
+                          prefixIcon: Icon(Icons.phone_outlined),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Address / Fleet Station
+                      TextField(
+                        controller: addressController,
+                        decoration: InputDecoration(
+                          labelText: selectedRole == UserRole.driver
+                              ? 'Assigned Area / Vehicle Details (Optional)'
+                              : 'Delivery Address (Optional)',
+                          hintText: selectedRole == UserRole.driver
+                              ? 'e.g. Sector B - Motorcycle (Plate #1234)'
+                              : 'e.g. Block 5 Lot 12, Sunrise Village',
+                          prefixIcon: Icon(selectedRole == UserRole.driver ? Icons.two_wheeler_rounded : Icons.location_on_outlined),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSubmitting ? null : () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton.icon(
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          final name = nameController.text.trim();
+                          final email = emailController.text.trim();
+                          final password = passwordController.text.trim();
+                          final phone = phoneController.text.trim();
+                          final address = addressController.text.trim();
+
+                          if (name.isEmpty) {
+                            Helpers.showSnackBar(context, 'Please enter a full name.', isError: true);
+                            return;
+                          }
+                          if (email.isEmpty || !email.contains('@')) {
+                            Helpers.showSnackBar(context, 'Please enter a valid email address.', isError: true);
+                            return;
+                          }
+                          if (password.length < 6) {
+                            Helpers.showSnackBar(context, 'Password must be at least 6 characters long.', isError: true);
+                            return;
+                          }
+
+                          setDialogState(() => isSubmitting = true);
+
+                          try {
+                            final newUser = await _apiService.createUserAccount(
+                              name: name,
+                              email: email,
+                              role: selectedRole,
+                              password: password,
+                              phone: phone.isNotEmpty ? phone : null,
+                              address: address.isNotEmpty ? address : null,
+                            );
+
+                            if (mounted) {
+                              Navigator.of(context).pop();
+                              if (newUser != null) {
+                                Helpers.showSnackBar(
+                                  context,
+                                  '${newUser.roleDisplayName} "${newUser.name}" created successfully without needing to sign up!',
+                                );
+                                await _loadAllDashboardData();
+                              } else {
+                                Helpers.showSnackBar(context, 'Failed to create user account.', isError: true);
+                              }
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              setDialogState(() => isSubmitting = false);
+                              Helpers.showSnackBar(context, 'Error creating account: $e', isError: true);
+                            }
+                          }
+                        },
+                  icon: isSubmitting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.check_rounded, size: 16),
+                  label: Text(
+                    isSubmitting
+                        ? 'Creating Account...'
+                        : 'Create ${selectedRole == UserRole.driver ? 'Driver' : 'Customer'}',
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: activeColor,
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
@@ -4620,11 +4938,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
           }
           final users = snapshot.data ?? [];
           if (users.isEmpty) {
-            return const Center(
-              child: Text(
-                'No registered user accounts found.\nNew sign-ups will automatically appear here.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey, height: 1.4),
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.people_outline, size: 54, color: Colors.grey),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'No registered user accounts found.\nYou can create customer or driver accounts directly without waiting for sign-ups.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey, height: 1.4),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () => _showCreateUserDialog(isDark),
+                    icon: const Icon(Icons.person_add_rounded, size: 16),
+                    label: const Text('Create Account'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
               ),
             );
           }
@@ -4680,6 +5015,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 tooltip: 'Refresh user database',
                 icon: const Icon(Icons.refresh_rounded),
                 onPressed: _loadAllDashboardData,
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton.icon(
+                onPressed: () => _showCreateUserDialog(isDark),
+                icon: const Icon(Icons.person_add_rounded, size: 16),
+                label: const Text(
+                  'Create Account',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
               ),
             ],
           ),
@@ -4825,55 +5174,103 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           subtitle: Text(
                             '${cust.email} • Role: $roleLabel',
                           ),
-                          trailing: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.end,
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(
-                                'ID: ${cust.id}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 11,
-                                ),
-                              ),
-                              const SizedBox(height: 5),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: roleBgColor,
-                                  borderRadius: BorderRadius.circular(5),
-                                  border: Border.all(
-                                    color: roleColor.withValues(alpha: 0.35),
-                                    width: 1,
+                              Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    'ID: ${cust.id}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 11,
+                                    ),
                                   ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      width: 6,
-                                      height: 6,
-                                      decoration: BoxDecoration(
-                                        color: roleColor,
-                                        shape: BoxShape.circle,
+                                  const SizedBox(height: 5),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: roleBgColor,
+                                      borderRadius: BorderRadius.circular(5),
+                                      border: Border.all(
+                                        color: roleColor.withValues(alpha: 0.35),
+                                        width: 1,
                                       ),
                                     ),
-                                    const SizedBox(width: 5),
-                                    Text(
-                                      roleLabel,
-                                      style: TextStyle(
-                                        color: roleColor,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 0.3,
-                                      ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Container(
+                                          width: 6,
+                                          height: 6,
+                                          decoration: BoxDecoration(
+                                            color: roleColor,
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 5),
+                                        Text(
+                                          roleLabel,
+                                          style: TextStyle(
+                                            color: roleColor,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 0.3,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
+                              const SizedBox(width: 8),
+                              if (cust.role == UserRole.admin)
+                                const Tooltip(
+                                  message: 'Admin account (Protected)',
+                                  child: Padding(
+                                    padding: EdgeInsets.all(8.0),
+                                    child: Icon(Icons.lock_rounded, size: 16, color: Color(0xFF94A3B8)),
+                                  ),
+                                )
+                              else
+                                PopupMenuButton<UserRole>(
+                                  icon: const Icon(Icons.more_vert_rounded, size: 20),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  onSelected: (newRole) => _handleUpdateRole(cust, newRole),
+                                  itemBuilder: (context) {
+                                    final assignableRoles = [UserRole.customer, UserRole.driver];
+                                    return assignableRoles.map((role) {
+                                      final isCurrent = cust.role == role;
+                                      return PopupMenuItem<UserRole>(
+                                        value: role,
+                                        enabled: !isCurrent,
+                                        child: Row(
+                                          children: [
+                                            Icon(_getRoleIcon(role), size: 16, color: _getRoleColor(role)),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              'Set to ${Helpers.capitalize(role.name)}',
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
+                                                color: isCurrent ? Colors.grey : null,
+                                              ),
+                                            ),
+                                            if (isCurrent) ...[
+                                              const SizedBox(width: 6),
+                                              const Icon(Icons.check_rounded, size: 14, color: Colors.green),
+                                            ],
+                                          ],
+                                        ),
+                                      );
+                                    }).toList();
+                                  },
+                                ),
                             ],
                           ),
                         ),
@@ -9290,6 +9687,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       ),
                     ],
                   ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton.icon(
+                onPressed: () => _showCreateUserDialog(isDark),
+                icon: const Icon(Icons.person_add_rounded, size: 16),
+                label: const Text(
+                  'Create Account',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
               ),
             ],

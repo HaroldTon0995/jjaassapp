@@ -139,4 +139,73 @@ class ApiService {
     }
     return false;
   }
+
+  // Create a new Customer or Driver account directly from Admin Panel without public sign-up
+  Future<UserModel?> createUserAccount({
+    required String name,
+    required String email,
+    required UserRole role,
+    String? password,
+    String? phone,
+    String? address,
+  }) async {
+    if (role == UserRole.admin) {
+      throw Exception('Admin accounts cannot be created from this form.');
+    }
+
+    final newId = 'usr_${DateTime.now().millisecondsSinceEpoch}';
+    String assignedId = newId;
+
+    if (isSupabaseConfigured) {
+      try {
+        if (password != null && password.isNotEmpty) {
+          try {
+            final tempClient = SupabaseClient(
+              AppConstants.supabaseUrl,
+              AppConstants.supabaseAnonKey,
+              authFlowType: AuthFlowType.implicit,
+            );
+            final authRes = await tempClient.auth.signUp(
+              email: email.trim(),
+              password: password.trim(),
+              data: {
+                'name': name.trim(),
+                'role': role.name,
+                if (phone != null && phone.isNotEmpty) 'phone': phone.trim(),
+                if (address != null && address.isNotEmpty) 'address': address.trim(),
+              },
+            );
+            if (authRes.user != null) {
+              assignedId = authRes.user!.id;
+            }
+          } catch (authError) {
+            debugPrint('Direct user auth signup warning: $authError');
+          }
+        }
+
+        final client = Supabase.instance.client;
+        await client.from('profiles').upsert({
+          'id': assignedId,
+          'name': name.trim(),
+          'email': email.trim(),
+          'role': role.name,
+          if (phone != null && phone.isNotEmpty) 'phone': phone.trim(),
+          if (address != null && address.isNotEmpty) 'address': address.trim(),
+          'created_at': DateTime.now().toIso8601String(),
+        });
+      } catch (e) {
+        debugPrint('Supabase profiles create error: $e');
+      }
+    }
+
+    final newUser = UserModel(
+      id: assignedId,
+      name: name.trim(),
+      email: email.trim(),
+      role: role,
+    );
+
+    _registeredUsersList.insert(0, newUser);
+    return newUser;
+  }
 }
