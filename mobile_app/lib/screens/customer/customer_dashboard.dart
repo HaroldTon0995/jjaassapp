@@ -1192,8 +1192,10 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
         )
         .toList();
 
+    final isSmall = MediaQuery.of(context).size.width < 600;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20.0),
+      padding: EdgeInsets.all(isSmall ? 12.0 : 20.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1817,8 +1819,13 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   // TAB 1: ORDER WATER FORM
   Widget _buildOrderWaterTab(bool isDark) {
     final orderProvider = Provider.of<OrderProvider>(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+    final screenPadding = isMobile ? 12.0 : 24.0;
+    final cardPadding = isMobile ? 14.0 : 24.0;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
+      padding: EdgeInsets.all(screenPadding),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1830,9 +1837,9 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
               color: AppTheme.navyColor,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           Container(
-            padding: const EdgeInsets.all(24.0),
+            padding: EdgeInsets.all(cardPadding),
             decoration: CustomerDecorations.card(isDark: isDark),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1866,8 +1873,8 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 180),
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 12,
+                            horizontal: 10,
+                            vertical: 10,
                           ),
                           decoration: BoxDecoration(
                             color: isSelected
@@ -1884,42 +1891,44 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                           child: Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.all(10),
+                                padding: const EdgeInsets.all(7),
                                 decoration: BoxDecoration(
                                   color: isSelected
                                       ? AppTheme.navyColor
                                       : AppTheme.primaryColor.withValues(
                                           alpha: 0.12,
                                         ),
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Icon(
                                   Icons.water_drop_rounded,
                                   color: isSelected
                                       ? Colors.white
                                       : AppTheme.primaryColor,
-                                  size: 22,
+                                  size: 19,
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 8),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
                                       name,
                                       style: const TextStyle(
-                                        fontSize: 14,
+                                        fontSize: 13.5,
                                         fontWeight: FontWeight.w800,
                                         color: AppTheme.navyColor,
                                       ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                     if (desc.isNotEmpty) ...[
-                                      const SizedBox(height: 2),
+                                      const SizedBox(height: 1),
                                       Text(
                                         desc,
                                         style: const TextStyle(
-                                          fontSize: 11.5,
+                                          fontSize: 11,
                                           fontWeight: FontWeight.w500,
                                           color: Color(0xFF475569),
                                         ),
@@ -1930,24 +1939,29 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                                   ],
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '₱${price.toStringAsFixed(2)}',
-                                style: const TextStyle(
-                                  fontSize: 14.5,
-                                  fontWeight: FontWeight.w900,
-                                  color: AppTheme.navyColor,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Icon(
-                                isSelected
-                                    ? Icons.check_circle_rounded
-                                    : Icons.radio_button_unchecked_rounded,
-                                color: isSelected
-                                    ? AppTheme.navyColor
-                                    : const Color(0xFF94A3B8),
-                                size: 22,
+                              const SizedBox(width: 6),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '₱${price.toStringAsFixed(2)}',
+                                    style: const TextStyle(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w900,
+                                      color: AppTheme.navyColor,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Icon(
+                                    isSelected
+                                        ? Icons.check_circle_rounded
+                                        : Icons.radio_button_unchecked_rounded,
+                                    color: isSelected
+                                        ? AppTheme.navyColor
+                                        : const Color(0xFF94A3B8),
+                                    size: 19,
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -1959,8 +1973,11 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                 const SizedBox(height: 14),
 
                 // Jug Type Selection with Dedicated Quantities
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 4,
                   children: [
                     const Text(
                       'Select Jug Types & Quantity',
@@ -1970,58 +1987,71 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                         color: AppTheme.navyColor,
                       ),
                     ),
-                    Text(
-                      'Max: 20 jugs total',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDark ? Colors.white70 : const Color(0xFF64748B),
-                        fontWeight: FontWeight.w600,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'Max: 20 jugs total',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          color: AppTheme.navyColor,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 10),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: _buildJugTypeOptionCard(
-                        title: '5-Gallon Slim',
-                        subtitle: 'Faucet & Handle',
-                        imageAsset: 'assets/images/slim_container.jpg',
-                        quantity: _slimQuantity,
-                        onDecrement: () {
-                          if (_slimQuantity > 0) {
-                            setState(() => _slimQuantity--);
-                          }
-                        },
-                        onIncrement: () {
-                          if (_totalOrderQuantity < 20) {
-                            setState(() => _slimQuantity++);
-                          }
-                        },
+                SizedBox(
+                  height: 205,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    children: [
+                      SizedBox(
+                        width: isMobile ? 150.0 : 180.0,
+                        child: _buildJugTypeOptionCard(
+                          title: '5-Gallon Slim',
+                          subtitle: 'Faucet & Handle',
+                          imageAsset: 'assets/images/slim_container.jpg',
+                          quantity: _slimQuantity,
+                          onDecrement: () {
+                            if (_slimQuantity > 0) {
+                              setState(() => _slimQuantity--);
+                            }
+                          },
+                          onIncrement: () {
+                            if (_totalOrderQuantity < 20) {
+                              setState(() => _slimQuantity++);
+                            }
+                          },
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildJugTypeOptionCard(
-                        title: '5-Gallon Round',
-                        subtitle: 'For Dispenser',
-                        imageAsset: 'assets/images/round_container.jpg',
-                        quantity: _roundQuantity,
-                        onDecrement: () {
-                          if (_roundQuantity > 0) {
-                            setState(() => _roundQuantity--);
-                          }
-                        },
-                        onIncrement: () {
-                          if (_totalOrderQuantity < 20) {
-                            setState(() => _roundQuantity++);
-                          }
-                        },
+                      const SizedBox(width: 10),
+                      SizedBox(
+                        width: isMobile ? 150.0 : 180.0,
+                        child: _buildJugTypeOptionCard(
+                          title: '5-Gallon Round',
+                          subtitle: 'For Dispenser',
+                          imageAsset: 'assets/images/round_container.jpg',
+                          quantity: _roundQuantity,
+                          onDecrement: () {
+                            if (_roundQuantity > 0) {
+                              setState(() => _roundQuantity--);
+                            }
+                          },
+                          onIncrement: () {
+                            if (_totalOrderQuantity < 20) {
+                              setState(() => _roundQuantity++);
+                            }
+                          },
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 14),
 
@@ -2084,8 +2114,11 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                 const SizedBox(height: 20),
 
                 // Delivery Location Section
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 4,
                   children: [
                     const Text(
                       'Delivery Location',
@@ -2125,7 +2158,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                 // Primary Address Summary Badge (when Pinned)
                 if (_pinnedLocation != null) ...[
                   Container(
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF0FDF4),
                       borderRadius: BorderRadius.circular(12),
@@ -2137,7 +2170,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                         Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(8),
+                              padding: const EdgeInsets.all(7),
                               decoration: BoxDecoration(
                                 color: const Color(0xFF22C55E).withValues(alpha: 0.15),
                                 shape: BoxShape.circle,
@@ -2145,34 +2178,38 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                               child: const Icon(
                                 Icons.location_on_rounded,
                                 color: Color(0xFF16A34A),
-                                size: 22,
+                                size: 20,
                               ),
                             ),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: 10),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   const Text(
                                     'Exact GPS Location Pinned',
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 13.5,
+                                      fontSize: 13,
                                       color: Color(0xFF15803D),
                                     ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
                                     'Pin: ${_pinnedLocation!.latitude.toStringAsFixed(6)}, ${_pinnedLocation!.longitude.toStringAsFixed(6)}',
                                     style: const TextStyle(
-                                      fontSize: 11.5,
+                                      fontSize: 11,
                                       fontWeight: FontWeight.w600,
                                       color: Color(0xFF166534),
                                     ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ),
                             ),
+                            const SizedBox(width: 6),
                             ElevatedButton.icon(
                               onPressed: () async {
                                 final result = await LocationPickerModal.show(
@@ -2589,28 +2626,29 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     final isSelected = quantity > 0;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: isSelected
             ? AppTheme.primaryColor.withValues(alpha: 0.08)
             : const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isSelected ? AppTheme.navyColor : const Color(0xFFCBD5E1),
-          width: isSelected ? 2.0 : 1.2,
+          width: isSelected ? 1.8 : 1.0,
         ),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Stack(
             children: [
               Container(
                 width: double.infinity,
-                height: 105,
-                padding: const EdgeInsets.all(8),
+                height: 80,
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: const Color(0xFFE2E8F0),
                     width: 1,
@@ -2619,19 +2657,19 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                 child: Image.asset(imageAsset, fit: BoxFit.contain),
               ),
               Positioned(
-                top: 6,
-                right: 6,
+                top: 4,
+                right: 4,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                   decoration: BoxDecoration(
                     color: isSelected ? AppTheme.navyColor : Colors.grey.shade400,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    isSelected ? '$quantity Selected' : '0',
+                    isSelected ? '$quantity' : '0',
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 10,
+                      fontSize: 9.5,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -2639,37 +2677,41 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             title,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: FontWeight.w800,
               color: AppTheme.navyColor,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 1),
           Text(
             subtitle,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              fontSize: 10.5,
+              fontSize: 9.5,
               fontWeight: FontWeight.w600,
               color: Color(0xFF475569),
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
 
           // Stepper Quantity Row for this Jug Type
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
             decoration: BoxDecoration(
               color: isSelected ? Colors.white : const Color(0xFFF1F5F9),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color: isSelected ? AppTheme.navyColor : const Color(0xFFCBD5E1),
-                width: 1.2,
+                width: 1.0,
               ),
             ),
             child: Row(
@@ -2679,10 +2721,10 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                   onTap: quantity > 0 ? onDecrement : null,
                   borderRadius: BorderRadius.circular(6),
                   child: Padding(
-                    padding: const EdgeInsets.all(4.0),
+                    padding: const EdgeInsets.all(2.0),
                     child: Icon(
                       Icons.remove_circle_outline,
-                      size: 22,
+                      size: 20,
                       color: quantity > 0 ? AppTheme.navyColor : Colors.grey.shade400,
                     ),
                   ),
@@ -2690,7 +2732,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                 Text(
                   '$quantity',
                   style: TextStyle(
-                    fontSize: 15,
+                    fontSize: 14,
                     fontWeight: FontWeight.w900,
                     color: isSelected ? AppTheme.navyColor : const Color(0xFF64748B),
                   ),
@@ -2699,10 +2741,10 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                   onTap: _totalOrderQuantity < 20 ? onIncrement : null,
                   borderRadius: BorderRadius.circular(6),
                   child: const Padding(
-                    padding: EdgeInsets.all(4.0),
+                    padding: EdgeInsets.all(2.0),
                     child: Icon(
                       Icons.add_circle_outline,
-                      size: 22,
+                      size: 20,
                       color: AppTheme.navyColor,
                     ),
                   ),
@@ -2737,13 +2779,18 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
         )
         .toList();
 
+    final isSmall = MediaQuery.of(context).size.width < 600;
+
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: EdgeInsets.all(isSmall ? 12.0 : 24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 6,
             children: [
               const Text(
                 'Track Deliveries',
@@ -2763,6 +2810,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                     ),
                   ),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(
                         Icons.account_balance_wallet_rounded,
@@ -3123,8 +3171,10 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     final user = auth.currentUser;
     final myOrders = orderProvider.getCustomerOrders(user?.id ?? '');
 
+    final isSmall = MediaQuery.of(context).size.width < 600;
+
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: EdgeInsets.all(isSmall ? 12.0 : 24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -3274,8 +3324,10 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   // TAB 4: POINTS & REWARDS STORE
   // TAB 4: AI SUPPORT DESK (Full chat interface)
   Widget _buildAiSupportTab(bool isDark) {
+    final isSmall = MediaQuery.of(context).size.width < 600;
+
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: EdgeInsets.all(isSmall ? 12.0 : 24.0),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -3400,8 +3452,10 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
 
   // TAB 6: SETTINGS
   Widget _buildSettingsTab(bool isDark) {
+    final isSmall = MediaQuery.of(context).size.width < 600;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
+      padding: EdgeInsets.all(isSmall ? 12.0 : 24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

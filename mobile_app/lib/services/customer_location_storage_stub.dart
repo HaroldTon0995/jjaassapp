@@ -13,3 +13,4 @@ class LocationStoragePlatform {
     _mem.remove(key);
   }
 }
+

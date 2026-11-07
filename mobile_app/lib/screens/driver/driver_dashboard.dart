@@ -1401,6 +1401,13 @@ class _DriverDashboardState extends State<DriverDashboard> {
     );
     final otherJobs = activeJobs.where((o) => o.id != focusedJob.id).toList();
 
+    final cleanFocusId = focusedJob.id.startsWith('#')
+        ? focusedJob.id.substring(1)
+        : focusedJob.id;
+    final shortFocusId = cleanFocusId.length > 7
+        ? '${cleanFocusId.substring(0, 7)}...'
+        : cleanFocusId;
+
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -1425,14 +1432,16 @@ class _DriverDashboardState extends State<DriverDashboard> {
               ),
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: const Color(0xFF10B981).withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: const Color(0xFF10B981)),
                 ),
                 child: Text(
-                  'Focus: #${focusedJob.id.length > 8 ? '${focusedJob.id.substring(0, 8)}...' : focusedJob.id}',
+                  'Focus: #$shortFocusId',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Color(0xFF047857),
                     fontWeight: FontWeight.bold,

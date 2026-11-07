@@ -34,3 +34,4 @@ class LocationStoragePlatform {
     } catch (_) {}
   }
 }
+
