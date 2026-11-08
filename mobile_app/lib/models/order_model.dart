@@ -65,6 +65,10 @@ class OrderModel {
   final double? latitude;
   final double? longitude;
   final String? deliveryNote; // Customer's delivery preference / note
+  final bool isBorrowingContainers;
+  final int? borrowedSlimCount;
+  final int? borrowedRoundCount;
+  final bool isCollectionJob;
 
   OrderModel({
     required this.id,
@@ -88,6 +92,10 @@ class OrderModel {
     this.latitude,
     this.longitude,
     this.deliveryNote,
+    this.isBorrowingContainers = false,
+    this.borrowedSlimCount,
+    this.borrowedRoundCount,
+    this.isCollectionJob = false,
   });
 
   String get formattedTotal => '₱${totalAmount.toStringAsFixed(2)}';
@@ -123,6 +131,10 @@ class OrderModel {
       'latitude': latitude,
       'longitude': longitude,
       'deliveryNote': deliveryNote,
+      'isBorrowingContainers': isBorrowingContainers,
+      'borrowedSlimCount': borrowedSlimCount,
+      'borrowedRoundCount': borrowedRoundCount,
+      'isCollectionJob': isCollectionJob,
     };
   }
 
@@ -155,6 +167,10 @@ class OrderModel {
           ? (json['longitude'] as num).toDouble()
           : null,
       deliveryNote: json['deliveryNote'] as String?,
+      isBorrowingContainers: json['isBorrowingContainers'] == true || json['is_borrowing_containers'] == true,
+      borrowedSlimCount: (json['borrowedSlimCount'] ?? json['borrowed_slim_count'] as num?)?.toInt(),
+      borrowedRoundCount: (json['borrowedRoundCount'] ?? json['borrowed_round_count'] as num?)?.toInt(),
+      isCollectionJob: json['isCollectionJob'] == true || json['is_collection_job'] == true,
     );
   }
 }

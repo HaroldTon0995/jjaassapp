@@ -323,9 +323,9 @@ class AiSupportService {
         query.contains('limit') ||
         query.contains('how many jugs')) {
       return "📦 **Order Quantity & Limits**\n\n"
-          "• **Maximum Per Delivery Trip**: Up to **20 jugs total** per order (Slim and Round combined).\n"
-          "• **Why 20 Jugs?**: Ensures driver safety, motorcycle stability, and timely turnaround across Tabaco City.\n"
-          "• **Need More Than 20 Jugs?**: If your business, canteen, or event requires 30, 50, or 100+ jugs, simply submit multiple orders and our dispatch console will assign multiple delivery riders simultaneously!";
+          "• **Maximum Per Item**: Up to **150 jugs/items each** per order (e.g., up to 150 Slim, 150 Round, and 150 per accessory, capped by available inventory stock).\n"
+          "• **Bulk Orders (>20 Jugs)**: For large volume orders exceeding 20 jugs, our dispatch console automatically coordinates multi-rider batches or dedicated delivery vehicles for seamless turnaround across Tabaco City.\n"
+          "• **Quick Quantity Input**: You can tap any quantity number in the Order Water tab to directly type large numbers (like 25, 50, 100, or 150) instantly!";
     }
 
     // 6. Water Types comparison (Purified vs Alkaline vs Mineral)
@@ -459,23 +459,6 @@ class AiSupportService {
       }).join('\n');
       return "💧 **JJAASS Water Market Price List**\n\n$list\n\n"
           "Available in **5-Gallon Slim** (with faucet) or **5-Gallon Round** (dispenser) jugs!";
-    }
-
-    if (query.contains('point') ||
-        query.contains('reward') ||
-        query.contains('coupon') ||
-        query.contains('loyalty') ||
-        query.contains('aqualoyalty')) {
-      final pts = orderProvider.getCustomerRewardPoints(userId);
-      return "⭐ **AquaLoyalty Rewards Program Details**\n\n"
-          "• **Your Current Balance**: **$pts points**\n"
-          "• **How You Earn**: Earn **+10 points** automatically for each 5-gallon jug delivered.\n\n"
-          "🎁 **Reward Milestones & Perks**:\n"
-          "  • **50 Points**: Free jug deep sanitization & nozzle inspection\n"
-          "  • **100 Points**: 1 Free 19L Purified Refill voucher\n"
-          "  • **250 Points**: 50% discount on Set A brand new container\n"
-          "  • **500 Points**: Free USB rechargeable electric dispenser pump!\n\n"
-          "💡 **Tip**: Points never expire! They accumulate automatically with every completed delivery to your account.";
     }
 
     if (query.contains('gcash') || query.contains('paymongo')) {

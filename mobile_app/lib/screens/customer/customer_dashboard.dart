@@ -42,6 +42,25 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
 
   int get _totalOrderQuantity => _slimQuantity + _roundQuantity;
 
+  // Selected Add-ons & Accessories Map (itemId -> quantity)
+  final Map<String, int> _selectedAddonQuantities = {};
+
+  double _calculateAddonsTotal(OrderProvider orderProvider) {
+    double total = 0.0;
+    _selectedAddonQuantities.forEach((itemId, qty) {
+      if (qty > 0) {
+        final item = orderProvider.inventoryItems.firstWhere(
+          (i) => i['id'] == itemId,
+          orElse: () => <String, dynamic>{},
+        );
+        if (item.isNotEmpty) {
+          total += ((item['price'] as num?)?.toDouble() ?? 0.0) * qty;
+        }
+      }
+    });
+    return total;
+  }
+
   String get _jugSelectionSummary {
     if (_slimQuantity > 0 && _roundQuantity > 0) {
       return '$_slimQuantity Slim, $_roundQuantity Round';
@@ -178,7 +197,11 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     });
 
     try {
-      await _apiService.getCustomerDashboardData();
+      final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+      await Future.wait([
+        _apiService.getCustomerDashboardData(),
+        orderProvider.fetchSupabaseInventory(silent: true),
+      ]);
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -316,6 +339,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
         : '19L Purified Water';
     _slimQuantity = 1;
     _roundQuantity = 0;
+    _selectedAddonQuantities.clear();
     _selectedProvince = null;
     _selectedCityCode = null;
     _selectedBarangayCode = null;
@@ -362,10 +386,11 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
       }
     }
 
-    if (_totalOrderQuantity < 1) {
+    final totalStationItemsCount = _selectedAddonQuantities.values.fold<int>(0, (sum, count) => sum + count);
+    if (_totalOrderQuantity < 1 && totalStationItemsCount < 1) {
       Helpers.showSnackBar(
         context,
-        'Please select at least 1 container (Slim or Round).',
+        'Please select at least 1 container (Slim or Round) or station item to order.',
         isError: true,
       );
       return;
@@ -375,12 +400,62 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
     final user = auth.currentUser;
 
-    final match = orderProvider.waterProducts.firstWhere(
-      (p) => p['name'] == _selectedWaterType,
-      orElse: () => orderProvider.waterProducts.first,
-    );
-    final pricePerJug = (match['price'] as num).toDouble();
-    final waterTypeName = match['name'] as String;
+    double pricePerJug = 0.0;
+    String waterTypeName = '';
+
+    if (_totalOrderQuantity > 0) {
+      if (orderProvider.waterProducts.isEmpty) {
+        Helpers.showSnackBar(
+          context,
+          'No water products currently available for ordering.',
+          isError: true,
+        );
+        return;
+      }
+
+      final match = orderProvider.waterProducts.firstWhere(
+        (p) => p['name'] == _selectedWaterType,
+        orElse: () => <String, dynamic>{},
+      );
+      if (match.isEmpty) {
+        Helpers.showSnackBar(
+          context,
+          'Please select a valid water product.',
+          isError: true,
+        );
+        return;
+      }
+      final availableStock = (match['stock'] as num?)?.toDouble() ?? 0.0;
+      if (availableStock <= 0) {
+        Helpers.showSnackBar(
+          context,
+          'The selected product is currently out of stock. Please select another water product.',
+          isError: true,
+        );
+        return;
+      }
+      if (_totalOrderQuantity > availableStock) {
+        Helpers.showSnackBar(
+          context,
+          'Only ${availableStock.toInt()} units of ${match['name']} available in stock.',
+          isError: true,
+        );
+        return;
+      }
+
+      if (_slimQuantity > 150 || _roundQuantity > 150) {
+        Helpers.showSnackBar(
+          context,
+          'Maximum allowed order is 150 units per item type.',
+          isError: true,
+        );
+        return;
+      }
+
+      pricePerJug = (match['price'] as num).toDouble();
+      waterTypeName = match['name'] as String;
+    }
+
     final submittedPaymentMethod = _selectedPaymentMethod;
 
     final customerName = _savedProfileName.isNotEmpty
@@ -390,18 +465,44 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
         ? _savedProfilePhone
         : '+63 912 345 6789';
 
-    final jugDescription = _slimQuantity > 0 && _roundQuantity > 0
-        ? '($_slimQuantity Slim, $_roundQuantity Round)'
-        : (_slimQuantity > 0 ? '($_slimQuantity Slim)' : '($_roundQuantity Round)');
+    final jugDescription = _totalOrderQuantity > 0
+        ? (_slimQuantity > 0 && _roundQuantity > 0
+            ? '($_slimQuantity Slim, $_roundQuantity Round)'
+            : (_slimQuantity > 0 ? '($_slimQuantity Slim)' : '($_roundQuantity Round)'))
+        : '';
+
+    final itemNames = <String>[];
+    _selectedAddonQuantities.forEach((id, qty) {
+      if (qty > 0) {
+        final item = orderProvider.inventoryItems.firstWhere((i) => i['id'] == id, orElse: () => {});
+        if (item.isNotEmpty) {
+          itemNames.add('$qty x ${item['name']}');
+        }
+      }
+    });
+
+    String orderTitle;
+    if (_totalOrderQuantity > 0 && itemNames.isNotEmpty) {
+      orderTitle = '$waterTypeName $jugDescription + ${itemNames.join(', ')}';
+    } else if (_totalOrderQuantity > 0) {
+      orderTitle = '$waterTypeName $jugDescription';
+    } else {
+      orderTitle = itemNames.join(', ');
+    }
+
+    final addonsTotal = _calculateAddonsTotal(orderProvider);
+    final grandTotal = (_totalOrderQuantity * pricePerJug) + addonsTotal;
 
     final newOrder = await orderProvider.placeOrder(
       customerId: user?.id ?? '',
       customerName: customerName,
       customerPhone: customerPhone,
       deliveryAddress: _composeAddress(),
-      waterType: '$waterTypeName $jugDescription',
-      quantity: _totalOrderQuantity,
-      pricePerUnit: pricePerJug,
+      waterType: orderTitle,
+      quantity: _totalOrderQuantity > 0 ? _totalOrderQuantity : totalStationItemsCount,
+      pricePerUnit: _totalOrderQuantity > 0 ? pricePerJug : (totalStationItemsCount > 0 ? (grandTotal / totalStationItemsCount) : 0.0),
+      customTotalAmount: grandTotal,
+      addonItems: Map.from(_selectedAddonQuantities),
       paymentMethod: submittedPaymentMethod,
       deliveryNote: _deliveryNoteController.text.trim(),
       latitude: _pinnedLocation?.latitude,
@@ -1847,7 +1948,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Product / Order Type Selection (Refill vs Set A)
+                // Product / Order Type Selection (Refill vs Set A / Admin-added items)
                 const Text(
                   'Select Product / Order Type',
                   style: TextStyle(
@@ -1857,125 +1958,250 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                Column(
-                  children: orderProvider.waterProducts.map((prod) {
-                    final name = prod['name'] as String;
-                    final price = (prod['price'] as num).toDouble();
-                    final desc = (prod['description'] as String?) ?? '';
-                    final isSelected = _selectedWaterType == name;
-                    final isSetA = name.toLowerCase().contains('set a');
-
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: InkWell(
-                        onTap: () {
-                          setState(() {
-                            _selectedWaterType = name;
-                          });
-                        },
-                        borderRadius: BorderRadius.circular(14),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? AppTheme.primaryColor.withValues(alpha: 0.08)
-                                : const Color(0xFFF8FAFC),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: isSelected
-                                  ? AppTheme.navyColor
-                                  : const Color(0xFFCBD5E1),
-                              width: isSelected ? 2.0 : 1.2,
+                if (orderProvider.waterProducts.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    margin: const EdgeInsets.only(bottom: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.amber.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.info_outline_rounded, color: Colors.amber, size: 20),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'No water products currently available for ordering. Please check back shortly.',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF78350F),
                             ),
                           ),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(7),
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? AppTheme.navyColor
-                                      : AppTheme.primaryColor.withValues(
-                                          alpha: 0.12,
-                                        ),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Icon(
-                                  isSetA
-                                      ? Icons.inventory_2_rounded
-                                      : Icons.water_drop_rounded,
-                                  color: isSelected
-                                      ? Colors.white
-                                      : AppTheme.primaryColor,
-                                  size: 19,
-                                ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  Builder(
+                    builder: (context) {
+                      final waterList = orderProvider.refillProducts.isNotEmpty
+                          ? orderProvider.refillProducts
+                          : orderProvider.waterProducts;
+                      if (!waterList.any((p) => p['name'] == _selectedWaterType)) {
+                        final previousName = _selectedWaterType;
+                        final firstValid = waterList.firstWhere(
+                          (p) => ((p['stock'] as num?)?.toDouble() ?? 0.0) > 0,
+                          orElse: () => waterList.first,
+                        );
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted && _selectedWaterType != firstValid['name']) {
+                            setState(() {
+                              _selectedWaterType = firstValid['name'] as String;
+                            });
+                            if (previousName.isNotEmpty) {
+                              Helpers.showSnackBar(
+                                context,
+                                'The selected water product was updated as "$previousName" is no longer available.',
+                              );
+                            }
+                          }
+                        });
+                      }
+
+                      return Column(
+                        children: waterList.map((prod) {
+                      final name = prod['name'] as String;
+                      final price = (prod['price'] as num).toDouble();
+                      final desc = (prod['description'] as String?) ?? '';
+                      final stock = (prod['stock'] as num?)?.toDouble() ?? 0.0;
+                      final isOutOfStock = stock <= 0;
+                      final isSelected = _selectedWaterType == name && !isOutOfStock;
+                      final isSetA = name.toLowerCase().contains('set a');
+                      final Color prodColor =
+                          prod['color'] as Color? ?? (isSetA ? const Color(0xFF0284C7) : AppTheme.primaryColor);
+                      final IconData prodIcon =
+                          prod['icon'] as IconData? ?? (isSetA ? Icons.inventory_2_rounded : Icons.water_drop_rounded);
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: InkWell(
+                          onTap: isOutOfStock
+                              ? null
+                              : () {
+                                  setState(() {
+                                    _selectedWaterType = name;
+                                  });
+                                },
+                          borderRadius: BorderRadius.circular(14),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isOutOfStock
+                                  ? const Color(0xFFF1F5F9).withValues(alpha: 0.7)
+                                  : (isSelected
+                                      ? AppTheme.primaryColor.withValues(alpha: 0.08)
+                                      : const Color(0xFFF8FAFC)),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: isOutOfStock
+                                    ? Colors.red.withValues(alpha: 0.25)
+                                    : (isSelected
+                                        ? AppTheme.navyColor
+                                        : const Color(0xFFCBD5E1)),
+                                width: isSelected ? 2.0 : 1.2,
                               ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(7),
+                                  decoration: BoxDecoration(
+                                    color: isOutOfStock
+                                        ? Colors.grey.withValues(alpha: 0.2)
+                                        : (isSelected
+                                            ? AppTheme.navyColor
+                                            : prodColor.withValues(alpha: 0.12)),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Icon(
+                                    prodIcon,
+                                    color: isOutOfStock
+                                        ? Colors.grey
+                                        : (isSelected ? Colors.white : prodColor),
+                                    size: 19,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              name,
+                                              style: TextStyle(
+                                                fontSize: 13.5,
+                                                fontWeight: FontWeight.w800,
+                                                color: isOutOfStock
+                                                    ? const Color(0xFF94A3B8)
+                                                    : AppTheme.navyColor,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          if (isOutOfStock)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 6,
+                                                vertical: 2,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.red.withValues(alpha: 0.1),
+                                                borderRadius: BorderRadius.circular(4),
+                                                border: Border.all(
+                                                  color: Colors.red.withValues(alpha: 0.3),
+                                                  width: 0.8,
+                                                ),
+                                              ),
+                                              child: const Text(
+                                                'Out of Stock',
+                                                style: TextStyle(
+                                                  fontSize: 9.5,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.red,
+                                                ),
+                                              ),
+                                            )
+                                          else if (stock <= 5 && stock > 0)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 6,
+                                                vertical: 2,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.orange.withValues(alpha: 0.1),
+                                                borderRadius: BorderRadius.circular(4),
+                                              ),
+                                              child: Text(
+                                                'Only ${stock.toInt()} left',
+                                                style: const TextStyle(
+                                                  fontSize: 9.5,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.orange,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                      if (desc.isNotEmpty) ...[
+                                        const SizedBox(height: 1),
+                                        Text(
+                                          desc,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w500,
+                                            color: isOutOfStock
+                                                ? const Color(0xFF94A3B8)
+                                                : const Color(0xFF475569),
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
-                                      name,
-                                      style: const TextStyle(
+                                      '₱${price.toStringAsFixed(2)}',
+                                      style: TextStyle(
                                         fontSize: 13.5,
-                                        fontWeight: FontWeight.w800,
-                                        color: AppTheme.navyColor,
+                                        fontWeight: FontWeight.w900,
+                                        color: isOutOfStock
+                                            ? const Color(0xFF94A3B8)
+                                            : AppTheme.navyColor,
                                       ),
-                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    if (desc.isNotEmpty) ...[
-                                      const SizedBox(height: 1),
-                                      Text(
-                                        desc,
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w500,
-                                          color: Color(0xFF475569),
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ],
+                                    const SizedBox(width: 4),
+                                    Icon(
+                                      isOutOfStock
+                                          ? Icons.block_rounded
+                                          : (isSelected
+                                              ? Icons.check_circle_rounded
+                                              : Icons.radio_button_unchecked_rounded),
+                                      color: isOutOfStock
+                                          ? Colors.red.shade300
+                                          : (isSelected
+                                              ? AppTheme.navyColor
+                                              : const Color(0xFF94A3B8)),
+                                      size: 19,
+                                    ),
                                   ],
                                 ),
-                              ),
-                              const SizedBox(width: 6),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    '₱${price.toStringAsFixed(2)}',
-                                    style: const TextStyle(
-                                      fontSize: 13.5,
-                                      fontWeight: FontWeight.w900,
-                                      color: AppTheme.navyColor,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Icon(
-                                    isSelected
-                                        ? Icons.check_circle_rounded
-                                        : Icons.radio_button_unchecked_rounded,
-                                    color: isSelected
-                                        ? AppTheme.navyColor
-                                        : const Color(0xFF94A3B8),
-                                    size: 19,
-                                  ),
-                                ],
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  }).toList(),
-                ),
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
                 const SizedBox(height: 14),
 
                 // Jug Type Selection with Dedicated Quantities
@@ -2000,7 +2226,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: const Text(
-                        'Max: 20 jugs total',
+                        'Max: 150 per item',
                         style: TextStyle(
                           fontSize: 10.5,
                           color: AppTheme.navyColor,
@@ -2011,55 +2237,336 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                   ],
                 ),
                 const SizedBox(height: 10),
-                SizedBox(
-                  height: 205,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
-                    children: [
-                      SizedBox(
-                        width: isMobile ? 150.0 : 180.0,
-                        child: _buildJugTypeOptionCard(
-                          title: '5-Gallon Slim',
-                          subtitle: 'Faucet & Handle',
-                          imageAsset: 'assets/images/slim_container.jpg',
-                          quantity: _slimQuantity,
-                          onDecrement: () {
-                            if (_slimQuantity > 0) {
-                              setState(() => _slimQuantity--);
-                            }
-                          },
-                          onIncrement: () {
-                            if (_totalOrderQuantity < 20) {
-                              setState(() => _slimQuantity++);
-                            }
-                          },
-                        ),
+                Builder(
+                  builder: (context) {
+                    final slimItem = orderProvider.inventoryItems.firstWhere(
+                      (i) => i['id'] == 'item_slim_gallon' || i['name'].toString().toLowerCase().contains('slim'),
+                      orElse: () => {'stock': 150.0},
+                    );
+                    final slimStock = (slimItem['stock'] as num?)?.toInt() ?? 150;
+                    final maxSlim = min(150, slimStock > 0 ? slimStock : 150);
+
+                    final roundItem = orderProvider.inventoryItems.firstWhere(
+                      (i) => i['id'] == 'item_round_gallon' || i['name'].toString().toLowerCase().contains('round'),
+                      orElse: () => {'stock': 150.0},
+                    );
+                    final roundStock = (roundItem['stock'] as num?)?.toInt() ?? 150;
+                    final maxRound = min(150, roundStock > 0 ? roundStock : 150);
+
+                    return SizedBox(
+                      height: 205,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        children: [
+                          SizedBox(
+                            width: isMobile ? 150.0 : 180.0,
+                            child: _buildJugTypeOptionCard(
+                              title: '5-Gallon Slim',
+                              subtitle: 'Faucet & Handle',
+                              imageAsset: 'assets/images/slim_container.jpg',
+                              quantity: _slimQuantity,
+                              maxLimit: maxSlim,
+                              onDecrement: () {
+                                if (_slimQuantity > 0) {
+                                  setState(() => _slimQuantity--);
+                                }
+                              },
+                              onIncrement: () {
+                                if (_slimQuantity < maxSlim) {
+                                  setState(() => _slimQuantity++);
+                                }
+                              },
+                              onSetQuantity: (val) {
+                                setState(() => _slimQuantity = val);
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          SizedBox(
+                            width: isMobile ? 150.0 : 180.0,
+                            child: _buildJugTypeOptionCard(
+                              title: '5-Gallon Round',
+                              subtitle: 'For Dispenser',
+                              imageAsset: 'assets/images/round_container.jpg',
+                              quantity: _roundQuantity,
+                              maxLimit: maxRound,
+                              onDecrement: () {
+                                if (_roundQuantity > 0) {
+                                  setState(() => _roundQuantity--);
+                                }
+                              },
+                              onIncrement: () {
+                                if (_roundQuantity < maxRound) {
+                                  setState(() => _roundQuantity++);
+                                }
+                              },
+                              onSetQuantity: (val) {
+                                setState(() => _roundQuantity = val);
+                              },
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 10),
-                      SizedBox(
-                        width: isMobile ? 150.0 : 180.0,
-                        child: _buildJugTypeOptionCard(
-                          title: '5-Gallon Round',
-                          subtitle: 'For Dispenser',
-                          imageAsset: 'assets/images/round_container.jpg',
-                          quantity: _roundQuantity,
-                          onDecrement: () {
-                            if (_roundQuantity > 0) {
-                              setState(() => _roundQuantity--);
-                            }
-                          },
-                          onIncrement: () {
-                            if (_totalOrderQuantity < 20) {
-                              setState(() => _roundQuantity++);
-                            }
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 14),
+
+                // Station Products & Items added by Admin in Inventory
+                Builder(
+                  builder: (context) {
+                    final stationItems = orderProvider.standaloneProducts;
+
+                    // Prune any deleted addon items from active cart selections
+                    final validStationIds = stationItems.map((i) => i['id']?.toString() ?? '').toSet();
+                    final staleAddons = _selectedAddonQuantities.keys
+                        .where((id) => !validStationIds.contains(id) && (_selectedAddonQuantities[id] ?? 0) > 0)
+                        .toList();
+                    if (staleAddons.isNotEmpty) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          setState(() {
+                            for (final id in staleAddons) {
+                              _selectedAddonQuantities.remove(id);
+                            }
+                          });
+                        }
+                      });
+                    }
+
+                    if (stationItems.isEmpty) return const SizedBox.shrink();
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Wrap(
+                          alignment: WrapAlignment.spaceBetween,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: [
+                            const Text(
+                              'Station Products & Items',
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.navyColor,
+                              ),
+                            ),
+                            Text(
+                              '${stationItems.length} available to order',
+                              style: const TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF64748B),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          height: 138,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            physics: const BouncingScrollPhysics(),
+                            itemCount: stationItems.length,
+                            separatorBuilder: (_, _) => const SizedBox(width: 10),
+                            itemBuilder: (context, idx) {
+                              final item = stationItems[idx];
+                              final id = item['id'] as String;
+                              final name = item['name'] as String;
+                              final price = (item['price'] as num?)?.toDouble() ?? 0.0;
+                              final stock = (item['stock'] as num?)?.toDouble() ?? 0.0;
+                              final isOut = stock <= 0;
+                              final qty = _selectedAddonQuantities[id] ?? 0;
+                              final isSelected = qty > 0;
+                              final Color color = item['color'] as Color? ?? Colors.teal;
+                              final IconData icon = item['icon'] as IconData? ?? Icons.inventory_2_rounded;
+
+                              return Container(
+                                width: 165,
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? AppTheme.primaryColor.withValues(alpha: 0.06)
+                                      : (isOut ? const Color(0xFFF1F5F9) : const Color(0xFFF8FAFC)),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? AppTheme.navyColor
+                                        : (isOut ? Colors.red.withValues(alpha: 0.2) : const Color(0xFFCBD5E1)),
+                                    width: isSelected ? 1.8 : 1.0,
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(6),
+                                          decoration: BoxDecoration(
+                                            color: color.withValues(alpha: 0.12),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Icon(icon, color: color, size: 16),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            '₱${price.toStringAsFixed(price.truncateToDouble() == price ? 0 : 2)}',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w900,
+                                              fontSize: 13,
+                                              color: AppTheme.navyColor,
+                                            ),
+                                          ),
+                                        ),
+                                        if (isOut)
+                                          const Text(
+                                            'Out',
+                                            style: TextStyle(
+                                              fontSize: 9.5,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.red,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: isOut ? const Color(0xFF94A3B8) : AppTheme.navyColor,
+                                      ),
+                                    ),
+                                    Text(
+                                      isOut ? 'Out of Stock' : '${stock.toInt()} in stock',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: isOut ? Colors.red : const Color(0xFF64748B),
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    if (isOut)
+                                      const Center(
+                                        child: Text(
+                                          'Unavailable',
+                                          style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold),
+                                        ),
+                                      )
+                                    else
+                                      Builder(
+                                        builder: (context) {
+                                          final maxAddon = min(150, stock.toInt());
+                                          return Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              InkWell(
+                                                onTap: qty > 0
+                                                    ? () {
+                                                        setState(() {
+                                                          if (qty == 1) {
+                                                            _selectedAddonQuantities.remove(id);
+                                                          } else {
+                                                            _selectedAddonQuantities[id] = qty - 1;
+                                                          }
+                                                        });
+                                                      }
+                                                    : null,
+                                                borderRadius: BorderRadius.circular(6),
+                                                child: Container(
+                                                  width: 26,
+                                                  height: 26,
+                                                  decoration: BoxDecoration(
+                                                    color: qty > 0 ? const Color(0xFFE2E8F0) : const Color(0xFFF1F5F9),
+                                                    borderRadius: BorderRadius.circular(6),
+                                                  ),
+                                                  child: Icon(
+                                                    Icons.remove_rounded,
+                                                    size: 14,
+                                                    color: qty > 0 ? AppTheme.navyColor : Colors.grey,
+                                                  ),
+                                                ),
+                                              ),
+                                              InkWell(
+                                                onTap: () => _showQuantityInputDialog(
+                                                  context: context,
+                                                  itemName: name,
+                                                  currentQuantity: qty,
+                                                  maxLimit: maxAddon,
+                                                  onQuantityChanged: (newVal) {
+                                                    setState(() {
+                                                      if (newVal <= 0) {
+                                                        _selectedAddonQuantities.remove(id);
+                                                      } else {
+                                                        _selectedAddonQuantities[id] = newVal;
+                                                      }
+                                                    });
+                                                  },
+                                                ),
+                                                borderRadius: BorderRadius.circular(4),
+                                                child: Tooltip(
+                                                  message: 'Tap to type custom quantity (up to $maxAddon)',
+                                                  child: Padding(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                                    child: Text(
+                                                      '$qty',
+                                                      style: TextStyle(
+                                                        fontSize: 12.5,
+                                                        fontWeight: FontWeight.bold,
+                                                        color: qty > 0 ? AppTheme.navyColor : Colors.grey.shade600,
+                                                        decoration: TextDecoration.underline,
+                                                        decorationStyle: TextDecorationStyle.dotted,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              InkWell(
+                                                onTap: qty < maxAddon
+                                                    ? () {
+                                                        setState(() {
+                                                          _selectedAddonQuantities[id] = qty + 1;
+                                                        });
+                                                      }
+                                                    : null,
+                                                borderRadius: BorderRadius.circular(6),
+                                                child: Container(
+                                                  width: 26,
+                                                  height: 26,
+                                                  decoration: BoxDecoration(
+                                                    color: qty < maxAddon ? AppTheme.navyColor : Colors.grey.shade300,
+                                                    borderRadius: BorderRadius.circular(6),
+                                                  ),
+                                                  child: Icon(
+                                                    Icons.add_rounded,
+                                                    size: 14,
+                                                    color: qty < maxAddon ? Colors.white : Colors.grey.shade500,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
+                    );
+                  },
+                ),
 
                 // Simple Total Badge
                 Builder(
@@ -2071,49 +2578,90 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                           : {'price': 35.0},
                     );
                     final pricePerJug = (match['price'] as num?)?.toDouble() ?? 35.0;
-                    final totalCost = _totalOrderQuantity * pricePerJug;
+                    final waterTotal = _totalOrderQuantity * pricePerJug;
+                    final addonsTotal = _calculateAddonsTotal(orderProvider);
+                    final grandTotal = waterTotal + addonsTotal;
+                    final totalStationItemsCount = _selectedAddonQuantities.values.fold<int>(0, (sum, count) => sum + count);
+                    final hasValidOrder = _totalOrderQuantity > 0 || totalStationItemsCount > 0;
 
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: _totalOrderQuantity > 0
-                            ? AppTheme.primaryColor.withValues(alpha: 0.08)
-                            : const Color(0xFFFEF2F2),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: _totalOrderQuantity > 0
-                              ? AppTheme.primaryColor.withValues(alpha: 0.3)
-                              : const Color(0xFFFCA5A5),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            _totalOrderQuantity > 0
-                                ? Icons.shopping_bag_outlined
-                                : Icons.warning_amber_rounded,
-                            size: 20,
-                            color: _totalOrderQuantity > 0
-                                ? AppTheme.navyColor
-                                : Colors.red.shade700,
+                    String summaryText;
+                    if (_totalOrderQuantity > 0 && totalStationItemsCount > 0) {
+                      summaryText = 'Total: $_totalOrderQuantity ${_totalOrderQuantity == 1 ? 'jug' : 'jugs'} ($_jugSelectionSummary) + $totalStationItemsCount ${totalStationItemsCount == 1 ? 'item' : 'items'} • ₱${grandTotal.toStringAsFixed(2)}';
+                    } else if (_totalOrderQuantity > 0) {
+                      summaryText = 'Total: $_totalOrderQuantity ${_totalOrderQuantity == 1 ? 'jug' : 'jugs'} ($_jugSelectionSummary) • ₱${grandTotal.toStringAsFixed(2)}';
+                    } else if (totalStationItemsCount > 0) {
+                      summaryText = 'Total: $totalStationItemsCount ${totalStationItemsCount == 1 ? 'item' : 'items'} • ₱${grandTotal.toStringAsFixed(2)}';
+                    } else {
+                      summaryText = 'Please select at least 1 jug or station item to order';
+                    }
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: hasValidOrder
+                                ? AppTheme.primaryColor.withValues(alpha: 0.08)
+                                : const Color(0xFFFEF2F2),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: hasValidOrder
+                                  ? AppTheme.primaryColor.withValues(alpha: 0.3)
+                                  : const Color(0xFFFCA5A5),
+                            ),
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              _totalOrderQuantity > 0
-                                  ? 'Total: $_totalOrderQuantity ${_totalOrderQuantity == 1 ? 'jug' : 'jugs'} ($_jugSelectionSummary) • ₱${totalCost.toStringAsFixed(2)}'
-                                  : 'Please select at least 1 jug above (Slim or Round)',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: _totalOrderQuantity > 0
+                          child: Row(
+                            children: [
+                              Icon(
+                                hasValidOrder
+                                    ? Icons.shopping_bag_outlined
+                                    : Icons.warning_amber_rounded,
+                                size: 20,
+                                color: hasValidOrder
                                     ? AppTheme.navyColor
                                     : Colors.red.shade700,
                               ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  summaryText,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: hasValidOrder
+                                        ? AppTheme.navyColor
+                                        : Colors.red.shade700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (_totalOrderQuantity > 20) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFBFDBFE)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.local_shipping_rounded, color: Color(0xFF1D4ED8), size: 18),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    '🚚 Bulk Order ($_totalOrderQuantity jugs): Multi-rider dispatch or batch delivery will be assigned automatically.',
+                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF1E40AF)),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
-                      ),
+                      ],
                     );
                   },
                 ),
@@ -2621,13 +3169,118 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     );
   }
 
+  // Quick Dialog to type quantity directly for high volume (up to 150)
+  void _showQuantityInputDialog({
+    required BuildContext context,
+    required String itemName,
+    required int currentQuantity,
+    required int maxLimit,
+    required ValueChanged<int> onQuantityChanged,
+  }) {
+    final controller = TextEditingController(text: currentQuantity > 0 ? '$currentQuantity' : '');
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.edit_note_rounded, color: AppTheme.primaryColor, size: 22),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Set Quantity',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.navyColor),
+                  ),
+                  Text(
+                    itemName,
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Enter quantity (1 to $maxLimit):',
+              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              autofocus: true,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.navyColor),
+              decoration: InputDecoration(
+                hintText: 'e.g. 5, 25, 50, $maxLimit',
+                prefixIcon: const Icon(Icons.numbers_rounded),
+                suffixText: 'units',
+                helperText: 'Max allowable: $maxLimit units per item',
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              children: [1, 5, 10, 25, 50, 100, 150]
+                  .where((preset) => preset <= maxLimit)
+                  .map((preset) => ActionChip(
+                        label: Text('+$preset', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                        onPressed: () {
+                          controller.text = '$preset';
+                        },
+                      ))
+                  .toList(),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final val = int.tryParse(controller.text.trim()) ?? 0;
+              final safeVal = val.clamp(0, maxLimit);
+              onQuantityChanged(safeVal);
+              Navigator.of(ctx).pop();
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor),
+            child: const Text('Set Quantity', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildJugTypeOptionCard({
     required String title,
     required String subtitle,
     required String imageAsset,
     required int quantity,
+    required int maxLimit,
     required VoidCallback onDecrement,
     required VoidCallback onIncrement,
+    required ValueChanged<int> onSetQuantity,
   }) {
     final isSelected = quantity > 0;
     return AnimatedContainer(
@@ -2709,7 +3362,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
           ),
           const SizedBox(height: 8),
 
-          // Stepper Quantity Row for this Jug Type
+          // Stepper Quantity Row for this Jug Type (Supports Direct Tap-to-Type)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
             decoration: BoxDecoration(
@@ -2735,23 +3388,41 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                     ),
                   ),
                 ),
-                Text(
-                  '$quantity',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                    color: isSelected ? AppTheme.navyColor : const Color(0xFF64748B),
+                InkWell(
+                  onTap: () => _showQuantityInputDialog(
+                    context: context,
+                    itemName: title,
+                    currentQuantity: quantity,
+                    maxLimit: maxLimit,
+                    onQuantityChanged: onSetQuantity,
+                  ),
+                  borderRadius: BorderRadius.circular(4),
+                  child: Tooltip(
+                    message: 'Tap to type custom quantity (up to $maxLimit)',
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      child: Text(
+                        '$quantity',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          color: isSelected ? AppTheme.navyColor : const Color(0xFF64748B),
+                          decoration: TextDecoration.underline,
+                          decorationStyle: TextDecorationStyle.dotted,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
                 InkWell(
-                  onTap: _totalOrderQuantity < 20 ? onIncrement : null,
+                  onTap: quantity < maxLimit ? onIncrement : null,
                   borderRadius: BorderRadius.circular(6),
-                  child: const Padding(
-                    padding: EdgeInsets.all(2.0),
+                  child: Padding(
+                    padding: const EdgeInsets.all(2.0),
                     child: Icon(
                       Icons.add_circle_outline,
                       size: 20,
-                      color: AppTheme.navyColor,
+                      color: quantity < maxLimit ? AppTheme.navyColor : Colors.grey.shade400,
                     ),
                   ),
                 ),
@@ -3495,7 +4166,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                         ),
                       ),
                       subtitle: const Text(
-                        'Tap to browse 5 inquiry topics for instant answers',
+                        'Tap to browse 4 inquiry topics for instant answers',
                         style: TextStyle(
                           fontSize: 11,
                           color: Color(0xFF64748B),
@@ -3548,14 +4219,6 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                                     questions: [
                                       'Where is JJAASS Water Market located and what are your store hours?',
                                       'What are the customer service hotlines?',
-                                    ],
-                                  ),
-                                  _buildInquiryCategoryTile(
-                                    title: '⭐ AquaLoyalty Points & Perks',
-                                    color: const Color(0xFFD97706),
-                                    questions: [
-                                      'How do AquaLoyalty points work and how do I earn rewards?',
-                                      'How many points do I currently have?',
                                     ],
                                   ),
                                 ],

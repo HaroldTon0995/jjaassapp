@@ -10,8 +10,38 @@ import '../services/inventory_storage.dart';
 class OrderProvider extends ChangeNotifier {
   final List<OrderModel> _orders = [];
   final Map<String, double> _driverCashedOutEarnings = {};
+  final Set<String> _deletedProductIds = {};
   bool _isLoading = false;
   Timer? _pollingTimer;
+
+  Set<String> get deletedProductIds => Set.unmodifiable(_deletedProductIds);
+
+  // Helpers for category visual styling
+  static Color defaultColorForCategory(String category) {
+    switch (category) {
+      case 'water':
+        return Colors.blue;
+      case 'container':
+        return Colors.indigo;
+      case 'accessory':
+        return Colors.amber;
+      default:
+        return Colors.blueGrey;
+    }
+  }
+
+  static IconData defaultIconForCategory(String category) {
+    switch (category) {
+      case 'water':
+        return Icons.water_drop_rounded;
+      case 'container':
+        return Icons.local_drink_rounded;
+      case 'accessory':
+        return Icons.inventory_2_rounded;
+      default:
+        return Icons.inventory_2_rounded;
+    }
+  }
 
   // Shared dynamic inventory items catalog (Water Refills, Containers & Bottles, Accessories)
   // Clean initialization: stocks start at 0.0 until configured by the Admin or loaded from storage.
@@ -22,11 +52,13 @@ class OrderProvider extends ChangeNotifier {
       'category': 'water',
       'unit': 'Gallons',
       'price': 30.0,
-      'stock': 0.0,
+      'stock': 100.0,
       'capacity': 100.0,
       'color': Colors.blue,
       'icon': Icons.water_drop_rounded,
       'description': 'Multi-stage filtered pure drinking water refill',
+      'is_refill': true,
+      'is_active': true,
     },
     {
       'id': 'prod_set_a',
@@ -34,11 +66,13 @@ class OrderProvider extends ChangeNotifier {
       'category': 'water',
       'unit': 'Sets',
       'price': 230.0,
-      'stock': 0.0,
-      'capacity': 100.0,
+      'stock': 30.0,
+      'capacity': 50.0,
       'color': Color(0xFF0284C7),
       'icon': Icons.inventory_2_rounded,
       'description': 'Brand new 5-gallon jug filled with pure drinking water',
+      'is_refill': true,
+      'is_active': true,
     },
     {
       'id': 'item_slim_gallon',
@@ -52,6 +86,8 @@ class OrderProvider extends ChangeNotifier {
       'icon': Icons.local_drink_rounded,
       'image': 'assets/images/slim_container.jpg',
       'description': 'BPA-free durable slim poly-carbonate gallon jug',
+      'is_refill': false,
+      'is_active': true,
     },
     {
       'id': 'item_round_gallon',
@@ -65,47 +101,13 @@ class OrderProvider extends ChangeNotifier {
       'icon': Icons.crop_portrait_rounded,
       'image': 'assets/images/round_container.jpg',
       'description': 'Heavy-duty standard round water bottle',
-    },
-    {
-      'id': 'item_electric_pump',
-      'name': 'Rechargeable Electric Water Pump',
-      'category': 'accessory',
-      'unit': 'Pieces',
-      'price': 350.0,
-      'stock': 0.0,
-      'capacity': 50.0,
-      'color': Colors.amber,
-      'icon': Icons.power_rounded,
-      'description': 'USB rechargeable automatic dispenser pump',
-    },
-    {
-      'id': 'item_manual_pump',
-      'name': 'Manual Hand Press Water Pump',
-      'category': 'accessory',
-      'unit': 'Pieces',
-      'price': 120.0,
-      'stock': 0.0,
-      'capacity': 50.0,
-      'color': Colors.orange,
-      'icon': Icons.touch_app_rounded,
-      'description': 'Instant vacuum suction manual hand pump',
-    },
-    {
-      'id': 'item_dispenser_caps',
-      'name': '5-Gallon Non-Spill Caps (5-pack)',
-      'category': 'accessory',
-      'unit': 'Packs',
-      'price': 60.0,
-      'stock': 0.0,
-      'capacity': 100.0,
-      'color': Colors.green,
-      'icon': Icons.adjust_rounded,
-      'description': 'Leak-proof anti-splash silicone replacement caps',
+      'is_refill': false,
+      'is_active': true,
     },
   ];
 
-  int _emptyContainerStocks = 0;
-  int _refilledContainerStocks = 0;
+  int _emptyContainerStocks = 50;
+  int _refilledContainerStocks = 50;
 
   int get emptyContainerStocks => _emptyContainerStocks;
   int get refilledContainerStocks => _refilledContainerStocks;
@@ -167,18 +169,46 @@ class OrderProvider extends ChangeNotifier {
         _syncInventoryToSupabase(_inventoryItems[idx], action: 'update');
       }
     }
-    if (emptyReserves != null) _emptyContainerStocks = max(0, emptyReserves);
-    if (refilledReserves != null) _refilledContainerStocks = max(0, refilledReserves);
 
     notifyListeners();
     InventoryStorage.saveInventory(_inventoryItems);
-    InventoryStorage.saveReserves(_emptyContainerStocks, _refilledContainerStocks);
   }
 
   List<Map<String, dynamic>> get inventoryItems => _inventoryItems;
 
-  List<Map<String, dynamic>> get waterProducts =>
-      _inventoryItems.where((i) => i['category'] == 'water').toList();
+  List<Map<String, dynamic>> get refillProducts =>
+      _inventoryItems.where((i) {
+        final active = (i['is_active'] ?? true) == true;
+        final isRefill = i['is_refill'] == true ||
+            (i['category'] == 'water' &&
+                (i['unit']?.toString().toLowerCase() == 'gallons' ||
+                    i['name'].toString().toLowerCase().contains('refill') ||
+                    i['name'].toString().toLowerCase().contains('19l')));
+        return active && isRefill;
+      }).toList();
+
+  List<Map<String, dynamic>> get standaloneProducts =>
+      _inventoryItems.where((i) {
+        final active = (i['is_active'] ?? true) == true;
+        final id = i['id']?.toString() ?? '';
+        final name = (i['name']?.toString() ?? '').toLowerCase();
+        final isCoreJug = id == 'item_slim_gallon' ||
+            id == 'item_round_gallon' ||
+            name == '5-gallon slim container' ||
+            name == '5-gallon round container';
+        final isRefill = i['is_refill'] == true ||
+            (i['category'] == 'water' &&
+                (i['unit']?.toString().toLowerCase() == 'gallons' ||
+                    i['name'].toString().toLowerCase().contains('refill') ||
+                    i['name'].toString().toLowerCase().contains('19l')));
+        return active && !isCoreJug && !isRefill;
+      }).toList();
+
+  List<Map<String, dynamic>> get waterProducts {
+    final refills = refillProducts;
+    if (refills.isNotEmpty) return refills;
+    return _inventoryItems.where((i) => i['category'] == 'water' && (i['is_active'] ?? true) == true).toList();
+  }
 
   void addInventoryItem({
     required String name,
@@ -190,7 +220,14 @@ class OrderProvider extends ChangeNotifier {
     required Color color,
     required IconData icon,
     String description = '',
+    bool isActive = true,
+    bool isRefill = false,
   }) {
+    final bool calculatedIsRefill = isRefill ||
+        (category == 'water' &&
+            (unit.toLowerCase() == 'gallons' ||
+                name.toLowerCase().contains('refill') ||
+                name.toLowerCase().contains('19l')));
     final newItem = {
       'id': 'item_${DateTime.now().millisecondsSinceEpoch}',
       'name': name,
@@ -202,7 +239,11 @@ class OrderProvider extends ChangeNotifier {
       'color': color,
       'icon': icon,
       'description': description,
+      'is_refill': calculatedIsRefill,
+      'is_active': isActive,
     };
+    _deletedProductIds.remove(newItem['id']);
+    InventoryStorage.saveDeletedProductIds(_deletedProductIds);
     _inventoryItems.add(newItem);
     notifyListeners();
     InventoryStorage.saveInventory(_inventoryItems);
@@ -217,6 +258,8 @@ class OrderProvider extends ChangeNotifier {
     required Color color,
     required IconData icon,
     String description = '',
+    bool isActive = true,
+    bool isRefill = true,
   }) {
     addInventoryItem(
       name: name,
@@ -228,6 +271,8 @@ class OrderProvider extends ChangeNotifier {
       color: color,
       icon: icon,
       description: description.isNotEmpty ? description : 'Water Refill Product',
+      isActive: isActive,
+      isRefill: isRefill,
     );
   }
 
@@ -242,9 +287,17 @@ class OrderProvider extends ChangeNotifier {
     required Color color,
     required IconData icon,
     String description = '',
+    bool isActive = true,
+    bool? isRefill,
   }) {
     final idx = _inventoryItems.indexWhere((p) => p['id'] == id);
     if (idx != -1) {
+      final bool calculatedIsRefill = isRefill ??
+          (_inventoryItems[idx]['is_refill'] == true ||
+              (category == 'water' &&
+                  (unit.toLowerCase() == 'gallons' ||
+                      name.toLowerCase().contains('refill') ||
+                      name.toLowerCase().contains('19l'))));
       _inventoryItems[idx] = {
         'id': id,
         'name': name,
@@ -256,6 +309,8 @@ class OrderProvider extends ChangeNotifier {
         'color': color,
         'icon': icon,
         'description': description,
+        'is_refill': calculatedIsRefill,
+        'is_active': isActive,
       };
       notifyListeners();
       InventoryStorage.saveInventory(_inventoryItems);
@@ -264,8 +319,10 @@ class OrderProvider extends ChangeNotifier {
   }
 
   void deleteInventoryItem(String id) {
+    _deletedProductIds.add(id);
     _inventoryItems.removeWhere((p) => p['id'] == id);
     notifyListeners();
+    InventoryStorage.saveDeletedProductIds(_deletedProductIds);
     InventoryStorage.saveInventory(_inventoryItems);
     _syncInventoryToSupabase({'id': id}, action: 'delete');
   }
@@ -337,17 +394,19 @@ class OrderProvider extends ChangeNotifier {
   double get slimGallonCapacity {
     final item = _inventoryItems.firstWhere(
       (i) => i['id'] == 'item_slim_gallon' || i['name'].toString().toLowerCase().contains('slim'),
-      orElse: () => {'capacity': 0.0},
+      orElse: () => {'capacity': 100.0},
     );
-    return (item['capacity'] as num).toDouble();
+    final cap = (item['capacity'] as num).toDouble();
+    return cap > 0 ? cap : 100.0;
   }
 
   double get roundGallonCapacity {
     final item = _inventoryItems.firstWhere(
       (i) => i['id'] == 'item_round_gallon' || i['name'].toString().toLowerCase().contains('round'),
-      orElse: () => {'capacity': 0.0},
+      orElse: () => {'capacity': 100.0},
     );
-    return (item['capacity'] as num).toDouble();
+    final cap = (item['capacity'] as num).toDouble();
+    return cap > 0 ? cap : 100.0;
   }
 
   // Borrowed gallons list
@@ -355,28 +414,109 @@ class OrderProvider extends ChangeNotifier {
     final list = <Map<String, dynamic>>[];
     for (final order in _orders) {
       if (order.orderStatus == OrderStatus.cancelled) continue;
+      if (order.isCollectionJob) continue;
 
       final lower = order.waterType.toLowerCase();
-      String gallonType = '5-Gallon Slim';
-      if (lower.contains('round')) {
-        gallonType = '5-Gallon Round';
+      final isNewContainerSale = lower.contains('set a') || lower.contains('new container');
+      if (isNewContainerSale) continue; // Brand new container purchase, customer did not borrow
+
+      // Walk-in orders: Customer brings own containers unless explicitly borrowing for bulk
+      if (order.isWalkIn && !order.isBorrowingContainers) {
+        continue;
       }
 
       final isReturned = _returnedGallonOrderIds.contains(order.id);
 
-      list.add({
-        'orderId': order.id,
-        'txnId': order.txnId,
-        'customerId': order.customerId,
-        'customerName': order.customerName,
-        'customerPhone': order.customerPhone,
-        'deliveryAddress': order.deliveryAddress,
-        'gallonType': gallonType,
-        'quantity': order.quantity,
-        'orderStatus': order.orderStatus,
-        'borrowedAt': order.createdAt,
-        'isReturned': isReturned,
-      });
+      final int slimCount = order.borrowedSlimCount ?? 0;
+      final int roundCount = order.borrowedRoundCount ?? 0;
+
+      if (order.isBorrowingContainers && (slimCount > 0 || roundCount > 0)) {
+        if (slimCount > 0) {
+          list.add({
+            'orderId': order.id,
+            'txnId': order.txnId,
+            'customerId': order.customerId,
+            'customerName': order.customerName,
+            'customerPhone': order.customerPhone,
+            'deliveryAddress': order.deliveryAddress,
+            'gallonType': '5-Gallon Slim',
+            'quantity': slimCount,
+            'orderStatus': order.orderStatus,
+            'borrowedAt': order.createdAt,
+            'isReturned': isReturned,
+            'isBulkBorrow': true,
+          });
+        }
+        if (roundCount > 0) {
+          list.add({
+            'orderId': order.id,
+            'txnId': order.txnId,
+            'customerId': order.customerId,
+            'customerName': order.customerName,
+            'customerPhone': order.customerPhone,
+            'deliveryAddress': order.deliveryAddress,
+            'gallonType': '5-Gallon Round',
+            'quantity': roundCount,
+            'orderStatus': order.orderStatus,
+            'borrowedAt': order.createdAt,
+            'isReturned': isReturned,
+            'isBulkBorrow': true,
+          });
+        }
+        continue;
+      }
+
+      final slimMatch = RegExp(r'(\d+)\s*slim', caseSensitive: false).firstMatch(lower);
+      final roundMatch = RegExp(r'(\d+)\s*round', caseSensitive: false).firstMatch(lower);
+      final int slimQty = slimMatch != null ? int.tryParse(slimMatch.group(1)!) ?? 0 : 0;
+      final int roundQty = roundMatch != null ? int.tryParse(roundMatch.group(1)!) ?? 0 : 0;
+
+      if (slimQty > 0 && roundQty > 0) {
+        list.add({
+          'orderId': order.id,
+          'txnId': order.txnId,
+          'customerId': order.customerId,
+          'customerName': order.customerName,
+          'customerPhone': order.customerPhone,
+          'deliveryAddress': order.deliveryAddress,
+          'gallonType': '5-Gallon Slim',
+          'quantity': slimQty,
+          'orderStatus': order.orderStatus,
+          'borrowedAt': order.createdAt,
+          'isReturned': isReturned,
+        });
+        list.add({
+          'orderId': order.id,
+          'txnId': order.txnId,
+          'customerId': order.customerId,
+          'customerName': order.customerName,
+          'customerPhone': order.customerPhone,
+          'deliveryAddress': order.deliveryAddress,
+          'gallonType': '5-Gallon Round',
+          'quantity': roundQty,
+          'orderStatus': order.orderStatus,
+          'borrowedAt': order.createdAt,
+          'isReturned': isReturned,
+        });
+      } else {
+        String gallonType = '5-Gallon Slim';
+        if (roundQty > 0 || lower.contains('round')) {
+          gallonType = '5-Gallon Round';
+        }
+        list.add({
+          'orderId': order.id,
+          'txnId': order.txnId,
+          'customerId': order.customerId,
+          'customerName': order.customerName,
+          'customerPhone': order.customerPhone,
+          'deliveryAddress': order.deliveryAddress,
+          'gallonType': gallonType,
+          'quantity': order.quantity,
+          'orderStatus': order.orderStatus,
+          'borrowedAt': order.createdAt,
+          'isReturned': isReturned,
+        });
+      }
     }
     return list;
   }
@@ -406,18 +546,11 @@ class OrderProvider extends ChangeNotifier {
     String? customerName,
   }) {
     final lower = gallonType.toLowerCase();
-    String? matchedId;
-    if (lower.contains('slim')) {
-      matchedId = 'item_slim_gallon';
-    } else if (lower.contains('round')) {
-      matchedId = 'item_round_gallon';
-    }
-
-    if (matchedId != null) {
-      final idx = _inventoryItems.indexWhere(
-        (p) => p['id'] == matchedId || p['name'].toString().toLowerCase().contains(matchedId!.contains('slim') ? 'slim' : 'round'),
-      );
-      if (idx != -1) {
+    final String matchedId = lower.contains('round') ? 'item_round_gallon' : 'item_slim_gallon';
+    final idx = _inventoryItems.indexWhere(
+      (p) => p['id'] == matchedId || p['name'].toString().toLowerCase().contains(matchedId.contains('slim') ? 'slim' : 'round'),
+    );
+    if (idx != -1) {
         final capacity = (_inventoryItems[idx]['capacity'] as num).toDouble();
         final currentStock = (_inventoryItems[idx]['stock'] as num).toDouble();
         final newStock = currentStock + quantity;
@@ -441,25 +574,221 @@ class OrderProvider extends ChangeNotifier {
         _restockLogs.insert(0, logEntry);
         _syncRestockLogToSupabase(logEntry);
       }
-    }
 
     _returnedGallonOrderIds.add(orderId);
-    adjustContainerReserves(emptyChange: -quantity, refilledChange: quantity);
     notifyListeners();
     InventoryStorage.saveInventory(_inventoryItems);
     InventoryStorage.saveRestockLogs(_restockLogs);
     InventoryStorage.saveReturnedGallonOrders(_returnedGallonOrderIds);
   }
 
-  void deductProductStock(String name, int qty) {
+  void collectDriverReturnedGallons({
+    required String orderId,
+    required String customerName,
+    required int slimCount,
+    required int roundCount,
+    required String driverName,
+    String? notes,
+  }) {
+    if (slimCount > 0) {
+      final slimIdx = _inventoryItems.indexWhere((p) => p['id'] == 'item_slim_gallon');
+      if (slimIdx != -1) {
+        final currentStock = (_inventoryItems[slimIdx]['stock'] as num).toDouble();
+        final newStock = currentStock + slimCount;
+        final capacity = (_inventoryItems[slimIdx]['capacity'] as num).toDouble();
+        _inventoryItems[slimIdx]['stock'] = newStock;
+        _inventoryItems[slimIdx]['capacity'] = max(capacity, newStock);
+        _syncInventoryToSupabase(_inventoryItems[slimIdx], action: 'update');
+
+        final logEntry = {
+          'id': 'return_slim_${DateTime.now().millisecondsSinceEpoch}',
+          'itemId': 'item_slim_gallon',
+          'itemName': '5-Gallon Slim Container',
+          'amount': slimCount.toDouble(),
+          'previousStock': currentStock,
+          'newStock': newStock,
+          'unit': 'Units',
+          'timestamp': DateTime.now(),
+          'restockedBy': 'Driver $driverName (Collected from $customerName)',
+          'notes': notes ?? 'Order reference: $orderId - Gallon return collected',
+        };
+        _restockLogs.insert(0, logEntry);
+        _syncRestockLogToSupabase(logEntry);
+      }
+    }
+
+    if (roundCount > 0) {
+      final roundIdx = _inventoryItems.indexWhere((p) => p['id'] == 'item_round_gallon');
+      if (roundIdx != -1) {
+        final currentStock = (_inventoryItems[roundIdx]['stock'] as num).toDouble();
+        final newStock = currentStock + roundCount;
+        final capacity = (_inventoryItems[roundIdx]['capacity'] as num).toDouble();
+        _inventoryItems[roundIdx]['stock'] = newStock;
+        _inventoryItems[roundIdx]['capacity'] = max(capacity, newStock);
+        _syncInventoryToSupabase(_inventoryItems[roundIdx], action: 'update');
+
+        final logEntry = {
+          'id': 'return_round_${DateTime.now().millisecondsSinceEpoch}',
+          'itemId': 'item_round_gallon',
+          'itemName': '5-Gallon Round Container',
+          'amount': roundCount.toDouble(),
+          'previousStock': currentStock,
+          'newStock': newStock,
+          'unit': 'Units',
+          'timestamp': DateTime.now(),
+          'restockedBy': 'Driver $driverName (Collected from $customerName)',
+          'notes': notes ?? 'Order reference: $orderId - Gallon return collected',
+        };
+        _restockLogs.insert(0, logEntry);
+        _syncRestockLogToSupabase(logEntry);
+      }
+    }
+
+    _returnedGallonOrderIds.add(orderId);
+    notifyListeners();
+    InventoryStorage.saveInventory(_inventoryItems);
+    InventoryStorage.saveRestockLogs(_restockLogs);
+    InventoryStorage.saveReturnedGallonOrders(_returnedGallonOrderIds);
+  }
+
+  Future<OrderModel> createCollectionJobOrder({
+    required String customerId,
+    required String customerName,
+    required String customerPhone,
+    required String deliveryAddress,
+    required String driverId,
+    required String driverName,
+    int slimCount = 0,
+    int roundCount = 0,
+    String? scheduledDate,
+    String? notes,
+    double? latitude,
+    double? longitude,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+
+    final randomNum = 1000 + Random().nextInt(8999);
+    final orderId = '#COL-00$randomNum';
+    final txnId = '#TXN-COL$randomNum';
+    final totalQty = slimCount + roundCount;
+
+    final scheduleNote = [
+      if (scheduledDate != null && scheduledDate.isNotEmpty) 'Schedule: $scheduledDate',
+      if (notes != null && notes.isNotEmpty) notes,
+      'Weekly empty gallon retrieval',
+    ].join(' • ');
+
+    final newOrder = OrderModel(
+      id: orderId,
+      txnId: txnId,
+      customerId: customerId,
+      customerName: customerName,
+      customerPhone: customerPhone,
+      deliveryAddress: deliveryAddress,
+      waterType: 'Weekly Gallon Collection',
+      quantity: totalQty > 0 ? totalQty : 1,
+      pricePerUnit: 0.0,
+      totalAmount: 0.0,
+      paymentMethod: 'Collection Service',
+      paymentStatus: 'Paid',
+      orderStatus: OrderStatus.assigned,
+      driverId: driverId,
+      driverName: driverName,
+      createdAt: DateTime.now(),
+      distance: '1.5 km',
+      deliveryNote: scheduleNote,
+      latitude: latitude,
+      longitude: longitude,
+      isCollectionJob: true,
+      borrowedSlimCount: slimCount,
+      borrowedRoundCount: roundCount,
+    );
+
+    _orders.insert(0, newOrder);
+
+    if (_isSupabaseConfigured) {
+      try {
+        final client = Supabase.instance.client;
+        final insertMap = {
+          'id': newOrder.id,
+          'txnId': newOrder.txnId,
+          'customerId': newOrder.customerId,
+          'customerName': newOrder.customerName,
+          'customerPhone': newOrder.customerPhone,
+          'deliveryAddress': newOrder.deliveryAddress,
+          'waterType': newOrder.waterType,
+          'quantity': newOrder.quantity,
+          'pricePerUnit': newOrder.pricePerUnit,
+          'totalAmount': newOrder.totalAmount,
+          'paymentMethod': newOrder.paymentMethod,
+          'paymentStatus': newOrder.paymentStatus,
+          'orderStatus': newOrder.orderStatus.name,
+          'driverId': newOrder.driverId,
+          'driverName': newOrder.driverName,
+          'createdAt': newOrder.createdAt.toIso8601String(),
+          'distance': newOrder.distance,
+          'deliveryNote': newOrder.deliveryNote,
+          'latitude': newOrder.latitude,
+          'longitude': newOrder.longitude,
+          'isCollectionJob': true,
+          'borrowedSlimCount': newOrder.borrowedSlimCount,
+          'borrowedRoundCount': newOrder.borrowedRoundCount,
+        };
+        try {
+          await client.from('orders').insert(insertMap);
+        } catch (e) {
+          insertMap.remove('isCollectionJob');
+          insertMap.remove('borrowedSlimCount');
+          insertMap.remove('borrowedRoundCount');
+          try {
+            await client.from('orders').insert(insertMap);
+          } catch (_) {}
+        }
+      } catch (e) {
+        debugPrint('Supabase collection job order insert error: $e');
+      }
+    }
+
+    _isLoading = false;
+    notifyListeners();
+    return newOrder;
+  }
+
+  List<Map<String, dynamic>> getDriverDailyCollections(String driverName) {
+    final now = DateTime.now();
+    return _restockLogs.where((log) {
+      final by = log['restockedBy']?.toString() ?? '';
+      if (!by.toLowerCase().contains(driverName.toLowerCase())) return false;
+      final ts = log['timestamp'] as DateTime?;
+      if (ts == null) return false;
+      return ts.year == now.year && ts.month == now.month && ts.day == now.day;
+    }).toList();
+  }
+
+  int getDriverDailyCollectedGallonsCount(String driverName) {
+    final logs = getDriverDailyCollections(driverName);
+    return logs.fold<int>(0, (sum, l) => sum + ((l['amount'] as num?)?.toInt() ?? 0));
+  }
+
+  void deductProductStock(
+    String name,
+    int qty, {
+    bool isWalkIn = false,
+    bool isBorrowingContainers = false,
+    int? borrowedSlimQty,
+    int? borrowedRoundQty,
+  }) {
     final lowerName = name.toLowerCase();
-    // 1. Deduct water product stock
+    // 1. Deduct water product stock (water volume was sold)
     final waterIdx = _inventoryItems.indexWhere(
       (p) =>
           p['category'] == 'water' &&
           (p['name'] == name ||
+              lowerName.contains(p['name'].toString().toLowerCase()) ||
+              p['name'].toString().toLowerCase().contains(lowerName) ||
               (lowerName.contains('set a') && p['id'] == 'prod_set_a') ||
-              lowerName.contains('purified')),
+              (lowerName.contains('purified') && p['id'] == 'prod_purified')),
     );
     if (waterIdx != -1) {
       final currentStock = (_inventoryItems[waterIdx]['stock'] as num).toDouble();
@@ -467,42 +796,215 @@ class OrderProvider extends ChangeNotifier {
       _syncInventoryToSupabase(_inventoryItems[waterIdx], action: 'update');
     }
 
-    // 2. Automatically deduct specific gallon container inventory (Slim or Round)
-    if (lowerName.contains('slim')) {
+    // 2. Physical Container Inventory Deduction
+    final isNewContainerSale = lowerName.contains('set a') || lowerName.contains('new container');
+
+    // Walk-in order with customer's own container:
+    // DO NOT deduct physical container inventory (Slim / Round jugs)!
+    if (isWalkIn && !isNewContainerSale && !isBorrowingContainers) {
+      notifyListeners();
+      InventoryStorage.saveInventory(_inventoryItems);
+      return;
+    }
+
+    // Parse or use explicit Slim vs Round breakdown
+    int slimQty = borrowedSlimQty ?? 0;
+    int roundQty = borrowedRoundQty ?? 0;
+
+    if (slimQty == 0 && roundQty == 0) {
+      final slimMatch = RegExp(r'(\d+)\s*slim', caseSensitive: false).firstMatch(lowerName);
+      final roundMatch = RegExp(r'(\d+)\s*round', caseSensitive: false).firstMatch(lowerName);
+      slimQty = slimMatch != null ? int.tryParse(slimMatch.group(1)!) ?? 0 : 0;
+      roundQty = roundMatch != null ? int.tryParse(roundMatch.group(1)!) ?? 0 : 0;
+      if (slimQty == 0 && roundQty == 0) {
+        if (lowerName.contains('round')) {
+          roundQty = qty;
+        } else {
+          slimQty = qty;
+        }
+      }
+    }
+
+    if (slimQty > 0) {
       final slimIdx = _inventoryItems.indexWhere(
         (p) => p['id'] == 'item_slim_gallon' || p['name'].toString().toLowerCase().contains('slim'),
       );
       if (slimIdx != -1) {
         final currentStock = (_inventoryItems[slimIdx]['stock'] as num).toDouble();
-        _inventoryItems[slimIdx]['stock'] = max(0.0, currentStock - qty);
+        _inventoryItems[slimIdx]['stock'] = max(0.0, currentStock - slimQty);
         _syncInventoryToSupabase(_inventoryItems[slimIdx], action: 'update');
       }
-    } else if (lowerName.contains('round')) {
+    }
+
+    if (roundQty > 0) {
       final roundIdx = _inventoryItems.indexWhere(
         (p) => p['id'] == 'item_round_gallon' || p['name'].toString().toLowerCase().contains('round'),
       );
       if (roundIdx != -1) {
         final currentStock = (_inventoryItems[roundIdx]['stock'] as num).toDouble();
-        _inventoryItems[roundIdx]['stock'] = max(0.0, currentStock - qty);
+        _inventoryItems[roundIdx]['stock'] = max(0.0, currentStock - roundQty);
         _syncInventoryToSupabase(_inventoryItems[roundIdx], action: 'update');
-      }
-    } else {
-      // Default to 5-Gallon Slim if unspecified
-      final slimIdx = _inventoryItems.indexWhere((p) => p['id'] == 'item_slim_gallon');
-      if (slimIdx != -1) {
-        final currentStock = (_inventoryItems[slimIdx]['stock'] as num).toDouble();
-        _inventoryItems[slimIdx]['stock'] = max(0.0, currentStock - qty);
-        _syncInventoryToSupabase(_inventoryItems[slimIdx], action: 'update');
       }
     }
 
     // Update container reserves:
     // If selling a brand new container (Set A), customer does not return an empty container
-    final isNewContainerSale = lowerName.contains('set a') || lowerName.contains('new container');
     if (isNewContainerSale) {
       adjustContainerReserves(emptyChange: 0, refilledChange: -qty);
+    } else if (isBorrowingContainers) {
+      adjustContainerReserves(emptyChange: 0, refilledChange: -(slimQty + roundQty));
     } else {
       adjustContainerReserves(emptyChange: qty, refilledChange: -qty);
+    }
+    notifyListeners();
+    InventoryStorage.saveInventory(_inventoryItems);
+  }
+
+  void refundProductStock(
+    String name,
+    int qty, {
+    bool isWalkIn = false,
+    bool isBorrowingContainers = false,
+    int? borrowedSlimQty,
+    int? borrowedRoundQty,
+  }) {
+    final lowerName = name.toLowerCase();
+    // 1. Replenish water product stock
+    final waterIdx = _inventoryItems.indexWhere(
+      (p) =>
+          p['category'] == 'water' &&
+          (p['name'] == name ||
+              lowerName.contains(p['name'].toString().toLowerCase()) ||
+              p['name'].toString().toLowerCase().contains(lowerName) ||
+              (lowerName.contains('set a') && p['id'] == 'prod_set_a') ||
+              (lowerName.contains('purified') && p['id'] == 'prod_purified')),
+    );
+    if (waterIdx != -1) {
+      final capacity = (_inventoryItems[waterIdx]['capacity'] as num).toDouble();
+      final currentStock = (_inventoryItems[waterIdx]['stock'] as num).toDouble();
+      final newStock = currentStock + qty;
+      _inventoryItems[waterIdx]['capacity'] = max(capacity, newStock);
+      _inventoryItems[waterIdx]['stock'] = newStock;
+      _syncInventoryToSupabase(_inventoryItems[waterIdx], action: 'update');
+    }
+
+    // 2. Container Inventory Refund
+    final isNewContainerSale = lowerName.contains('set a') || lowerName.contains('new container');
+
+    // Walk-in order with customer's own container did not deduct container inventory
+    if (isWalkIn && !isNewContainerSale && !isBorrowingContainers) {
+      notifyListeners();
+      InventoryStorage.saveInventory(_inventoryItems);
+      return;
+    }
+
+    // Parse exact Slim vs Round breakdown
+    int slimQty = borrowedSlimQty ?? 0;
+    int roundQty = borrowedRoundQty ?? 0;
+
+    if (slimQty == 0 && roundQty == 0) {
+      final slimMatch = RegExp(r'(\d+)\s*slim', caseSensitive: false).firstMatch(lowerName);
+      final roundMatch = RegExp(r'(\d+)\s*round', caseSensitive: false).firstMatch(lowerName);
+      slimQty = slimMatch != null ? int.tryParse(slimMatch.group(1)!) ?? 0 : 0;
+      roundQty = roundMatch != null ? int.tryParse(roundMatch.group(1)!) ?? 0 : 0;
+      if (slimQty == 0 && roundQty == 0) {
+        if (lowerName.contains('round')) {
+          roundQty = qty;
+        } else {
+          slimQty = qty;
+        }
+      }
+    }
+
+    if (slimQty > 0) {
+      final slimIdx = _inventoryItems.indexWhere(
+        (p) => p['id'] == 'item_slim_gallon' || p['name'].toString().toLowerCase().contains('slim'),
+      );
+      if (slimIdx != -1) {
+        final capacity = (_inventoryItems[slimIdx]['capacity'] as num).toDouble();
+        final currentStock = (_inventoryItems[slimIdx]['stock'] as num).toDouble();
+        final newStock = currentStock + slimQty;
+        _inventoryItems[slimIdx]['capacity'] = max(capacity, newStock);
+        _inventoryItems[slimIdx]['stock'] = newStock;
+        _syncInventoryToSupabase(_inventoryItems[slimIdx], action: 'update');
+      }
+    }
+
+    if (roundQty > 0) {
+      final roundIdx = _inventoryItems.indexWhere(
+        (p) => p['id'] == 'item_round_gallon' || p['name'].toString().toLowerCase().contains('round'),
+      );
+      if (roundIdx != -1) {
+        final capacity = (_inventoryItems[roundIdx]['capacity'] as num).toDouble();
+        final currentStock = (_inventoryItems[roundIdx]['stock'] as num).toDouble();
+        final newStock = currentStock + roundQty;
+        _inventoryItems[roundIdx]['capacity'] = max(capacity, newStock);
+        _inventoryItems[roundIdx]['stock'] = newStock;
+        _syncInventoryToSupabase(_inventoryItems[roundIdx], action: 'update');
+      }
+    }
+
+    // 3. Refund any accessories included in the order summary
+    final addonRegex = RegExp(r'(\d+)\s*x\s*([^,+]+)');
+    for (final m in addonRegex.allMatches(name)) {
+      final aQty = int.tryParse(m.group(1) ?? '0') ?? 0;
+      final aName = (m.group(2) ?? '').trim().toLowerCase();
+      if (aQty > 0 && aName.isNotEmpty) {
+        final aIdx = _inventoryItems.indexWhere(
+          (i) => i['category'] == 'accessory' && aName.contains(i['name'].toString().toLowerCase()),
+        );
+        if (aIdx != -1) {
+          refundItemStockById(_inventoryItems[aIdx]['id'] as String, aQty);
+        }
+      }
+    }
+
+    notifyListeners();
+    InventoryStorage.saveInventory(_inventoryItems);
+  }
+
+  void deductItemStockById(String id, int qty) {
+    final idx = _inventoryItems.indexWhere((i) => i['id'] == id);
+    if (idx != -1) {
+      final currentStock = (_inventoryItems[idx]['stock'] as num).toDouble();
+      _inventoryItems[idx]['stock'] = max(0.0, currentStock - qty);
+      _syncInventoryToSupabase(_inventoryItems[idx], action: 'update');
+      notifyListeners();
+      InventoryStorage.saveInventory(_inventoryItems);
+    }
+  }
+
+  void refundItemStockById(String id, int qty) {
+    final idx = _inventoryItems.indexWhere((i) => i['id'] == id);
+    if (idx != -1) {
+      final capacity = (_inventoryItems[idx]['capacity'] as num).toDouble();
+      final currentStock = (_inventoryItems[idx]['stock'] as num).toDouble();
+      final newStock = currentStock + qty;
+      _inventoryItems[idx]['capacity'] = max(capacity, newStock);
+      _inventoryItems[idx]['stock'] = newStock;
+      _syncInventoryToSupabase(_inventoryItems[idx], action: 'update');
+      notifyListeners();
+      InventoryStorage.saveInventory(_inventoryItems);
+    }
+  }
+
+  void initializeOperatingStocks() {
+    for (final item in _inventoryItems) {
+      final id = item['id'];
+      if (id == 'prod_purified') {
+        item['stock'] = 100.0;
+        item['capacity'] = 100.0;
+      } else if (id == 'prod_set_a') {
+        item['stock'] = 30.0;
+        item['capacity'] = 50.0;
+      } else if (id == 'item_slim_gallon') {
+        item['stock'] = 50.0;
+        item['capacity'] = 100.0;
+      } else if (id == 'item_round_gallon') {
+        item['stock'] = 50.0;
+        item['capacity'] = 100.0;
+      }
+      _syncInventoryToSupabase(item, action: 'update');
     }
     notifyListeners();
     InventoryStorage.saveInventory(_inventoryItems);
@@ -513,7 +1015,7 @@ class OrderProvider extends ChangeNotifier {
     try {
       final client = Supabase.instance.client;
       if (action == 'insert' || action == 'update') {
-        await client.from('inventory').upsert({
+        final payload = <String, dynamic>{
           'id': item['id'],
           'name': item['name'],
           'category': item['category'],
@@ -522,7 +1024,21 @@ class OrderProvider extends ChangeNotifier {
           'stock': item['stock'],
           'capacity': item['capacity'],
           'description': item['description'] ?? '',
-        });
+          'is_refill': item['is_refill'] ?? false,
+          'is_active': item['is_active'] ?? true,
+        };
+        try {
+          await client.from('inventory').upsert(payload);
+        } catch (e) {
+          // If remote table does not have is_refill or is_active column yet, fall back gracefully
+          if (payload.containsKey('is_refill')) {
+            payload.remove('is_refill');
+          }
+          if (payload.containsKey('is_active')) {
+            payload.remove('is_active');
+          }
+          await client.from('inventory').upsert(payload);
+        }
       } else if (action == 'delete') {
         await client.from('inventory').delete().eq('id', item['id']);
       }
@@ -551,32 +1067,163 @@ class OrderProvider extends ChangeNotifier {
     }
   }
 
+  RealtimeChannel? _inventoryRealtimeChannel;
+  StreamSubscription? _inventorySubscription;
+
+  void _listenToSupabaseInventory() {
+    if (!_isSupabaseConfigured) return;
+    try {
+      final client = Supabase.instance.client;
+
+      // 1. Direct channel for instant Postgres Change broadcast
+      _inventoryRealtimeChannel = client
+          .channel('public:inventory_changes')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'inventory',
+            callback: (payload) {
+              if (payload.eventType == PostgresChangeEvent.delete) {
+                final deletedId = payload.oldRecord['id']?.toString();
+                if (deletedId != null && deletedId.isNotEmpty) {
+                  _deletedProductIds.add(deletedId);
+                  InventoryStorage.saveDeletedProductIds(_deletedProductIds);
+                  _inventoryItems.removeWhere((p) => p['id'] == deletedId);
+                  InventoryStorage.saveInventory(_inventoryItems);
+                  notifyListeners();
+                }
+              }
+              fetchSupabaseInventory(silent: true);
+            },
+          )
+          .subscribe();
+
+      // 2. Realtime Stream
+      _inventorySubscription = client
+          .from('inventory')
+          .stream(primaryKey: ['id'])
+          .listen(
+            (List<Map<String, dynamic>> response) {
+              if (response.isNotEmpty) {
+                _processSupabaseInventoryResponse(response);
+              }
+            },
+            onError: (error) {
+              debugPrint('Supabase Realtime Inventory stream error: $error');
+            },
+          );
+    } catch (e) {
+      debugPrint('Supabase Realtime Inventory stream setup failed: $e');
+    }
+  }
+
+  void _processSupabaseInventoryResponse(List<dynamic> response) {
+    bool hasChanges = false;
+    final fetchedIds = <String>{};
+
+    for (final row in response) {
+      final id = row['id']?.toString() ?? '';
+      if (id.isEmpty) continue;
+      if (_deletedProductIds.contains(id) ||
+          id == 'item_electric_pump' ||
+          id == 'item_manual_pump' ||
+          id == 'item_dispenser_caps') {
+        continue;
+      }
+      fetchedIds.add(id);
+
+      final idx = _inventoryItems.indexWhere((i) => i['id'] == id);
+      final newStock = (row['stock'] as num?)?.toDouble() ?? 0.0;
+      final newCap = (row['capacity'] as num?)?.toDouble() ?? 100.0;
+      final newPrice = (row['price'] as num?)?.toDouble() ?? 0.0;
+      final newName = row['name']?.toString() ?? '';
+      final newUnit = row['unit']?.toString() ?? 'Units';
+      final newCat = row['category']?.toString() ?? 'water';
+      final newDesc = row['description']?.toString() ?? '';
+      final newIsActive = row['is_active'] is bool ? row['is_active'] as bool : true;
+      final newIsRefill = row['is_refill'] is bool
+          ? row['is_refill'] as bool
+          : (newCat == 'water' &&
+              (newUnit.toLowerCase() == 'gallons' ||
+                  newName.toLowerCase().contains('refill') ||
+                  newName.toLowerCase().contains('19l')));
+
+      if (idx != -1) {
+        final cur = _inventoryItems[idx];
+        if (cur['stock'] != newStock ||
+            cur['capacity'] != newCap ||
+            cur['price'] != newPrice ||
+            cur['name'] != newName ||
+            cur['unit'] != newUnit ||
+            cur['category'] != newCat ||
+            cur['description'] != newDesc ||
+            cur['is_refill'] != newIsRefill ||
+            (cur['is_active'] ?? true) != newIsActive) {
+          cur['stock'] = newStock;
+          cur['capacity'] = newCap;
+          cur['price'] = newPrice;
+          cur['name'] = newName;
+          cur['unit'] = newUnit;
+          cur['category'] = newCat;
+          cur['description'] = newDesc;
+          cur['is_refill'] = newIsRefill;
+          cur['is_active'] = newIsActive;
+          hasChanges = true;
+        }
+      } else {
+        // New item added in Supabase by Admin!
+        _inventoryItems.add({
+          'id': id,
+          'name': newName,
+          'category': newCat,
+          'unit': newUnit,
+          'price': newPrice,
+          'stock': newStock,
+          'capacity': newCap,
+          'description': newDesc,
+          'is_refill': newIsRefill,
+          'is_active': newIsActive,
+          'color': defaultColorForCategory(newCat),
+          'icon': defaultIconForCategory(newCat),
+        });
+        hasChanges = true;
+      }
+    }
+
+    // Remove items ONLY if explicitly deleted by Admin
+    final toRemove = _inventoryItems.where((i) {
+      final id = i['id']?.toString() ?? '';
+      return _deletedProductIds.contains(id);
+    }).map((i) => i['id'] as String).toList();
+
+    if (toRemove.isNotEmpty) {
+      _inventoryItems.removeWhere((i) => toRemove.contains(i['id']));
+      hasChanges = true;
+    }
+
+    // Auto-seed/sync local items that are missing from Supabase
+    for (final localItem in _inventoryItems) {
+      final localId = localItem['id']?.toString() ?? '';
+      if (localId.isNotEmpty &&
+          !fetchedIds.contains(localId) &&
+          !_deletedProductIds.contains(localId)) {
+        _syncInventoryToSupabase(localItem, action: 'insert');
+      }
+    }
+
+    if (hasChanges) {
+      InventoryStorage.saveInventory(_inventoryItems);
+      notifyListeners();
+    }
+  }
+
   Future<void> fetchSupabaseInventory({bool silent = false}) async {
     if (!_isSupabaseConfigured) return;
     try {
       final client = Supabase.instance.client;
       final List<dynamic> response = await client.from('inventory').select();
       if (response.isNotEmpty) {
-        bool hasChanges = false;
-        for (final row in response) {
-          final id = row['id']?.toString() ?? '';
-          final idx = _inventoryItems.indexWhere((i) => i['id'] == id);
-          if (idx != -1) {
-            final newStock = (row['stock'] as num?)?.toDouble();
-            final newCap = (row['capacity'] as num?)?.toDouble();
-            if (newStock != null && _inventoryItems[idx]['stock'] != newStock) {
-              _inventoryItems[idx]['stock'] = newStock;
-              hasChanges = true;
-            }
-            if (newCap != null && _inventoryItems[idx]['capacity'] != newCap) {
-              _inventoryItems[idx]['capacity'] = newCap;
-              hasChanges = true;
-            }
-          }
-        }
-        if (hasChanges && !silent) {
-          notifyListeners();
-        }
+        _processSupabaseInventoryResponse(response);
       }
     } catch (e) {
       debugPrint('Supabase direct fetch inventory error: $e');
@@ -593,17 +1240,72 @@ class OrderProvider extends ChangeNotifier {
   StreamSubscription? _ordersSubscription;
 
   void _loadLocalInventoryCache() {
+    final loadedDeleted = InventoryStorage.loadDeletedProductIds();
+    _deletedProductIds.addAll(loadedDeleted);
+    _deletedProductIds.add('item_electric_pump');
+    _deletedProductIds.add('item_manual_pump');
+    _deletedProductIds.add('item_dispenser_caps');
+    _deletedProductIds.remove('item_slim_gallon');
+    _deletedProductIds.remove('item_round_gallon');
+    _inventoryItems.removeWhere((item) => _deletedProductIds.contains(item['id']));
+
+    // Guarantee core 5-gallon containers exist
+    if (!_inventoryItems.any((i) => i['id'] == 'item_slim_gallon')) {
+      _inventoryItems.add({
+        'id': 'item_slim_gallon',
+        'name': '5-Gallon Slim Container',
+        'category': 'container',
+        'unit': 'Units',
+        'price': 220.0,
+        'stock': 0.0,
+        'capacity': 100.0,
+        'color': Colors.indigo,
+        'icon': Icons.local_drink_rounded,
+        'image': 'assets/images/slim_container.jpg',
+        'description': 'BPA-free durable slim poly-carbonate gallon jug',
+        'is_refill': false,
+        'is_active': true,
+      });
+    }
+
+    if (!_inventoryItems.any((i) => i['id'] == 'item_round_gallon')) {
+      _inventoryItems.add({
+        'id': 'item_round_gallon',
+        'name': '5-Gallon Round Container',
+        'category': 'container',
+        'unit': 'Units',
+        'price': 200.0,
+        'stock': 0.0,
+        'capacity': 100.0,
+        'color': Colors.deepPurple,
+        'icon': Icons.crop_portrait_rounded,
+        'image': 'assets/images/round_container.jpg',
+        'description': 'Heavy-duty standard round water bottle',
+        'is_refill': false,
+        'is_active': true,
+      });
+    }
+
+    final cachedLogs = InventoryStorage.loadRestockLogs();
+    if (cachedLogs != null && cachedLogs.isNotEmpty) {
+      _restockLogs.clear();
+      _restockLogs.addAll(cachedLogs);
+    }
+
     final cachedItems = InventoryStorage.loadInventory();
     if (cachedItems != null && cachedItems.isNotEmpty) {
       for (final cached in cachedItems) {
-        final id = cached['id'];
+        final id = cached['id']?.toString() ?? '';
+        if (id.isEmpty || _deletedProductIds.contains(id)) continue;
+
         final idx = _inventoryItems.indexWhere((i) => i['id'] == id);
         if (idx != -1) {
           if (cached['stock'] != null) {
             _inventoryItems[idx]['stock'] = (cached['stock'] as num).toDouble();
           }
           if (cached['capacity'] != null) {
-            _inventoryItems[idx]['capacity'] = (cached['capacity'] as num).toDouble();
+            final cap = (cached['capacity'] as num).toDouble();
+            _inventoryItems[idx]['capacity'] = cap > 0 ? cap : 100.0;
           }
           if (cached['price'] != null) {
             _inventoryItems[idx]['price'] = (cached['price'] as num).toDouble();
@@ -614,32 +1316,58 @@ class OrderProvider extends ChangeNotifier {
           if (cached['unit'] != null) {
             _inventoryItems[idx]['unit'] = cached['unit'];
           }
+          if (cached['description'] != null) {
+            _inventoryItems[idx]['description'] = cached['description'];
+          }
+          if (cached['is_active'] != null) {
+            _inventoryItems[idx]['is_active'] = cached['is_active'];
+          }
+          if (cached['is_refill'] != null) {
+            _inventoryItems[idx]['is_refill'] = cached['is_refill'] == true;
+          }
         } else {
           // Custom items previously saved
+          final cat = cached['category']?.toString() ?? 'container';
+          final nameStr = cached['name']?.toString() ?? '';
+          final unitStr = cached['unit']?.toString() ?? '';
+          final isRefill = cached['is_refill'] is bool
+              ? cached['is_refill'] as bool
+              : (cat == 'water' &&
+                  (unitStr.toLowerCase() == 'gallons' ||
+                      nameStr.toLowerCase().contains('refill') ||
+                      nameStr.toLowerCase().contains('19l')));
           _inventoryItems.add({
             ...cached,
-            'color': Colors.blueGrey,
-            'icon': Icons.inventory_2_rounded,
+            'is_refill': isRefill,
+            'color': defaultColorForCategory(cat),
+            'icon': defaultIconForCategory(cat),
+            'is_active': cached['is_active'] ?? true,
           });
         }
       }
     }
 
+    // Ensure container capacities are at least 100
+    for (final item in _inventoryItems) {
+      final id = item['id']?.toString() ?? '';
+      if (id == 'item_slim_gallon' || id == 'item_round_gallon') {
+        final cap = (item['capacity'] as num?)?.toDouble() ?? 0.0;
+        if (cap <= 0.0) item['capacity'] = 100.0;
+      }
+    }
+
     final cachedReserves = InventoryStorage.loadReserves();
     if (cachedReserves != null) {
-      _emptyContainerStocks = cachedReserves['empty'] ?? 0;
-      _refilledContainerStocks = cachedReserves['refilled'] ?? 0;
+      if (!((cachedReserves['empty'] == 0 || cachedReserves['empty'] == null) &&
+          (cachedReserves['refilled'] == 0 || cachedReserves['refilled'] == null))) {
+        _emptyContainerStocks = cachedReserves['empty'] ?? 50;
+        _refilledContainerStocks = cachedReserves['refilled'] ?? 50;
+      }
     }
 
     final cachedReturns = InventoryStorage.loadReturnedGallonOrders();
     if (cachedReturns != null) {
       _returnedGallonOrderIds.addAll(cachedReturns);
-    }
-
-    final cachedLogs = InventoryStorage.loadRestockLogs();
-    if (cachedLogs != null && cachedLogs.isNotEmpty) {
-      _restockLogs.clear();
-      _restockLogs.addAll(cachedLogs);
     }
   }
 
@@ -651,6 +1379,7 @@ class OrderProvider extends ChangeNotifier {
       fetchSupabaseInventory();
       // 2. Realtime Stream
       _listenToSupabaseOrders();
+      _listenToSupabaseInventory();
       // 3. Fallback sync polling every 3 seconds for guaranteed cross-device sync
       _pollingTimer = Timer.periodic(const Duration(seconds: 3), (_) {
         fetchSupabaseOrders(silent: true);
@@ -731,6 +1460,8 @@ class OrderProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _inventoryRealtimeChannel?.unsubscribe();
+    _inventorySubscription?.cancel();
     _ordersSubscription?.cancel();
     _pollingTimer?.cancel();
     super.dispose();
@@ -747,6 +1478,8 @@ class OrderProvider extends ChangeNotifier {
     required int quantity,
     required double pricePerUnit,
     required String paymentMethod,
+    double? customTotalAmount,
+    Map<String, int>? addonItems,
     String? paymentStatus,
     OrderStatus? orderStatus,
     String? driverId,
@@ -754,6 +1487,10 @@ class OrderProvider extends ChangeNotifier {
     String? deliveryNote,
     double? latitude,
     double? longitude,
+    bool isWalkIn = false,
+    bool isBorrowingContainers = false,
+    int? borrowedSlimQty,
+    int? borrowedRoundQty,
   }) async {
     _isLoading = true;
     notifyListeners();
@@ -761,7 +1498,7 @@ class OrderProvider extends ChangeNotifier {
     final randomNum = 1000 + Random().nextInt(8999);
     final orderId = '#ORD-00$randomNum';
     final txnId = '#TXN-88$randomNum';
-    final totalAmount = pricePerUnit * quantity;
+    final totalAmount = customTotalAmount ?? (pricePerUnit * quantity);
 
     final newOrder = OrderModel(
       id: orderId,
@@ -786,10 +1523,32 @@ class OrderProvider extends ChangeNotifier {
           : null,
       latitude: latitude,
       longitude: longitude,
+      isBorrowingContainers: isBorrowingContainers,
+      borrowedSlimCount: borrowedSlimQty,
+      borrowedRoundCount: borrowedRoundQty,
     );
 
+    final bool isOrderWalkIn = isWalkIn ||
+        customerId == 'usr_walkin_guest' ||
+        deliveryAddress.toLowerCase().contains('walk-in') ||
+        deliveryAddress.toLowerCase().contains('pickup');
+
     _orders.insert(0, newOrder);
-    deductProductStock(waterType, quantity);
+    deductProductStock(
+      waterType,
+      quantity,
+      isWalkIn: isOrderWalkIn,
+      isBorrowingContainers: isBorrowingContainers,
+      borrowedSlimQty: borrowedSlimQty,
+      borrowedRoundQty: borrowedRoundQty,
+    );
+    if (addonItems != null) {
+      addonItems.forEach((id, qty) {
+        if (qty > 0) {
+          deductItemStockById(id, qty);
+        }
+      });
+    }
 
     if (_isSupabaseConfigured) {
       try {
@@ -1043,11 +1802,36 @@ class OrderProvider extends ChangeNotifier {
     final index = _orders.indexWhere((o) => o.id == orderId);
     if (index == -1) return;
 
+    final previousStatus = _orders[index].orderStatus;
     _orders[index].orderStatus = newStatus;
-    if (newStatus == OrderStatus.completed) {
+
+    if (newStatus == OrderStatus.completed && previousStatus != OrderStatus.completed) {
       _orders[index].paymentStatus = 'Paid';
       _orders[index].completedAt = DateTime.now();
       LocationService().stopBroadcasting();
+
+      // Automatically resolve borrowed container on delivery completion (driver collects empty exchange jug)
+      final lower = _orders[index].waterType.toLowerCase();
+      final isNewContainerSale = lower.contains('set a') || lower.contains('new container');
+      if (!isNewContainerSale && !_orders[index].isCollectionJob && !_returnedGallonOrderIds.contains(orderId)) {
+        returnBorrowedGallons(
+          orderId: orderId,
+          gallonType: _orders[index].waterType,
+          quantity: _orders[index].quantity,
+          customerName: _orders[index].customerName,
+        );
+      }
+    } else if (newStatus == OrderStatus.cancelled && previousStatus != OrderStatus.cancelled) {
+      // Auto-replenish stock and void any borrow record on order cancellation
+      refundProductStock(
+        _orders[index].waterType,
+        _orders[index].quantity,
+        isWalkIn: _orders[index].isWalkIn,
+        isBorrowingContainers: _orders[index].isBorrowingContainers,
+        borrowedSlimQty: _orders[index].borrowedSlimCount,
+        borrowedRoundQty: _orders[index].borrowedRoundCount,
+      );
+      _returnedGallonOrderIds.remove(orderId);
     }
     if (driverId != null) {
       _orders[index].driverId = driverId;

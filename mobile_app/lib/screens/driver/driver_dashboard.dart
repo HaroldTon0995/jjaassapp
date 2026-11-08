@@ -44,6 +44,9 @@ class _DriverDashboardState extends State<DriverDashboard> {
   String _selectedVehicleType = 'Motorcycle with Rack';
   String? _selectedActiveOrderId;
 
+  // Gallon Collection search controller
+  final TextEditingController _gallonSearchController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -55,6 +58,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
     _supportInputController.dispose();
     _chatScrollController.dispose();
     _plateNoController.dispose();
+    _gallonSearchController.dispose();
     super.dispose();
   }
 
@@ -97,15 +101,26 @@ class _DriverDashboardState extends State<DriverDashboard> {
 
     if (success) {
       if (mounted) {
-        setState(() {
-          _selectedActiveOrderId = order.id;
-          _selectedTab = 1; // Auto navigate to GPS Map Tab
-          _activeSidebarMenu = 1;
-        });
-        Helpers.showSnackBar(
-          context,
-          'Job ${order.id} accepted! Added to active deliveries.',
-        );
+        if (order.isCollectionJob) {
+          setState(() {
+            _selectedTab = 2; // Auto navigate to Gallon Collection Tab
+            _activeSidebarMenu = 2;
+          });
+          Helpers.showSnackBar(
+            context,
+            'Weekly Gallon Collection Task accepted! You can now log collected containers below.',
+          );
+        } else {
+          setState(() {
+            _selectedActiveOrderId = order.id;
+            _selectedTab = 1; // Auto navigate to GPS Map Tab
+            _activeSidebarMenu = 1;
+          });
+          Helpers.showSnackBar(
+            context,
+            'Job ${order.id} accepted! Added to active deliveries.',
+          );
+        }
       }
     } else {
       if (mounted) {
@@ -559,10 +574,12 @@ class _DriverDashboardState extends State<DriverDashboard> {
       case 1:
         return 'Live GPS Navigation Map';
       case 2:
-        return 'Trip Duty History';
+        return 'Gallon Collection';
       case 3:
-        return 'AI Support Dispatch';
+        return 'Trip Duty History';
       case 4:
+        return 'AI Support Dispatch';
+      case 5:
         return 'Vehicle & Profile Settings';
       default:
         return 'Driver Dashboard';
@@ -573,6 +590,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
     final menuItems = [
       {'title': 'Dashboard', 'icon': Icons.home_rounded},
       {'title': 'Deliveries Map', 'icon': Icons.map_rounded},
+      {'title': 'Gallon Collection', 'icon': Icons.assignment_return_rounded},
       {'title': 'Duty History', 'icon': Icons.history_rounded},
       {'title': 'AI Chat Support', 'icon': Icons.chat_rounded},
       {'title': 'Settings', 'icon': Icons.settings_rounded},
@@ -727,10 +745,12 @@ class _DriverDashboardState extends State<DriverDashboard> {
       case 1:
         return _buildDeliveriesMapTab(isDark);
       case 2:
-        return _buildDutyHistoryTab(isDark);
+        return _buildGallonCollectionTab(isDark);
       case 3:
-        return _buildSupportTab(isDark);
+        return _buildDutyHistoryTab(isDark);
       case 4:
+        return _buildSupportTab(isDark);
+      case 5:
         return _buildSettingsTab(isDark);
       default:
         return _buildOverviewTab(isDark, width);
@@ -1058,6 +1078,71 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                   ),
                                 ),
                               ),
+                              const SizedBox(height: 4),
+                              if (job.isCollectionJob)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.assignment_return_rounded, size: 12, color: Color(0xFF059669)),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Weekly Gallon Collection • ${(job.borrowedSlimCount ?? 0) > 0 ? '${job.borrowedSlimCount} Slim ' : ''}${(job.borrowedRoundCount ?? 0) > 0 ? '${job.borrowedRoundCount} Round' : ''} Target',
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF047857),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              else if (job.isBorrowingContainers || (job.borrowedSlimCount ?? 0) > 0 || (job.borrowedRoundCount ?? 0) > 0)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.people_alt_rounded, size: 11, color: Colors.amber),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Borrowing: ${_formatBorrowSummary(job)}',
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFFB45309),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              else
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text(
+                                    '💧 Refill (Customer Owns Jugs)',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF1D4ED8),
+                                    ),
+                                  ),
+                                ),
                             ],
                           ),
                         ),
@@ -1065,11 +1150,11 @@ class _DriverDashboardState extends State<DriverDashboard> {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              '₱${payoutVal.toStringAsFixed(2)}',
-                              style: const TextStyle(
-                                color: Color(0xFF10B981),
+                              job.isCollectionJob ? 'Collection' : '₱${payoutVal.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                color: job.isCollectionJob ? AppTheme.primaryColor : const Color(0xFF10B981),
                                 fontWeight: FontWeight.bold,
-                                fontSize: 18,
+                                fontSize: job.isCollectionJob ? 14 : 18,
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -1079,14 +1164,14 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                   horizontal: 14,
                                   vertical: 8,
                                 ),
-                                backgroundColor: AppTheme.primaryColor,
+                                backgroundColor: job.isCollectionJob ? const Color(0xFF10B981) : AppTheme.primaryColor,
                                 textStyle: const TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                               onPressed: () => _acceptDeliveryJob(job),
-                              child: const Text('Accept Job'),
+                              child: Text(job.isCollectionJob ? 'Accept Task' : 'Accept Job'),
                             ),
                           ],
                         ),
@@ -1662,6 +1747,47 @@ class _DriverDashboardState extends State<DriverDashboard> {
                           ),
                         ],
                       ),
+                      const SizedBox(height: 6),
+                      if (job.isBorrowingContainers || (job.borrowedSlimCount ?? 0) > 0 || (job.borrowedRoundCount ?? 0) > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.people_alt_rounded, size: 12, color: Colors.amber),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Borrowing: ${_formatBorrowSummary(job)}',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFB45309),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            '💧 Refill (Customer Owns Jugs)',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1D4ED8),
+                            ),
+                          ),
+                        ),
                       if (job.deliveryNote != null && job.deliveryNote!.trim().isNotEmpty) ...[
                         const SizedBox(height: 6),
                         Container(
@@ -1752,7 +1878,681 @@ class _DriverDashboardState extends State<DriverDashboard> {
     );
   }
 
-  // TAB 2: TRIP DUTY HISTORY
+  String _formatBorrowSummary(OrderModel job) {
+    final slim = job.borrowedSlimCount ?? 0;
+    final round = job.borrowedRoundCount ?? 0;
+    if (slim > 0 && round > 0) {
+      return '$slim Slim, $round Round';
+    } else if (slim > 0) {
+      return '$slim Slim Gallon${slim > 1 ? 's' : ''}';
+    } else if (round > 0) {
+      return '$round Round Gallon${round > 1 ? 's' : ''}';
+    } else if (job.isBorrowingContainers) {
+      return '${job.quantity} Borrowed Gallon${job.quantity > 1 ? 's' : ''}';
+    }
+    return 'Refill (Customer Owns Jugs)';
+  }
+
+  // TAB 2: GALLON COLLECTION & CONTAINER TRACKING
+  Widget _buildGallonCollectionTab(bool isDark) {
+    final auth = Provider.of<AuthProvider>(context);
+    final orderProvider = Provider.of<OrderProvider>(context);
+    final driverName = auth.currentUser?.name ?? 'Driver';
+
+    final borrows = orderProvider.customerBorrows;
+    final activeBorrows = borrows.where((b) => b['isReturned'] == false).toList();
+    final dailyCollectedCount = orderProvider.getDriverDailyCollectedGallonsCount(driverName);
+    final totalActiveBorrows = orderProvider.totalActiveBorrowedGallons;
+
+    final query = _gallonSearchController.text.trim().toLowerCase();
+    final filteredBorrows = activeBorrows.where((b) {
+      if (query.isEmpty) return true;
+      final name = (b['customerName'] as String? ?? '').toLowerCase();
+      final phone = (b['customerPhone'] as String? ?? '').toLowerCase();
+      final addr = (b['deliveryAddress'] as String? ?? '').toLowerCase();
+      final txn = (b['txnId'] as String? ?? '').toLowerCase();
+      final gType = (b['gallonType'] as String? ?? '').toLowerCase();
+      return name.contains(query) || phone.contains(query) || addr.contains(query) || txn.contains(query) || gType.contains(query);
+    }).toList();
+
+    final cardBgColor = isDark ? AppTheme.darkSurface : Colors.white;
+    final borderColor = isDark ? Colors.white10 : const Color(0xFFE2E8F0);
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header Bar
+          Text(
+            'Gallon Collection & Returns',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : const Color(0xFF1E293B),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Monitor customer container balances and record empty gallons collected on dispatch.',
+            style: TextStyle(
+              fontSize: 12,
+              color: isDark ? Colors.white70 : const Color(0xFF64748B),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Stat Cards Summary
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth > 700;
+              final card1 = _buildGallonStatCard(
+                title: "Today's Collected",
+                value: '+$dailyCollectedCount Gallons',
+                subtitle: 'Empties retrieved by you today',
+                icon: Icons.check_circle_rounded,
+                color: const Color(0xFF10B981),
+                isDark: isDark,
+              );
+              final card2 = _buildGallonStatCard(
+                title: 'Active Customers with Jugs',
+                value: '${activeBorrows.length} Customer${activeBorrows.length == 1 ? '' : 's'}',
+                subtitle: 'Customers with outstanding gallons',
+                icon: Icons.assignment_ind_rounded,
+                color: const Color(0xFF2563EB),
+                isDark: isDark,
+              );
+              final card3 = _buildGallonStatCard(
+                title: 'Total Gallons in Field',
+                value: '$totalActiveBorrows Gallons',
+                subtitle: 'Awaiting return to station',
+                icon: Icons.warehouse_rounded,
+                color: const Color(0xFFF59E0B),
+                isDark: isDark,
+              );
+
+              if (isWide) {
+                return Row(
+                  children: [
+                    Expanded(child: card1),
+                    const SizedBox(width: 14),
+                    Expanded(child: card2),
+                    const SizedBox(width: 14),
+                    Expanded(child: card3),
+                  ],
+                );
+              } else {
+                return Column(
+                  children: [
+                    card1,
+                    const SizedBox(height: 12),
+                    card2,
+                    const SizedBox(height: 12),
+                    card3,
+                  ],
+                );
+              }
+            },
+          ),
+          const SizedBox(height: 20),
+
+          // Search Box
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: cardBgColor,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: borderColor),
+            ),
+            child: TextField(
+              controller: _gallonSearchController,
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(
+                hintText: 'Search customer name, phone, address, or Txn ID...',
+                prefixIcon: const Icon(Icons.search_rounded),
+                suffixIcon: _gallonSearchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 18),
+                        onPressed: () {
+                          _gallonSearchController.clear();
+                          setState(() {});
+                        },
+                      )
+                    : null,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Active Borrows List
+          if (filteredBorrows.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(40),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: cardBgColor,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: borderColor),
+              ),
+              child: Column(
+                children: [
+                  const Icon(Icons.check_circle_outline_rounded, size: 48, color: Color(0xFF10B981)),
+                  const SizedBox(height: 12),
+                  Text(
+                    activeBorrows.isEmpty
+                        ? 'All customer borrowed gallons are returned! Zero pending collections.'
+                        : 'No borrowed gallons match your search.',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: filteredBorrows.length,
+              itemBuilder: (context, index) {
+                final b = filteredBorrows[index];
+                final custName = b['customerName'] as String? ?? 'Customer';
+                final phone = b['customerPhone'] as String? ?? 'No phone';
+                final address = b['deliveryAddress'] as String? ?? 'No address';
+                final gType = b['gallonType'] as String? ?? '5-Gallon';
+                final qty = (b['quantity'] as num?)?.toInt() ?? 1;
+                final txnId = b['txnId'] as String? ?? '';
+                final isSlim = gType.toLowerCase().contains('slim');
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 14),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: cardBgColor,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: borderColor),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.02),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header Row: Avatar + Customer Info & Owed Badge
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          CircleAvatar(
+                            radius: 20,
+                            backgroundColor: (isSlim ? Colors.indigo : Colors.deepPurple).withValues(alpha: 0.12),
+                            child: Icon(
+                              isSlim ? Icons.local_drink_rounded : Icons.crop_portrait_rounded,
+                              color: isSlim ? Colors.indigo : Colors.deepPurple,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 4,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    Text(
+                                      custName,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                        color: isDark ? Colors.white : const Color(0xFF1E293B),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.amber.withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+                                      ),
+                                      child: Text(
+                                        'Owes $qty $gType',
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFFB45309),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(
+                                      Icons.location_on_rounded,
+                                      size: 14,
+                                      color: isDark ? Colors.white54 : const Color(0xFF64748B),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        address,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: isDark ? Colors.white70 : const Color(0xFF475569),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Wrap(
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  spacing: 6,
+                                  runSpacing: 2,
+                                  children: [
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.phone_rounded,
+                                          size: 13,
+                                          color: isDark ? Colors.white54 : const Color(0xFF64748B),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          phone,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w500,
+                                            color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Text(
+                                      '• Ref: $txnId',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Builder(
+                        builder: (context) {
+                          final custId = b['customerId'] as String? ?? '';
+                          final currentDriverId = auth.currentUser?.id ?? '';
+
+                          final driverCollectionJob = orderProvider.orders.cast<OrderModel?>().firstWhere(
+                            (o) =>
+                                o != null &&
+                                o.isCollectionJob &&
+                                (o.driverId == currentDriverId || o.driverName == driverName) &&
+                                (o.customerId == custId || o.customerName.trim().toLowerCase() == custName.trim().toLowerCase()) &&
+                                o.orderStatus != OrderStatus.cancelled &&
+                                o.orderStatus != OrderStatus.completed,
+                            orElse: () => null,
+                          );
+
+                          final bool isJobAssigned = driverCollectionJob != null &&
+                              (driverCollectionJob.orderStatus == OrderStatus.assigned ||
+                               driverCollectionJob.orderStatus == OrderStatus.confirmed ||
+                               driverCollectionJob.orderStatus == OrderStatus.pending);
+
+                          final bool isJobActive = driverCollectionJob != null &&
+                              driverCollectionJob.orderStatus == OrderStatus.onDelivery;
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (driverCollectionJob != null)
+                                Container(
+                                  margin: const EdgeInsets.only(bottom: 10),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: isJobActive
+                                        ? const Color(0xFF10B981).withValues(alpha: 0.12)
+                                        : Colors.amber.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: isJobActive
+                                          ? const Color(0xFF10B981).withValues(alpha: 0.3)
+                                          : Colors.amber.withValues(alpha: 0.3),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        isJobActive ? Icons.check_circle_rounded : Icons.schedule_rounded,
+                                        size: 14,
+                                        color: isJobActive ? const Color(0xFF059669) : const Color(0xFFB45309),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          isJobActive
+                                              ? 'Weekly Task Accepted • Ready to log returned containers'
+                                              : 'Weekly Job Dispatched by Admin • Tap below to accept & unlock collection',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: isJobActive ? const Color(0xFF047857) : const Color(0xFFB45309),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              SizedBox(
+                                width: double.infinity,
+                                child: isJobActive
+                                    ? ElevatedButton.icon(
+                                        onPressed: () => _showCollectGallonsDialog(
+                                          context,
+                                          b,
+                                          collectionJob: driverCollectionJob,
+                                        ),
+                                        icon: const Icon(Icons.assignment_return_rounded, size: 16),
+                                        label: const Text('Log Return / Collect Gallons'),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(0xFF10B981),
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(vertical: 12),
+                                          textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                          elevation: 0,
+                                        ),
+                                      )
+                                    : isJobAssigned
+                                        ? ElevatedButton.icon(
+                                            onPressed: () => _acceptDeliveryJob(driverCollectionJob),
+                                            icon: const Icon(Icons.touch_app_rounded, size: 16),
+                                            label: const Text('⏳ Task Assigned • Tap to Accept & Unlock'),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: const Color(0xFFF59E0B),
+                                              foregroundColor: Colors.white,
+                                              padding: const EdgeInsets.symmetric(vertical: 12),
+                                              textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                              elevation: 0,
+                                            ),
+                                          )
+                                        : ElevatedButton.icon(
+                                            onPressed: () {
+                                              Helpers.showSnackBar(
+                                                context,
+                                                'Awaiting Admin job order. The Admin must schedule and dispatch a weekly collection for $custName before you can log returns.',
+                                              );
+                                            },
+                                            icon: const Icon(Icons.lock_outline_rounded, size: 16),
+                                            label: const Text('🔒 Awaiting Admin Job Order'),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: isDark ? Colors.white10 : const Color(0xFFF1F5F9),
+                                              foregroundColor: isDark ? Colors.white54 : const Color(0xFF64748B),
+                                              padding: const EdgeInsets.symmetric(vertical: 12),
+                                              textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                              elevation: 0,
+                                            ),
+                                          ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGallonStatCard({
+    required String title,
+    required String value,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required bool isDark,
+  }) {
+    final cardBgColor = isDark ? AppTheme.darkSurface : Colors.white;
+    final borderColor = isDark ? Colors.white10 : const Color(0xFFE2E8F0);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cardBgColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    color: isDark ? Colors.white : const Color(0xFF1E293B),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCollectGallonsDialog(BuildContext context, Map<String, dynamic> borrow, {OrderModel? collectionJob}) {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+    final driverName = auth.currentUser?.name ?? 'Driver';
+
+    final String custName = borrow['customerName'] ?? 'Customer';
+    final String gType = borrow['gallonType'] ?? '5-Gallon';
+    final int owedQty = (borrow['quantity'] as num?)?.toInt() ?? 1;
+    final String orderId = borrow['orderId'] ?? '';
+
+    final isSlim = gType.toLowerCase().contains('slim');
+    final isRound = gType.toLowerCase().contains('round');
+
+    final slimController = TextEditingController(text: isSlim ? owedQty.toString() : '0');
+    final roundController = TextEditingController(text: isRound ? owedQty.toString() : '0');
+    final notesController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.assignment_return_rounded, color: Colors.blue, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Collect Returned Gallons',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      'From: $custName',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 420,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.info_outline_rounded, color: Colors.amber, size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Customer currently owes $owedQty $gType gallon(s). Enter the quantity of empty containers handed over to your vehicle.',
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: slimController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: '5-Gallon Slim Containers Collected',
+                      prefixIcon: Icon(Icons.local_drink_rounded, color: Colors.indigo),
+                      helperText: 'Number of empty Slim jugs received',
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: roundController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: '5-Gallon Round Containers Collected',
+                      prefixIcon: Icon(Icons.crop_portrait_rounded, color: Colors.deepPurple),
+                      helperText: 'Number of empty Round jugs received',
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: notesController,
+                    decoration: const InputDecoration(
+                      labelText: 'Notes / Container Condition (Optional)',
+                      hintText: 'e.g. Good condition with cap intact',
+                      prefixIcon: Icon(Icons.notes_rounded),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                final slimCount = int.tryParse(slimController.text.trim()) ?? 0;
+                final roundCount = int.tryParse(roundController.text.trim()) ?? 0;
+                if (slimCount <= 0 && roundCount <= 0) {
+                  Helpers.showSnackBar(context, 'Please enter at least 1 collected gallon.', isError: true);
+                  return;
+                }
+
+                orderProvider.collectDriverReturnedGallons(
+                  orderId: orderId,
+                  customerName: custName,
+                  slimCount: slimCount,
+                  roundCount: roundCount,
+                  driverName: driverName,
+                  notes: notesController.text.trim().isNotEmpty ? notesController.text.trim() : null,
+                );
+
+                if (collectionJob != null) {
+                  orderProvider.updateOrderStatus(
+                    orderId: collectionJob.id,
+                    newStatus: OrderStatus.completed,
+                    driverId: auth.currentUser?.id,
+                    driverName: driverName,
+                  );
+                }
+
+                Navigator.of(ctx).pop();
+                Helpers.showSnackBar(
+                  context,
+                  'Successfully logged return: ${slimCount > 0 ? '$slimCount Slim ' : ''}${roundCount > 0 ? '$roundCount Round' : ''} gallons collected from $custName!',
+                );
+              },
+              icon: const Icon(Icons.check_circle_rounded, size: 16),
+              label: const Text('Confirm Collection'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF10B981),
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // TAB 3: TRIP DUTY HISTORY
   Widget _buildDutyHistoryTab(bool isDark) {
     final auth = Provider.of<AuthProvider>(context);
     final orderProvider = Provider.of<OrderProvider>(context);

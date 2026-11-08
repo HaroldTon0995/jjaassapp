@@ -47,7 +47,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
       TextEditingController();
   final TextEditingController _borrowSearchController =
       TextEditingController();
-  int _inventorySubTab = 0; // 0: Container Items, 1: Customer Borrowed Gallons Log
+  int _inventorySubTab = 0; // 0: Inventory Items, 1: Customer Borrowed Gallons Log
+  String _inventoryCategoryFilter = 'all'; // 'all', 'water', 'container', 'accessory'
   String _borrowFilter = 'all'; // 'all', 'active', 'returned', 'slim', 'round'
 
   // State variables for interactive support chat
@@ -1545,7 +1546,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       case 3:
         return 'Users';
       case 4:
-        return 'Inventory & Reserves';
+        return 'Inventory & Stock Tracking';
       case 5:
         return 'Payments Transactions';
       case 6:
@@ -2908,6 +2909,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final phoneController = TextEditingController(text: '+63 ');
     final addressController = TextEditingController();
     final qtyController = TextEditingController(text: '1');
+    bool isBorrowingContainers = false;
+    final slimBorrowController = TextEditingController(text: '0');
+    final roundBorrowController = TextEditingController(text: '0');
 
     String selectedWaterType = orderProvider.waterProducts.isNotEmpty
         ? (orderProvider.waterProducts.first['name'] as String)
@@ -3291,14 +3295,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.25)),
                           ),
-                          child: const Row(
+                          child: Row(
                             children: [
-                              Icon(Icons.info_outline_rounded, color: Color(0xFF059669), size: 18),
-                              SizedBox(width: 8),
+                              const Icon(Icons.info_outline_rounded, color: Color(0xFF059669), size: 18),
+                              const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  'Store Pickup: No delivery rider will be assigned.',
-                                  style: TextStyle(
+                                  isBorrowingContainers
+                                      ? 'Walk-in Bulk Borrow: Station containers will be borrowed by this registered customer.'
+                                      : 'Walk-in Refill: Customer brings own containers. Station container inventory will NOT be deducted.',
+                                  style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
                                     color: Color(0xFF047857),
@@ -3308,7 +3314,93 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             ],
                           ),
                         ),
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 12),
+                        if (isRegistered) ...[
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: isBorrowingContainers
+                                    ? AppTheme.primaryColor
+                                    : (isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Borrow Station Containers (Bulk Order)',
+                                            style: TextStyle(
+                                              fontSize: 12.5,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          SizedBox(height: 2),
+                                          Text(
+                                            'Enable if registered customer borrows station gallons',
+                                            style: TextStyle(fontSize: 11, color: Colors.grey),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Switch(
+                                      value: isBorrowingContainers,
+                                      onChanged: (val) {
+                                        setDialogState(() {
+                                          isBorrowingContainers = val;
+                                          if (val) {
+                                            final currentQty = int.tryParse(qtyController.text) ?? 1;
+                                            slimBorrowController.text = currentQty.toString();
+                                            roundBorrowController.text = '0';
+                                          }
+                                        });
+                                      },
+                                    ),
+                                  ],
+                                ),
+                                if (isBorrowingContainers) ...[
+                                  const SizedBox(height: 10),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: TextField(
+                                          controller: slimBorrowController,
+                                          keyboardType: TextInputType.number,
+                                          decoration: const InputDecoration(
+                                            labelText: 'Slim Gallons Borrowed',
+                                            isDense: true,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: TextField(
+                                          controller: roundBorrowController,
+                                          keyboardType: TextInputType.number,
+                                          decoration: const InputDecoration(
+                                            labelText: 'Round Gallons Borrowed',
+                                            isDense: true,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                        const SizedBox(height: 6),
                       ],
 
                       // 4. ORDER & PRODUCT DETAILS
@@ -3579,6 +3671,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             : 'Not Needed (Walk-in/Pickup)';
 
                         try {
+                          final int borrowedSlim = isBorrowingContainers ? (int.tryParse(slimBorrowController.text) ?? 0) : 0;
+                          final int borrowedRound = isBorrowingContainers ? (int.tryParse(roundBorrowController.text) ?? 0) : 0;
                           final newOrder = await orderProvider.placeOrder(
                             customerId: custId,
                             customerName: name,
@@ -3592,6 +3686,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             orderStatus: orderStatus,
                             driverId: driverId,
                             driverName: driverName,
+                            isWalkIn: !isDelivery,
+                            isBorrowingContainers: isBorrowingContainers,
+                            borrowedSlimQty: borrowedSlim,
+                            borrowedRoundQty: borrowedRound,
                           );
 
                           if (context.mounted) {
@@ -4122,8 +4220,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header Bar
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 12,
+            runSpacing: 10,
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -4143,22 +4244,41 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ),
                 ],
               ),
-              ActionChip(
-                avatar: Icon(
-                  _mapSatelliteMode
-                      ? Icons.satellite_alt_rounded
-                      : Icons.map_rounded,
-                  size: 16,
-                  color: AppTheme.primaryColor,
-                ),
-                label: Text(
-                  _mapSatelliteMode ? 'Satellite Dark' : 'Vector Map',
-                ),
-                onPressed: () {
-                  setState(() {
-                    _mapSatelliteMode = !_mapSatelliteMode;
-                  });
-                },
+              Wrap(
+                spacing: 10,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  ActionChip(
+                    avatar: Icon(
+                      _mapSatelliteMode
+                          ? Icons.satellite_alt_rounded
+                          : Icons.map_rounded,
+                      size: 16,
+                      color: AppTheme.primaryColor,
+                    ),
+                    label: Text(
+                      _mapSatelliteMode ? 'Satellite Dark' : 'Vector Map',
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _mapSatelliteMode = !_mapSatelliteMode;
+                      });
+                    },
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () => _showScheduleCollectionDialog(isDark),
+                    icon: const Icon(Icons.assignment_add, size: 16),
+                    label: const Text('Schedule Weekly Collection'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      elevation: 1,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -5374,17 +5494,24 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
 
     String selectedCategory = isEditing
-        ? (itemToEdit['category'] as String? ?? 'container')
-        : 'container';
+        ? (itemToEdit['category'] as String? ?? 'water')
+        : 'water';
     String selectedUnit = isEditing
-        ? (itemToEdit['unit'] as String? ?? 'Units')
-        : 'Units';
+        ? (itemToEdit['unit'] as String? ?? 'Gallons')
+        : 'Gallons';
     Color selectedColor = isEditing
-        ? (itemToEdit['color'] as Color? ?? Colors.indigo)
-        : Colors.indigo;
+        ? (itemToEdit['color'] as Color? ?? Colors.blue)
+        : Colors.blue;
     IconData selectedIcon = isEditing
-        ? (itemToEdit['icon'] as IconData? ?? Icons.local_drink_rounded)
-        : Icons.local_drink_rounded;
+        ? (itemToEdit['icon'] as IconData? ?? Icons.water_drop_rounded)
+        : Icons.water_drop_rounded;
+    bool isRefill = isEditing
+        ? ((itemToEdit['is_refill'] ??
+            (itemToEdit['category'] == 'water' &&
+                (itemToEdit['unit']?.toString().toLowerCase() == 'gallons' ||
+                    (itemToEdit['name']?.toString().toLowerCase().contains('refill') ?? false) ||
+                    (itemToEdit['name']?.toString().toLowerCase().contains('19l') ?? false)))) as bool)
+        : (selectedCategory == 'water' && selectedUnit == 'Gallons');
 
     showDialog(
       context: context,
@@ -5439,19 +5566,164 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         ),
                         items: const [
                           DropdownMenuItem(
+                            value: 'water',
+                            child: Text('💧 Water Product / Refill (Customer App)'),
+                          ),
+                          DropdownMenuItem(
                             value: 'container',
                             child: Text('🪣 Container & Jug Reserve'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'accessory',
+                            child: Text('📦 Accessory & Parts'),
                           ),
                         ],
                         onChanged: (val) {
                           if (val != null) {
                             setDialogState(() {
                               selectedCategory = val;
-                              selectedUnit = 'Units';
-                              selectedIcon = Icons.local_drink_rounded;
+                              if (val == 'water') {
+                                selectedUnit = 'Gallons';
+                                selectedColor = Colors.blue;
+                                selectedIcon = Icons.water_drop_rounded;
+                                isRefill = true;
+                              } else if (val == 'accessory') {
+                                selectedUnit = 'Pieces';
+                                selectedColor = Colors.amber;
+                                selectedIcon = Icons.inventory_2_rounded;
+                                isRefill = false;
+                              } else {
+                                selectedUnit = 'Units';
+                                selectedColor = Colors.indigo;
+                                selectedIcon = Icons.local_drink_rounded;
+                                isRefill = false;
+                              }
                             });
                           }
                         },
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Customer App Ordering Mode Toggle
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: isRefill
+                              ? const Color(0xFF0284C7).withValues(alpha: 0.08)
+                              : const Color(0xFF10B981).withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isRefill
+                                ? const Color(0xFF0284C7).withValues(alpha: 0.3)
+                                : const Color(0xFF10B981).withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Customer App Order Placement',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: InkWell(
+                                    onTap: () {
+                                      setDialogState(() {
+                                        isRefill = true;
+                                      });
+                                    },
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                                      decoration: BoxDecoration(
+                                        color: isRefill ? const Color(0xFF0284C7) : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.water_drop_rounded,
+                                            size: 16,
+                                            color: isRefill ? Colors.white : Colors.blueGrey,
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Flexible(
+                                            child: Text(
+                                              '5-Gallon Refill',
+                                              style: TextStyle(
+                                                fontSize: 11.5,
+                                                fontWeight: FontWeight.bold,
+                                                color: isRefill ? Colors.white : Colors.blueGrey,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: InkWell(
+                                    onTap: () {
+                                      setDialogState(() {
+                                        isRefill = false;
+                                      });
+                                    },
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                                      decoration: BoxDecoration(
+                                        color: !isRefill ? const Color(0xFF10B981) : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.storefront_rounded,
+                                            size: 16,
+                                            color: !isRefill ? Colors.white : Colors.blueGrey,
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Flexible(
+                                            child: Text(
+                                              'Standalone Product',
+                                              style: TextStyle(
+                                                fontSize: 11.5,
+                                                fontWeight: FontWeight.bold,
+                                                color: !isRefill ? Colors.white : Colors.blueGrey,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              isRefill
+                                  ? '💧 Shows in Top Refills section (Customer selects 5-Gallon Slim / Round jug types).'
+                                  : '📦 Shows in Station Products & Items (Direct [ - ] [ + ] quantity purchase, e.g. 500ml Bottled Water, Jugs, Accessories).',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                color: isDark ? Colors.white70 : const Color(0xFF475569),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 12),
 
@@ -5670,6 +5942,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         color: selectedColor,
                         icon: selectedIcon,
                         description: desc,
+                        isRefill: isRefill,
                       );
                       Navigator.of(context).pop();
                       Helpers.showSnackBar(
@@ -5687,6 +5960,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         color: selectedColor,
                         icon: selectedIcon,
                         description: desc,
+                        isRefill: isRefill,
                       );
                       Navigator.of(context).pop();
                       Helpers.showSnackBar(
@@ -5879,98 +6153,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  // Set Container Reserves Dialog (Empty vs Refilled Reserves)
-  void _showSetReservesDialog(bool isDark) {
-    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
-    final emptyController = TextEditingController(text: orderProvider.emptyContainerStocks.toString());
-    final refilledController = TextEditingController(text: orderProvider.refilledContainerStocks.toString());
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.amber.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.warehouse_rounded, color: Colors.amber, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Configure Container Reserves',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : const Color(0xFF1E293B),
-                ),
-              ),
-            ],
-          ),
-          content: SizedBox(
-            width: 400,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Set your warehouse reserve counts for empty jugs awaiting refill and ready-to-dispatch refilled jugs.',
-                  style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : Colors.grey.shade600),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: emptyController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Empty Containers in Warehouse',
-                    hintText: 'e.g. 100',
-                    prefixIcon: Icon(Icons.delete_sweep_rounded),
-                    helperText: 'Awaiting cleaning or refill in storage',
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: refilledController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Refilled Containers Ready for Dispatch',
-                    hintText: 'e.g. 150',
-                    prefixIcon: Icon(Icons.check_circle_outline_rounded),
-                    helperText: 'Pre-filled jugs ready for delivery',
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final emptyVal = int.tryParse(emptyController.text.trim()) ?? 0;
-                final refilledVal = int.tryParse(refilledController.text.trim()) ?? 0;
-                orderProvider.setContainerReserves(
-                  emptyStocks: max(0, emptyVal),
-                  refilledStocks: max(0, refilledVal),
-                );
-                Navigator.of(context).pop();
-                Helpers.showSnackBar(context, 'Container reserves updated successfully!');
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor),
-              child: const Text('Save Reserves'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   // Set All Inventory Stocks Dialog (All-in-one Quick Table)
   void _showSetAllInventoryDialog(bool isDark) {
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
@@ -5988,9 +6170,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'price': TextEditingController(text: price.toStringAsFixed(2)),
       };
     }
-
-    final emptyReserveCtrl = TextEditingController(text: orderProvider.emptyContainerStocks.toString());
-    final refilledReserveCtrl = TextEditingController(text: orderProvider.refilledContainerStocks.toString());
 
     showDialog(
       context: context,
@@ -6013,7 +6192,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Set All Inventory Stocks & Reserves',
+                      'Set All Inventory Stocks',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -6021,7 +6200,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       ),
                     ),
                     Text(
-                      'Input real inventory counts directly. Replaces any hardcoded defaults.',
+                      'Input actual warehouse inventory counts directly. Persists permanently across reloads.',
                       style: TextStyle(
                         fontSize: 11,
                         color: isDark ? Colors.white70 : Colors.grey.shade600,
@@ -6115,34 +6294,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       ),
                     );
                   }),
-                  const Divider(height: 24),
-                  const Text('Container Reserves', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: emptyReserveCtrl,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'Empty Containers',
-                            isDense: true,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextField(
-                          controller: refilledReserveCtrl,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'Refilled Containers',
-                            isDense: true,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
                 ],
               ),
             ),
@@ -6168,17 +6319,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     'price': p,
                   });
                 }
-                final emptyVal = int.tryParse(emptyReserveCtrl.text.trim()) ?? 0;
-                final refilledVal = int.tryParse(refilledReserveCtrl.text.trim()) ?? 0;
 
-                orderProvider.setAllInventoryLevels(
-                  updatedList,
-                  emptyReserves: max(0, emptyVal),
-                  refilledReserves: max(0, refilledVal),
-                );
+                orderProvider.setAllInventoryLevels(updatedList);
 
                 Navigator.of(context).pop();
-                Helpers.showSnackBar(context, 'All inventory stocks and reserves updated successfully!');
+                Helpers.showSnackBar(context, 'All inventory stocks updated and saved successfully!');
               },
               icon: const Icon(Icons.check_rounded, size: 16),
               label: const Text('Save All Levels'),
@@ -6595,6 +6740,491 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
+  // Schedule Weekly Gallon Collection Dialog
+  void _showScheduleCollectionDialog(bool isDark, {Map<String, dynamic>? preselectedBorrow}) {
+    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+    final driversList = _allUsers.where((u) => u.role == UserRole.driver).toList();
+    final activeBorrows = orderProvider.customerBorrows.where((b) => b['isReturned'] == false).toList();
+
+    if (driversList.isEmpty) {
+      Helpers.showSnackBar(
+        context,
+        'No drivers registered in the system yet. Please create a driver user first.',
+        isError: true,
+      );
+      return;
+    }
+
+    if (activeBorrows.isEmpty && preselectedBorrow == null) {
+      Helpers.showSnackBar(
+        context,
+        'There are no customers currently holding borrowed gallons to collect.',
+        isError: true,
+      );
+      return;
+    }
+
+    // Calculate station totals across all borrowers
+    int totalSlimAcrossAll = 0;
+    int totalRoundAcrossAll = 0;
+    for (final b in activeBorrows) {
+      final s = b['gallonType']?.toString().toLowerCase().contains('slim') ?? false;
+      final r = b['gallonType']?.toString().toLowerCase().contains('round') ?? false;
+      final q = (b['quantity'] as num?)?.toInt() ?? 1;
+      if (s) totalSlimAcrossAll += q;
+      if (r) totalRoundAcrossAll += q;
+    }
+
+    String selectedBorrowKey = preselectedBorrow != null
+        ? '${preselectedBorrow['orderId']}_${preselectedBorrow['gallonType']}'
+        : 'all_borrowers';
+
+    UserModel? selectedDriver = driversList.first;
+
+    final isPreSlim = preselectedBorrow != null
+        ? (preselectedBorrow['gallonType']?.toString().toLowerCase().contains('slim') ?? false)
+        : false;
+    final isPreRound = preselectedBorrow != null
+        ? (preselectedBorrow['gallonType']?.toString().toLowerCase().contains('round') ?? false)
+        : false;
+    final preQty = preselectedBorrow != null
+        ? ((preselectedBorrow['quantity'] as num?)?.toInt() ?? 1)
+        : 0;
+
+    final slimController = TextEditingController(
+      text: preselectedBorrow != null
+          ? (isPreSlim ? '$preQty' : '0')
+          : '$totalSlimAcrossAll',
+    );
+    final roundController = TextEditingController(
+      text: preselectedBorrow != null
+          ? (isPreRound ? '$preQty' : '0')
+          : '$totalRoundAcrossAll',
+    );
+    final notesController = TextEditingController();
+    String selectedSchedule = 'Weekly Regular Collection (Every Monday)';
+
+    final scheduleOptions = [
+      'Weekly Regular Collection (Every Monday)',
+      'Weekly Regular Collection (Every Wednesday)',
+      'Weekly Regular Collection (Every Friday)',
+      'Weekly Regular Collection (Every Weekend)',
+      'Special Scheduled Dispatch Today',
+      'Next Driver Route Run',
+    ];
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final cardBg = isDark ? AppTheme.darkSurface : Colors.white;
+            final textCol = isDark ? Colors.white : const Color(0xFF1E293B);
+            final subCol = isDark ? Colors.white70 : const Color(0xFF64748B);
+            final isAllSelected = selectedBorrowKey == 'all_borrowers';
+
+            return AlertDialog(
+              backgroundColor: cardBg,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.assignment_add, color: AppTheme.primaryColor),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Schedule Weekly Gallon Collection',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            color: textCol,
+                          ),
+                        ),
+                        Text(
+                          isAllSelected
+                              ? 'Batch route: Assign driver to collect from all ${activeBorrows.length} borrowers'
+                              : 'Assign driver to retrieve empty jugs from specific customer',
+                          style: TextStyle(fontSize: 12, color: subCol),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: 520,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Select Customer Holding Gallons or All Borrowers
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Borrower Customer Selection',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textCol),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: isAllSelected
+                                  ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                                  : Colors.blue.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              isAllSelected ? 'All Borrowers Mode' : 'Single Customer Mode',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: isAllSelected ? const Color(0xFF047857) : Colors.blue,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: isDark ? Colors.white24 : const Color(0xFFCBD5E1)),
+                          color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF8FAFC),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            isExpanded: true,
+                            value: selectedBorrowKey,
+                            dropdownColor: cardBg,
+                            items: [
+                              // OPTION 1: ALL BORROWERS
+                              DropdownMenuItem<String>(
+                                value: 'all_borrowers',
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.route_rounded, size: 16, color: Color(0xFF10B981)),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        '🌟 ALL BORROWERS — Weekly Full Route (${activeBorrows.length} Customers • $totalSlimAcrossAll Slim, $totalRoundAcrossAll Round)',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF047857),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // INDIVIDUAL BORROWERS
+                              ...activeBorrows.map((b) {
+                                final key = '${b['orderId']}_${b['gallonType']}';
+                                final name = b['customerName'] as String? ?? 'Customer';
+                                final gType = b['gallonType'] as String? ?? 'Gallon';
+                                final qty = b['quantity']?.toString() ?? '1';
+                                final addr = b['deliveryAddress'] as String? ?? '';
+                                return DropdownMenuItem<String>(
+                                  value: key,
+                                  child: Text(
+                                    '👤 $name (Owes $qty $gType) • $addr',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(fontSize: 13, color: textCol),
+                                  ),
+                                );
+                              }),
+                            ],
+                            onChanged: (val) {
+                              if (val != null) {
+                                setDialogState(() {
+                                  selectedBorrowKey = val;
+                                  if (val == 'all_borrowers') {
+                                    slimController.text = '$totalSlimAcrossAll';
+                                    roundController.text = '$totalRoundAcrossAll';
+                                  } else {
+                                    final found = activeBorrows.firstWhere(
+                                      (b) => '${b['orderId']}_${b['gallonType']}' == val,
+                                      orElse: () => activeBorrows.first,
+                                    );
+                                    final s = found['gallonType']?.toString().toLowerCase().contains('slim') ?? false;
+                                    final r = found['gallonType']?.toString().toLowerCase().contains('round') ?? false;
+                                    final q = (found['quantity'] as num?)?.toInt() ?? 1;
+                                    slimController.text = s ? '$q' : '0';
+                                    roundController.text = r ? '$q' : '0';
+                                  }
+                                });
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                      if (isAllSelected) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.alt_route_rounded, size: 16, color: Color(0xFF059669)),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Full Route Mode: Dispatches weekly collection tasks to ${selectedDriver?.name ?? 'Driver'} for all ${activeBorrows.length} customers holding containers ($totalSlimAcrossAll Slim, $totalRoundAcrossAll Round).',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF047857),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 14),
+
+                      // Select Driver
+                      Text(
+                        'Assign Driver / Rider',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textCol),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: isDark ? Colors.white24 : const Color(0xFFCBD5E1)),
+                          color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF8FAFC),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<UserModel>(
+                            isExpanded: true,
+                            value: selectedDriver,
+                            dropdownColor: cardBg,
+                            items: driversList.map((d) {
+                              return DropdownMenuItem<UserModel>(
+                                value: d,
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.delivery_dining_rounded, size: 18, color: AppTheme.primaryColor),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      '${d.name} (${d.email})',
+                                      style: TextStyle(fontSize: 13, color: textCol),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setDialogState(() => selectedDriver = val);
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Weekly Schedule Selection
+                      Text(
+                        'Weekly Schedule / Timing',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textCol),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: isDark ? Colors.white24 : const Color(0xFFCBD5E1)),
+                          color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF8FAFC),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            isExpanded: true,
+                            value: selectedSchedule,
+                            dropdownColor: cardBg,
+                            items: scheduleOptions.map((opt) {
+                              return DropdownMenuItem<String>(
+                                value: opt,
+                                child: Text(
+                                  opt,
+                                  style: TextStyle(fontSize: 13, color: textCol),
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setDialogState(() => selectedSchedule = val);
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Gallons to Collect
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: slimController,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'Slim Gallons Target',
+                                prefixIcon: Icon(Icons.water_drop_rounded, size: 16, color: Colors.blue),
+                                helperText: '5-Gallon Slim count',
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextField(
+                              controller: roundController,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'Round Gallons Target',
+                                prefixIcon: Icon(Icons.radio_button_checked_rounded, size: 16, color: Colors.indigo),
+                                helperText: '5-Gallon Round count',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Dispatch Note
+                      TextField(
+                        controller: notesController,
+                        decoration: InputDecoration(
+                          labelText: 'Dispatch Instructions / Notes (Optional)',
+                          hintText: isAllSelected
+                              ? 'e.g. Weekly full route collection for all borrowing customers'
+                              : 'e.g. Call customer before arrival at Purok 1 gate',
+                          prefixIcon: const Icon(Icons.note_alt_outlined, size: 18),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    if (selectedDriver == null) return;
+                    final slim = int.tryParse(slimController.text.trim()) ?? 0;
+                    final round = int.tryParse(roundController.text.trim()) ?? 0;
+                    if (slim <= 0 && round <= 0) {
+                      Helpers.showSnackBar(ctx, 'Please set at least 1 Slim or Round gallon to collect.', isError: true);
+                      return;
+                    }
+
+                    if (isAllSelected) {
+                      // BATCH ROUTE: Dispatch collection job orders for each active borrower
+                      for (final b in activeBorrows) {
+                        final s = b['gallonType']?.toString().toLowerCase().contains('slim') ?? false;
+                        final r = b['gallonType']?.toString().toLowerCase().contains('round') ?? false;
+                        final q = (b['quantity'] as num?)?.toInt() ?? 1;
+
+                        await orderProvider.createCollectionJobOrder(
+                          customerId: b['customerId'] as String? ?? 'usr_borrower',
+                          customerName: b['customerName'] as String? ?? 'Customer',
+                          customerPhone: b['customerPhone'] as String? ?? '+63 912 345 6789',
+                          deliveryAddress: b['deliveryAddress'] as String? ?? 'Ligao City',
+                          driverId: selectedDriver!.id,
+                          driverName: selectedDriver!.name,
+                          slimCount: s ? q : 0,
+                          roundCount: r ? q : 0,
+                          scheduledDate: selectedSchedule,
+                          notes: notesController.text.trim().isNotEmpty
+                              ? notesController.text.trim()
+                              : 'Weekly Full Route Collection',
+                        );
+                      }
+
+                      if (ctx.mounted) {
+                        Navigator.of(ctx).pop();
+                      }
+                      if (!mounted) return;
+                      setState(() {});
+                      Helpers.showSnackBar(
+                        this.context,
+                        'Weekly collection route created! Dispatched tasks for all ${activeBorrows.length} customers to ${selectedDriver!.name}.',
+                      );
+                    } else {
+                      // SINGLE CUSTOMER SELECTION
+                      final selectedBorrow = activeBorrows.firstWhere(
+                        (b) => '${b['orderId']}_${b['gallonType']}' == selectedBorrowKey,
+                        orElse: () => activeBorrows.first,
+                      );
+
+                      await orderProvider.createCollectionJobOrder(
+                        customerId: selectedBorrow['customerId'] as String? ?? 'usr_borrower',
+                        customerName: selectedBorrow['customerName'] as String? ?? 'Customer',
+                        customerPhone: selectedBorrow['customerPhone'] as String? ?? '+63 912 345 6789',
+                        deliveryAddress: selectedBorrow['deliveryAddress'] as String? ?? 'Ligao City',
+                        driverId: selectedDriver!.id,
+                        driverName: selectedDriver!.name,
+                        slimCount: slim,
+                        roundCount: round,
+                        scheduledDate: selectedSchedule,
+                        notes: notesController.text.trim().isNotEmpty ? notesController.text.trim() : null,
+                      );
+
+                      if (ctx.mounted) {
+                        Navigator.of(ctx).pop();
+                      }
+                      if (!mounted) return;
+                      setState(() {});
+                      Helpers.showSnackBar(
+                        this.context,
+                        'Weekly collection task created! Dispatched to ${selectedDriver!.name} for ${selectedBorrow['customerName']}.',
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.send_rounded, size: 16),
+                  label: Text(
+                    isAllSelected
+                        ? 'Dispatch Route (${activeBorrows.length} Customers)'
+                        : 'Dispatch Task to Driver',
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isAllSelected ? const Color(0xFF059669) : AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildBorrowFilterChip(
     String label,
     String value,
@@ -6647,9 +7277,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final valueTextColor = isDark ? Colors.white : const Color(0xFF1E293B);
     final borderColor = isDark ? Colors.white10 : const Color(0xFFE2E8F0);
 
-    final allItems = orderProvider.inventoryItems
-        .where((i) => i['category'] == 'container')
-        .toList();
+    final allItems = orderProvider.inventoryItems.where((i) {
+      if (_inventoryCategoryFilter == 'all') return true;
+      return i['category'] == _inventoryCategoryFilter;
+    }).toList();
 
     // Gallon Metrics
     final slimRemaining = orderProvider.remainingSlimGallons;
@@ -6731,15 +7362,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 spacing: 10,
                 runSpacing: 10,
                 children: [
-                  OutlinedButton.icon(
-                    onPressed: () => _showSetReservesDialog(isDark),
-                    icon: const Icon(Icons.warehouse_rounded, size: 16),
-                    label: const Text('Reserves', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                  ),
                   OutlinedButton.icon(
                     onPressed: () => _showSetAllInventoryDialog(isDark),
                     icon: const Icon(Icons.tune_rounded, size: 16),
@@ -7258,7 +7880,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Container Inventory Stock',
+                            'Products & Inventory Stock',
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: _inventorySubTab == 0 ? FontWeight.bold : FontWeight.w500,
@@ -7433,7 +8055,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 ),
               ),
             ],
-            // Container Catalog Search Bar
+            // Products Catalog Search Bar & Category Filter
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -7441,26 +8063,66 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: borderColor),
               ),
-              child: TextField(
-                controller: _inventorySearchController,
-                onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
-                  hintText: 'Search containers & jugs by name or description...',
-                  prefixIcon: const Icon(Icons.search_rounded),
-                  suffixIcon: _inventorySearchController.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear, size: 18),
-                          onPressed: () {
-                            _inventorySearchController.clear();
-                            setState(() {});
-                          },
-                        )
-                      : null,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: _inventorySearchController,
+                    onChanged: (_) => setState(() {}),
+                    decoration: InputDecoration(
+                      hintText: 'Search products, refills, containers, or accessories...',
+                      prefixIcon: const Icon(Icons.search_rounded),
+                      suffixIcon: _inventorySearchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 18),
+                              onPressed: () {
+                                _inventorySearchController.clear();
+                                setState(() {});
+                              },
+                            )
+                          : null,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 12),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildInventoryCategoryFilterChip(
+                          'all',
+                          'All Items (${orderProvider.inventoryItems.length})',
+                          Icons.grid_view_rounded,
+                          isDark,
+                        ),
+                        const SizedBox(width: 8),
+                        _buildInventoryCategoryFilterChip(
+                          'water',
+                          'Water Products (${orderProvider.inventoryItems.where((i) => i['category'] == 'water').length})',
+                          Icons.water_drop_rounded,
+                          isDark,
+                        ),
+                        const SizedBox(width: 8),
+                        _buildInventoryCategoryFilterChip(
+                          'container',
+                          'Containers (${orderProvider.inventoryItems.where((i) => i['category'] == 'container').length})',
+                          Icons.inventory_2_rounded,
+                          isDark,
+                        ),
+                        const SizedBox(width: 8),
+                        _buildInventoryCategoryFilterChip(
+                          'accessory',
+                          'Accessories (${orderProvider.inventoryItems.where((i) => i['category'] == 'accessory').length})',
+                          Icons.shopping_bag_rounded,
+                          isDark,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 20),
@@ -7484,7 +8146,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'No inventory items match your search.',
+                      'No inventory items match your search or category filter.',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: titleTextColor,
@@ -7494,7 +8156,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     ElevatedButton.icon(
                       onPressed: () => _showAddEditInventoryItemDialog(isDark),
                       icon: const Icon(Icons.add, size: 16),
-                      label: const Text('Add Container Item'),
+                      label: const Text('Add Product / Item'),
                     ),
                   ],
                 ),
@@ -7540,7 +8202,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     statusColor = Colors.orange;
                   }
 
-                  String categoryBadgeText = '🪣 Container';
+                  final String category = prod['category'] as String? ?? 'container';
+                  final bool isRefillItem = prod['is_refill'] == true ||
+                      (category == 'water' &&
+                          (unit.toLowerCase() == 'gallons' ||
+                              name.toLowerCase().contains('refill') ||
+                              name.toLowerCase().contains('19l')));
+                  String categoryBadgeText = isRefillItem
+                      ? '💧 5-Gallon Refill'
+                      : (category == 'water'
+                          ? '💧 Bottled Water'
+                          : (category == 'accessory' ? '📦 Accessory' : '🪣 Container'));
                   if (description.isNotEmpty) {
                     categoryBadgeText = '$categoryBadgeText • $description';
                   }
@@ -8022,17 +8694,80 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               ),
                             ),
                             const SizedBox(height: 8),
-                            if (!isReturned)
-                              ElevatedButton.icon(
-                                onPressed: () => _showReturnGallonDialog(isDark, borrow),
-                                icon: const Icon(Icons.assignment_return_rounded, size: 14, color: Colors.white),
-                                label: const Text('Return Gallons', style: TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold)),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green,
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                ),
+                            if (!isReturned) ...[
+                              Builder(
+                                builder: (context) {
+                                  final activeCollectionJob = orderProvider.orders.cast<OrderModel?>().firstWhere(
+                                    (o) =>
+                                        o != null &&
+                                        o.isCollectionJob &&
+                                        (o.customerId == (borrow['customerId'] ?? '') ||
+                                         o.customerName.trim().toLowerCase() == custName.trim().toLowerCase()) &&
+                                        o.orderStatus != OrderStatus.cancelled &&
+                                        o.orderStatus != OrderStatus.completed,
+                                    orElse: () => null,
+                                  );
+
+                                  return Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      if (activeCollectionJob != null)
+                                        Container(
+                                          margin: const EdgeInsets.only(bottom: 6),
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: Colors.blue.withValues(alpha: 0.12),
+                                            borderRadius: BorderRadius.circular(6),
+                                            border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(Icons.delivery_dining_rounded, size: 13, color: Colors.blue),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                'Dispatched: ${activeCollectionJob.driverName ?? 'Driver'} (${activeCollectionJob.orderStatus.displayName})',
+                                                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blue),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 6,
+                                        alignment: WrapAlignment.end,
+                                        children: [
+                                          OutlinedButton.icon(
+                                            onPressed: () => _showScheduleCollectionDialog(isDark, preselectedBorrow: borrow),
+                                            icon: const Icon(Icons.send_rounded, size: 13),
+                                            label: Text(
+                                              activeCollectionJob != null ? 'Reassign' : 'Dispatch to Driver',
+                                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                            ),
+                                            style: OutlinedButton.styleFrom(
+                                              foregroundColor: AppTheme.primaryColor,
+                                              side: const BorderSide(color: AppTheme.primaryColor),
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                            ),
+                                          ),
+                                          ElevatedButton.icon(
+                                            onPressed: () => _showReturnGallonDialog(isDark, borrow),
+                                            icon: const Icon(Icons.assignment_return_rounded, size: 13, color: Colors.white),
+                                            label: const Text('Return Gallons', style: TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold)),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.green,
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  );
+                                },
                               ),
+                            ],
                           ],
                         ),
                       ],
@@ -8263,6 +8998,57 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildInventoryCategoryFilterChip(
+    String filterValue,
+    String label,
+    IconData icon,
+    bool isDark,
+  ) {
+    final isSelected = _inventoryCategoryFilter == filterValue;
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: () => setState(() => _inventoryCategoryFilter = filterValue),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppTheme.primaryColor
+              : (isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF1F5F9)),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected
+                ? AppTheme.primaryColor
+                : (isDark ? Colors.white12 : const Color(0xFFCBD5E1)),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 14,
+              color: isSelected
+                  ? Colors.white
+                  : (isDark ? Colors.white70 : const Color(0xFF64748B)),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                color: isSelected
+                    ? Colors.white
+                    : (isDark ? Colors.white : const Color(0xFF334155)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

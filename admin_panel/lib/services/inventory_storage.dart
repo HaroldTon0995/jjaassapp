@@ -9,6 +9,7 @@ class InventoryStorage {
   static const String _restockLogsKey = 'jjaass_restock_logs_v3';
   static const String _reservesKey = 'jjaass_container_reserves_v3';
   static const String _returnedGallonsKey = 'jjaass_returned_gallons_v3';
+  static const String _deletedProductIdsKey = 'jjaass_deleted_product_ids_v3';
 
   static void saveInventory(List<Map<String, dynamic>> items) {
     try {
@@ -19,7 +20,9 @@ class InventoryStorage {
         return copy;
       }).toList();
       InventoryStorageImpl.saveString(_inventoryKey, jsonEncode(cleanList));
-      debugPrint('InventoryStorage: saved ${cleanList.length} items to local storage.');
+      debugPrint(
+        'InventoryStorage: saved ${cleanList.length} items to local storage.',
+      );
     } catch (e) {
       debugPrint('InventoryStorage save error: $e');
     }
@@ -29,9 +32,21 @@ class InventoryStorage {
     try {
       final raw = InventoryStorageImpl.getString(_inventoryKey);
       if (raw != null && raw.isNotEmpty) {
+        final deletedIds = loadDeletedProductIds();
         final decoded = jsonDecode(raw) as List<dynamic>;
-        final list = decoded.map((e) => Map<String, dynamic>.from(e as Map)).toList();
-        debugPrint('InventoryStorage: loaded ${list.length} items from local storage.');
+        final list = decoded
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .where((item) {
+              final id = item['id']?.toString() ?? '';
+              if (deletedIds.contains(id)) return false;
+              return id != 'item_electric_pump' &&
+                  id != 'item_manual_pump' &&
+                  id != 'item_dispenser_caps';
+            })
+            .toList();
+        debugPrint(
+          'InventoryStorage: loaded ${list.length} items from local storage.',
+        );
         return list;
       }
     } catch (e) {
@@ -70,7 +85,10 @@ class InventoryStorage {
 
   static void saveReturnedGallonOrders(Set<String> orderIds) {
     try {
-      InventoryStorageImpl.saveString(_returnedGallonsKey, jsonEncode(orderIds.toList()));
+      InventoryStorageImpl.saveString(
+        _returnedGallonsKey,
+        jsonEncode(orderIds.toList()),
+      );
     } catch (e) {
       debugPrint('InventoryStorage save returned orders error: $e');
     }
@@ -122,5 +140,29 @@ class InventoryStorage {
       debugPrint('InventoryStorage load logs error: $e');
     }
     return null;
+  }
+
+  static void saveDeletedProductIds(Set<String> deletedIds) {
+    try {
+      InventoryStorageImpl.saveString(
+        _deletedProductIdsKey,
+        jsonEncode(deletedIds.toList()),
+      );
+    } catch (e) {
+      debugPrint('InventoryStorage save deleted product ids error: $e');
+    }
+  }
+
+  static Set<String> loadDeletedProductIds() {
+    try {
+      final raw = InventoryStorageImpl.getString(_deletedProductIdsKey);
+      if (raw != null && raw.isNotEmpty) {
+        final decoded = jsonDecode(raw) as List<dynamic>;
+        return decoded.map((e) => e.toString()).toSet();
+      }
+    } catch (e) {
+      debugPrint('InventoryStorage load deleted product ids error: $e');
+    }
+    return <String>{};
   }
 }
