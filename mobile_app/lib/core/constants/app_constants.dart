@@ -27,6 +27,9 @@ class AppConstants {
   static const String supabaseAnonKey =
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlhaHdkdWtjZGd0cnhvbWlnanRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4OTI2NDMsImV4cCI6MjA5OTQ2ODY0M30.hsYowVzhwKSGdfaGn_Qlpz2dGQpky15dLNuXbmwV7V8';
 
+  static bool get isSupabaseConfigured =>
+      supabaseUrl.isNotEmpty && !supabaseUrl.contains('YOUR_SUPABASE');
+
   // PayMongo Keys Configuration
   // Replace these with your actual keys from the PayMongo dashboard settings
   static const String paymongoSecretKey = 'sk_test_ktY7QC25rmHyB3Qt1jAnHtLt';

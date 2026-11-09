@@ -49,7 +49,7 @@ class OrderModel {
   final String customerId;
   final String customerName;
   final String customerPhone;
-  final String deliveryAddress;
+  String deliveryAddress;
   final String waterType;
   final int quantity;
   final double pricePerUnit;
@@ -65,10 +65,11 @@ class OrderModel {
   final double? latitude;
   final double? longitude;
   final String? deliveryNote; // Customer's delivery preference / note
-  final bool isBorrowingContainers;
-  final int? borrowedSlimCount;
-  final int? borrowedRoundCount;
+  bool isBorrowingContainers;
+  int? borrowedSlimCount;
+  int? borrowedRoundCount;
   final bool isCollectionJob;
+  bool isGallonReturned;
 
   OrderModel({
     required this.id,
@@ -96,6 +97,7 @@ class OrderModel {
     this.borrowedSlimCount,
     this.borrowedRoundCount,
     this.isCollectionJob = false,
+    this.isGallonReturned = false,
   });
 
   String get formattedTotal => '₱${totalAmount.toStringAsFixed(2)}';
@@ -135,6 +137,7 @@ class OrderModel {
       'borrowedSlimCount': borrowedSlimCount,
       'borrowedRoundCount': borrowedRoundCount,
       'isCollectionJob': isCollectionJob,
+      'isGallonReturned': isGallonReturned,
     };
   }
 
@@ -167,10 +170,35 @@ class OrderModel {
           ? (json['longitude'] as num).toDouble()
           : null,
       deliveryNote: json['deliveryNote'] as String?,
-      isBorrowingContainers: json['isBorrowingContainers'] == true || json['is_borrowing_containers'] == true,
-      borrowedSlimCount: (json['borrowedSlimCount'] ?? json['borrowed_slim_count'] as num?)?.toInt(),
-      borrowedRoundCount: (json['borrowedRoundCount'] ?? json['borrowed_round_count'] as num?)?.toInt(),
-      isCollectionJob: json['isCollectionJob'] == true || json['is_collection_job'] == true,
+      isBorrowingContainers: (json['deliveryAddress']?.toString().contains('[GALLONS_RETURNED]') ?? false)
+          ? false
+          : (json['isBorrowingContainers'] == true ||
+              json['is_borrowing_containers'] == true ||
+              ((json['deliveryAddress']?.toString().contains('[BORROWED_') ?? false) &&
+                  !(json['deliveryAddress']?.toString().contains('[GALLONS_RETURNED]') ?? false))),
+      borrowedSlimCount: (json['borrowedSlimCount'] ?? json['borrowed_slim_count'] as num?)?.toInt() ??
+          (() {
+            final addr = json['deliveryAddress']?.toString() ?? '';
+            final match = RegExp(r'\[BORROWED_SLIM:(\d+)\]').firstMatch(addr);
+            return match != null ? int.tryParse(match.group(1)!) : null;
+          })(),
+      borrowedRoundCount: (json['borrowedRoundCount'] ?? json['borrowed_round_count'] as num?)?.toInt() ??
+          (() {
+            final addr = json['deliveryAddress']?.toString() ?? '';
+            final match = RegExp(r'\[BORROWED_ROUND:(\d+)\]').firstMatch(addr);
+            return match != null ? int.tryParse(match.group(1)!) : null;
+          })(),
+      isCollectionJob: json['isCollectionJob'] == true ||
+          json['is_collection_job'] == true ||
+          (json['waterType']?.toString().toLowerCase().contains('collection') ?? false) ||
+          (json['paymentMethod']?.toString().toLowerCase().contains('collection') ?? false) ||
+          (json['deliveryNote']?.toString().toLowerCase().contains('weekly empty gallon retrieval') ?? false) ||
+          (json['deliveryNote']?.toString().toLowerCase().contains('weekly full route collection') ?? false) ||
+          (json['deliveryNote']?.toString().toLowerCase().contains('weekly regular collection') ?? false),
+      isGallonReturned: json['isGallonReturned'] == true ||
+          json['is_gallon_returned'] == true ||
+          (json['deliveryAddress']?.toString().contains('[GALLONS_RETURNED]') ?? false) ||
+          (json['deliveryNote']?.toString().contains('[GALLONS_RETURNED]') ?? false),
     );
   }
 }

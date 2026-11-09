@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../core/constants/app_constants.dart';
 import '../core/theme/app_theme.dart';
 import '../core/utils/helpers.dart';
 import '../providers/auth_provider.dart';
@@ -32,9 +35,56 @@ class _ForgotPasswordModalState extends State<ForgotPasswordModal> {
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
 
+  // Brute-force protection: 5 failed attempts = 5-minute lockout
+  static int _failedAttempts = 0;
+  static DateTime? _lockoutUntil;
+  Timer? _countdownTimer;
+  int _secondsRemaining = 0;
+
+  bool get _isLockedOut => _lockoutUntil != null && DateTime.now().isBefore(_lockoutUntil!);
+
+  String _formatSeconds(int secs) {
+    final m = (secs ~/ 60).toString().padLeft(2, '0');
+    final s = (secs % 60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
+  void _checkLockout() {
+    if (_lockoutUntil != null && DateTime.now().isBefore(_lockoutUntil!)) {
+      _secondsRemaining = _lockoutUntil!.difference(DateTime.now()).inSeconds;
+      _startCountdown();
+    } else {
+      _lockoutUntil = null;
+    }
+  }
+
+  void _startCountdown() {
+    _countdownTimer?.cancel();
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      final diff = _lockoutUntil != null ? _lockoutUntil!.difference(DateTime.now()).inSeconds : 0;
+      if (diff <= 0) {
+        timer.cancel();
+        setState(() {
+          _lockoutUntil = null;
+          _failedAttempts = 0;
+          _secondsRemaining = 0;
+        });
+      } else {
+        setState(() {
+          _secondsRemaining = diff;
+        });
+      }
+    });
+  }
+
   @override
   void initState() {
     super.initState();
+    _checkLockout();
     if (widget.initialEmail != null && widget.initialEmail!.trim().isNotEmpty) {
       _emailController.text = widget.initialEmail!.trim();
     }
@@ -42,6 +92,7 @@ class _ForgotPasswordModalState extends State<ForgotPasswordModal> {
 
   @override
   void dispose() {
+    _countdownTimer?.cancel();
     _emailController.dispose();
     _otpController.dispose();
     _passwordController.dispose();
@@ -50,6 +101,15 @@ class _ForgotPasswordModalState extends State<ForgotPasswordModal> {
   }
 
   Future<void> _handleSendOtp() async {
+    if (_isLockedOut) {
+      Helpers.showSnackBar(
+        context,
+        'Security lockout active. Please wait ${_formatSeconds(_secondsRemaining)} before trying again.',
+        isError: true,
+      );
+      return;
+    }
+
     final email = _emailController.text.trim();
     if (email.isEmpty || !email.contains('@')) {
       Helpers.showSnackBar(
@@ -60,6 +120,34 @@ class _ForgotPasswordModalState extends State<ForgotPasswordModal> {
       return;
     }
 
+    // Role verification: Only Customer and Driver accounts can reset on the mobile app
+    if (AppConstants.isSupabaseConfigured) {
+      try {
+        final client = Supabase.instance.client;
+        final profile = await client
+            .from('profiles')
+            .select('role')
+            .eq('email', email)
+            .maybeSingle();
+
+        if (profile != null) {
+          final role = profile['role']?.toString().toLowerCase();
+          if (role == 'admin') {
+            if (!mounted) return;
+            Helpers.showSnackBar(
+              context,
+              'Administrator accounts must be reset via the Admin Management Console.',
+              isError: true,
+            );
+            return;
+          }
+        }
+      } catch (e) {
+        debugPrint('Mobile role check error: $e');
+      }
+    }
+
+    if (!mounted) return;
     setState(() => _isLoading = true);
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final success = await auth.sendPasswordResetOtp(email);
@@ -82,6 +170,15 @@ class _ForgotPasswordModalState extends State<ForgotPasswordModal> {
   }
 
   Future<void> _handleResetPassword() async {
+    if (_isLockedOut) {
+      Helpers.showSnackBar(
+        context,
+        'Security lockout active. Please wait ${_formatSeconds(_secondsRemaining)} before trying again.',
+        isError: true,
+      );
+      return;
+    }
+
     final email = _emailController.text.trim();
     final otp = _otpController.text.trim();
     final pass = _passwordController.text;
@@ -90,7 +187,7 @@ class _ForgotPasswordModalState extends State<ForgotPasswordModal> {
     if (otp.length < 6) {
       Helpers.showSnackBar(
         context,
-        'Please enter the full 6-digit code.',
+        'Please enter the full verification code.',
         isError: true,
       );
       return;
@@ -125,17 +222,33 @@ class _ForgotPasswordModalState extends State<ForgotPasswordModal> {
     setState(() => _isLoading = false);
 
     if (success) {
+      _failedAttempts = 0;
+      _lockoutUntil = null;
+      _countdownTimer?.cancel();
       Navigator.of(context).pop();
       Helpers.showSnackBar(
         context,
         'Password reset successful! You can now sign in with your new password.',
       );
     } else {
-      Helpers.showSnackBar(
-        context,
-        auth.errorMessage ?? 'Invalid or expired code. Please try again.',
-        isError: true,
-      );
+      _failedAttempts++;
+      if (_failedAttempts >= 5) {
+        _lockoutUntil = DateTime.now().add(const Duration(minutes: 5));
+        _secondsRemaining = 300;
+        _startCountdown();
+        Helpers.showSnackBar(
+          context,
+          'Too many failed attempts! Security lockout activated for 5 minutes.',
+          isError: true,
+        );
+      } else {
+        final remaining = 5 - _failedAttempts;
+        Helpers.showSnackBar(
+          context,
+          '${auth.errorMessage ?? 'Invalid verification code.'} ($remaining attempt${remaining == 1 ? '' : 's'} remaining before 5-minute lockout).',
+          isError: true,
+        );
+      }
     }
   }
 
@@ -147,7 +260,7 @@ class _ForgotPasswordModalState extends State<ForgotPasswordModal> {
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 440),
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(22.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -202,6 +315,39 @@ class _ForgotPasswordModalState extends State<ForgotPasswordModal> {
               ),
               const Divider(height: 24),
 
+              if (_isLockedOut) ...[
+                Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.red.withValues(alpha: 0.4)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.lock_clock_rounded, color: Colors.red, size: 22),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Security Lockout Active',
+                              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red, fontSize: 13),
+                            ),
+                            Text(
+                              '5 failed attempts reached. Try again in ${_formatSeconds(_secondsRemaining)}.',
+                              style: const TextStyle(color: Colors.redAccent, fontSize: 11),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
               if (_step == 1) ...[
                 const Text(
                   'We will send a 6-digit verification code to your email to verify your identity (zero cost).',
@@ -249,7 +395,7 @@ class _ForgotPasswordModalState extends State<ForgotPasswordModal> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              'Send 6-Digit Code',
+                              'Send Verification Code',
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
@@ -262,7 +408,7 @@ class _ForgotPasswordModalState extends State<ForgotPasswordModal> {
                 ),
               ] else ...[
                 Text(
-                  'Code sent to ${_emailController.text}. Enter the 6-digit code and choose a new password:',
+                  'Code sent to ${_emailController.text}. Enter the verification code and choose a new password:',
                   style: const TextStyle(
                     fontSize: 12.5,
                     color: Color(0xFF475569),
@@ -273,16 +419,16 @@ class _ForgotPasswordModalState extends State<ForgotPasswordModal> {
                 TextField(
                   controller: _otpController,
                   keyboardType: TextInputType.number,
-                  maxLength: 6,
+                  maxLength: 8,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 20,
-                    letterSpacing: 6,
+                    letterSpacing: 4,
                     fontWeight: FontWeight.bold,
                     color: AppTheme.primaryColor,
                   ),
                   decoration: InputDecoration(
-                    labelText: '6-Digit OTP Code',
+                    labelText: 'Verification OTP Code',
                     counterText: '',
                     prefixIcon: const Icon(Icons.pin_rounded),
                     border: OutlineInputBorder(

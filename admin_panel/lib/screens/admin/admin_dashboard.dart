@@ -55,11 +55,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
   final List<Map<String, dynamic>> _supportMessages = [
     {
       'sender': 'AquaBot',
-      'message': "Hello! I'm AquaBot 💧 How can I help you today?",
+      'message':
+          "Hello Administrator! I'm **AquaBot 💧**, your JJAASS Water Market management assistant.\n\nTap any topic in the **Quick Inquiry Guide** above, or type your question below for instant guidance on inventory, bulk reservoir levels, driver dispatches, or sales reports!",
     },
   ];
   final TextEditingController _supportInputController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
+  final ScrollController _faqScrollController = ScrollController();
   bool _isChatLoading = false;
 
   // Sales Overview interactive state
@@ -383,6 +385,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     _borrowSearchController.dispose();
     _supportInputController.dispose();
     _chatScrollController.dispose();
+    _faqScrollController.dispose();
     _paymentsSearchController.dispose();
     super.dispose();
   }
@@ -525,11 +528,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Future<void> _handleUpdateRole(UserModel user, UserRole newRole) async {
-    // Admin role cannot be changed or reset; only Customer and Driver can be set
+    // Admin and Customer roles cannot be changed; only Driver can be modified
     if (user.role == UserRole.admin) {
       Helpers.showSnackBar(
         context,
         'Admin account is protected and cannot be changed.',
+        isError: true,
+      );
+      return;
+    }
+    if (user.role == UserRole.customer) {
+      Helpers.showSnackBar(
+        context,
+        'Customer account role is permanent and cannot be changed.',
         isError: true,
       );
       return;
@@ -577,6 +588,165 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
   }
 
+  Future<void> _confirmDeleteUser(
+    UserModel user,
+    bool isDark,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.delete_forever_rounded, color: Colors.red, size: 22),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Delete Account',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Are you sure you want to permanently delete this account?',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          _getRoleIcon(user.role),
+                          size: 16,
+                          color: _getRoleColor(user.role),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            user.name,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: _getRoleColor(user.role).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            user.roleDisplayName,
+                            style: TextStyle(
+                              color: _getRoleColor(user.role),
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      user.email,
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'This will remove this user from the system and database. This action cannot be undone.',
+                style: TextStyle(fontSize: 12, color: Colors.redAccent),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogCtx).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.of(dialogCtx).pop(true),
+              icon: const Icon(Icons.delete_outline_rounded, size: 16, color: Colors.white),
+              label: const Text('Delete Permanently', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() {
+      _isActionLoading = true;
+    });
+
+    try {
+      final success = await _apiService.deleteUserAccount(user.id);
+      if (success && mounted) {
+        setState(() {
+          _allUsers.removeWhere((u) => u.id == user.id);
+          _filteredUsers.removeWhere((u) => u.id == user.id);
+        });
+        Helpers.showSnackBar(
+          context,
+          'Account "${user.name}" has been permanently deleted.',
+        );
+      } else if (mounted) {
+        Helpers.showSnackBar(
+          context,
+          'Failed to delete user account. Please check your connection.',
+          isError: true,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Helpers.showSnackBar(
+          context,
+          'Error deleting user: $e',
+          isError: true,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isActionLoading = false;
+        });
+      }
+    }
+  }
+
   Future<void> _handleLogout() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     await authProvider.logout();
@@ -600,8 +770,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (subContext, setDialogState) {
+            final isAdmin = selectedRole == UserRole.admin;
             final isDriver = selectedRole == UserRole.driver;
-            final activeColor = isDriver ? AppTheme.secondaryColor : const Color(0xFF10B981);
+            final activeColor = isAdmin
+                ? const Color(0xFF6366F1)
+                : (isDriver ? AppTheme.secondaryColor : const Color(0xFF10B981));
 
             return AlertDialog(
               backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
@@ -615,38 +788,30 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
-                      isDriver ? Icons.local_shipping_rounded : Icons.person_add_rounded,
+                      isAdmin
+                          ? Icons.admin_panel_settings_rounded
+                          : (isDriver ? Icons.local_shipping_rounded : Icons.person_add_rounded),
                       color: activeColor,
                       size: 22,
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          isDriver ? 'Create Driver Account' : 'Create Customer Account',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white : const Color(0xFF1E293B),
-                          ),
-                        ),
-                        Text(
-                          'Direct account creation (no self sign-up required)',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: isDark ? Colors.white70 : Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      isAdmin
+                          ? 'Create Administrator Account'
+                          : (isDriver ? 'Create Driver Account' : 'Create Customer Account'),
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : const Color(0xFF1E293B),
+                      ),
                     ),
                   ),
                 ],
               ),
               content: SizedBox(
-                width: 460,
+                width: 480,
                 child: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -665,7 +830,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               borderRadius: BorderRadius.circular(10),
                               onTap: () => setDialogState(() => selectedRole = UserRole.customer),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
                                 decoration: BoxDecoration(
                                   color: selectedRole == UserRole.customer
                                       ? const Color(0xFF10B981).withValues(alpha: 0.12)
@@ -683,14 +848,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                   children: [
                                     Icon(
                                       Icons.person_rounded,
-                                      size: 18,
+                                      size: 16,
                                       color: selectedRole == UserRole.customer ? const Color(0xFF10B981) : Colors.grey,
                                     ),
-                                    const SizedBox(width: 6),
+                                    const SizedBox(width: 4),
                                     Text(
                                       'Customer',
                                       style: TextStyle(
-                                        fontSize: 13,
+                                        fontSize: 12,
                                         fontWeight: FontWeight.bold,
                                         color: selectedRole == UserRole.customer ? const Color(0xFF10B981) : Colors.grey,
                                       ),
@@ -700,13 +865,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: InkWell(
                               borderRadius: BorderRadius.circular(10),
                               onTap: () => setDialogState(() => selectedRole = UserRole.driver),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
                                 decoration: BoxDecoration(
                                   color: selectedRole == UserRole.driver
                                       ? AppTheme.secondaryColor.withValues(alpha: 0.12)
@@ -724,16 +889,57 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                   children: [
                                     Icon(
                                       Icons.local_shipping_rounded,
-                                      size: 18,
+                                      size: 16,
                                       color: selectedRole == UserRole.driver ? AppTheme.secondaryColor : Colors.grey,
                                     ),
-                                    const SizedBox(width: 6),
+                                    const SizedBox(width: 4),
                                     Text(
                                       'Driver',
                                       style: TextStyle(
-                                        fontSize: 13,
+                                        fontSize: 12,
                                         fontWeight: FontWeight.bold,
                                         color: selectedRole == UserRole.driver ? AppTheme.secondaryColor : Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(10),
+                              onTap: () => setDialogState(() => selectedRole = UserRole.admin),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                                decoration: BoxDecoration(
+                                  color: selectedRole == UserRole.admin
+                                      ? const Color(0xFF6366F1).withValues(alpha: 0.12)
+                                      : (isDark ? Colors.white10 : Colors.grey.shade100),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: selectedRole == UserRole.admin
+                                        ? const Color(0xFF6366F1)
+                                        : Colors.transparent,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.admin_panel_settings_rounded,
+                                      size: 16,
+                                      color: selectedRole == UserRole.admin ? const Color(0xFF6366F1) : Colors.grey,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Admin',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: selectedRole == UserRole.admin ? const Color(0xFF6366F1) : Colors.grey,
                                       ),
                                     ),
                                   ],
@@ -875,7 +1081,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               setDialogState(() => isSubmitting = false);
                             }
                             if (mounted) {
-                              Helpers.showSnackBar(context, 'Error creating account: $e', isError: true);
+                              Helpers.showSnackBar(
+                                context,
+                                'Error creating account: ${e.toString().replaceAll('Exception: ', '')}',
+                                isError: true,
+                              );
                             }
                           }
                         },
@@ -889,7 +1099,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   label: Text(
                     isSubmitting
                         ? 'Creating Account...'
-                        : 'Create ${selectedRole == UserRole.driver ? 'Driver' : 'Customer'}',
+                        : (selectedRole == UserRole.admin
+                            ? 'Create Admin'
+                            : (selectedRole == UserRole.driver ? 'Create Driver' : 'Create Customer')),
                     style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
                   ),
                   style: ElevatedButton.styleFrom(
@@ -1544,7 +1756,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       case 2:
         return 'Deliveries Fleet';
       case 3:
-        return 'Users';
+        return 'User / Roles & Permissions';
       case 4:
         return 'Inventory & Stock Tracking';
       case 5:
@@ -1554,8 +1766,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
       case 7:
         return 'AquaBot AI Support';
       case 8:
-        return 'Role Permissions';
-      case 9:
         return 'System Settings';
       default:
         return 'Admin Portal';
@@ -1567,12 +1777,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
       {'title': 'Dashboard', 'icon': Icons.home_rounded},
       {'title': 'Orders', 'icon': Icons.shopping_bag_rounded},
       {'title': 'Deliveries', 'icon': Icons.local_shipping_rounded},
-      {'title': 'Users', 'icon': Icons.people_alt_rounded},
+      {'title': 'User / Roles & Permissions', 'icon': Icons.manage_accounts_rounded},
       {'title': 'Inventory', 'icon': Icons.inventory_2_rounded},
       {'title': 'Payments', 'icon': Icons.payment_rounded},
       {'title': 'Reports', 'icon': Icons.analytics_rounded},
       {'title': 'AI Chat Support', 'icon': Icons.chat_rounded},
-      {'title': 'Role Permissions', 'icon': Icons.manage_accounts_rounded},
       {'title': 'Settings', 'icon': Icons.settings_rounded},
     ];
 
@@ -1729,7 +1938,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       case 2:
         return _buildDeliveriesTab(isDark);
       case 3:
-        return _buildCustomersTab(isDark);
+        return _buildUsersTab(isDark);
       case 4:
         return _buildInventoryTab(isDark);
       case 5:
@@ -1739,9 +1948,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
       case 7:
         return _buildSupportTab(isDark);
       case 8:
-        return _buildUsersTab(isDark);
-      case 9:
         return _buildSettingsTab(isDark);
+      case 99:
+        return _buildCustomersTab(isDark);
       default:
         return _buildOverviewTab(isDark, width);
     }
@@ -2666,8 +2875,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 () => setState(() => _selectedTab = 1),
               ),
               _buildQuickActionItem(
-                'Add Customer',
-                Icons.person_add_alt_1_rounded,
+                'Users & Roles',
+                Icons.manage_accounts_rounded,
                 const Color(0xFF0284C7),
                 () => setState(() => _selectedTab = 3),
               ),
@@ -2702,8 +2911,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 () => setState(() => _selectedTab = 7),
               ),
               _buildQuickActionItem(
-                'Users',
-                Icons.people_alt_rounded,
+                'Settings',
+                Icons.settings_rounded,
                 const Color(0xFF64748B),
                 () => setState(() => _selectedTab = 8),
               ),
@@ -5986,6 +6195,179 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   // Direct Set Stock & Capacity Dialog (Admin input directly sets inventory & capacity)
+  void _showRefillWaterReservoirDialog(bool isDark) {
+    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+    final waterRemaining = orderProvider.waterReservoirLiters;
+    final waterCap = orderProvider.waterReservoirCapacity;
+    final needed = max(0.0, waterCap - waterRemaining);
+
+    final litersController = TextEditingController(text: needed > 0 ? needed.toInt().toString() : '2000');
+    final notesController = TextEditingController(text: 'Deep well / filtration water replenishment');
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0284C7).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.water_rounded, color: Color(0xFF0284C7), size: 24),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Refill Bulk Water Supply',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          'Replenish 10,000L Commercial Reservoir',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: 440,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0284C7).withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF0284C7).withValues(alpha: 0.2)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.info_outline_rounded, size: 18, color: Color(0xFF0284C7)),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Current Reservoir: ${waterRemaining.toInt()}L / ${waterCap.toInt()}L. Space available: ${needed.toInt()} Liters.',
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0369A1)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    const Text('Quick Add Amount:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: [
+                        ActionChip(
+                          label: const Text('+1,000 L'),
+                          onPressed: () {
+                            litersController.text = '1000';
+                            setDialogState(() {});
+                          },
+                        ),
+                        ActionChip(
+                          label: const Text('+2,500 L'),
+                          onPressed: () {
+                            litersController.text = '2500';
+                            setDialogState(() {});
+                          },
+                        ),
+                        ActionChip(
+                          label: const Text('+5,000 L'),
+                          onPressed: () {
+                            litersController.text = '5000';
+                            setDialogState(() {});
+                          },
+                        ),
+                        if (needed > 0)
+                          ActionChip(
+                            label: Text('Fill to Max (${needed.toInt()}L)'),
+                            backgroundColor: const Color(0xFF0284C7).withValues(alpha: 0.15),
+                            onPressed: () {
+                              litersController.text = needed.toInt().toString();
+                              setDialogState(() {});
+                            },
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: litersController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Liters to Add *',
+                        prefixIcon: Icon(Icons.water_drop_rounded, color: Color(0xFF0284C7)),
+                        helperText: 'Volume in Liters (L) to add to filtration tank',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: notesController,
+                      decoration: const InputDecoration(
+                        labelText: 'Restock Notes (Optional)',
+                        prefixIcon: Icon(Icons.notes_rounded),
+                        hintText: 'e.g., Municipal water supply delivery / RO filter top-up',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0284C7),
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () async {
+                    final liters = double.tryParse(litersController.text.trim()) ?? 0.0;
+                    if (liters <= 0) {
+                      Helpers.showSnackBar(context, 'Please enter a valid volume greater than 0 Liters.', isError: true);
+                      return;
+                    }
+                    final messenger = ScaffoldMessenger.of(context);
+                    await orderProvider.refillBulkWaterReservoir(
+                      liters,
+                      notes: notesController.text.trim().isNotEmpty ? notesController.text.trim() : null,
+                    );
+                    if (ctx.mounted) Navigator.pop(ctx);
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text('Successfully added ${liters.toInt()} Liters to Bulk Water Reservoir!'),
+                        backgroundColor: const Color(0xFF0284C7),
+                      ),
+                    );
+                    if (mounted) setState(() {});
+                  },
+                  icon: const Icon(Icons.check_circle_rounded, size: 16),
+                  label: const Text('Confirm Refill'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _showSetStockDialog(bool isDark, Map<String, dynamic> item) {
     final currentStock = (item['stock'] as num).toDouble();
     final currentCap = (item['capacity'] as num).toDouble();
@@ -7282,6 +7664,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
       return i['category'] == _inventoryCategoryFilter;
     }).toList();
 
+    // Bulk Water Reservoir Metrics
+    final waterRemaining = orderProvider.waterReservoirLiters;
+    final waterCap = orderProvider.waterReservoirCapacity;
+    final waterRatio = waterCap > 0 ? (waterRemaining / waterCap).clamp(0.0, 1.0) : 0.0;
+    final availableRefills = (waterRemaining / 19.0).floor();
+    final isWaterLow = waterRemaining <= 1500.0;
+
     // Gallon Metrics
     final slimRemaining = orderProvider.remainingSlimGallons;
     final slimCap = orderProvider.slimGallonCapacity;
@@ -7402,6 +7791,176 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ],
           ),
           const SizedBox(height: 20),
+
+          // SECTION 1: BULK WATER RESERVOIR (COMMERCIAL FILTRATION TANK)
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: cardBgColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isWaterLow
+                    ? Colors.red.withValues(alpha: 0.5)
+                    : const Color(0xFF0284C7).withValues(alpha: 0.3),
+                width: isWaterLow ? 1.5 : 1.0,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF0284C7), Color(0xFF2563EB)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(
+                        Icons.water_rounded,
+                        color: Colors.white,
+                        size: 26,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 10,
+                            runSpacing: 4,
+                            children: [
+                              Text(
+                                'Bulk Water Reservoir (10,000L Commercial Tank)',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                  color: valueTextColor,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: (isWaterLow ? Colors.red : const Color(0xFF10B981)).withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: (isWaterLow ? Colors.red : const Color(0xFF10B981)).withValues(alpha: 0.3),
+                                  ),
+                                ),
+                                child: Text(
+                                  isWaterLow ? '⚠️ Low Water Alert (<1,500L)' : '✅ Optimal Supply',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: isWaterLow ? Colors.red : const Color(0xFF047857),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'Continuous bulk drinking water volume. Dispenses 19 Liters per 5-gallon jug refill without depleting physical station container inventory.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: titleTextColor,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () => _showRefillWaterReservoirDialog(isDark),
+                      icon: const Icon(Icons.add_circle_outline_rounded, size: 16),
+                      label: const Text('+ Refill Water Supply', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0284C7),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        elevation: 0,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '${waterRemaining.toInt()} Liters',
+                      style: const TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF0284C7),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 5, left: 8),
+                      child: Text(
+                        '/ ${waterCap.toInt()} Liters Total Capacity  •  Approx. $availableRefills Jugs Refillable',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: titleTextColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: LinearProgressIndicator(
+                    value: waterRatio,
+                    minHeight: 10,
+                    backgroundColor: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      isWaterLow ? Colors.red : const Color(0xFF0284C7),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // SECTION 2: PHYSICAL CONTAINERS
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            children: [
+              Text(
+                'Physical Container Stocks (Countable Assets)',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : const Color(0xFF1E293B),
+                ),
+              ),
+              Text(
+                '• Depletes only when brand new jugs are purchased or loaned to customers',
+                style: TextStyle(fontSize: 12, color: titleTextColor),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
 
           // TOP HERO CARDS: Remaining Slim & Round Gallons
           LayoutBuilder(
@@ -8517,6 +9076,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   final String custName = borrow['customerName'] as String? ?? 'Customer';
                   final String phone = borrow['customerPhone'] as String? ?? 'No phone';
                   final String address = borrow['deliveryAddress'] as String? ?? 'No address';
+                  final String displayAddress = address
+                      .replaceAll(RegExp(r'\[BORROWED_[A-Z]+:\d+\]'), '')
+                      .replaceAll('[GALLONS_RETURNED]', '')
+                      .trim();
                   final String gType = borrow['gallonType'] as String? ?? '5-Gallon Container';
                   final int qty = (borrow['quantity'] as num?)?.toInt() ?? 1;
                   final bool isReturned = borrow['isReturned'] as bool? ?? false;
@@ -8629,7 +9192,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                   const SizedBox(width: 4),
                                   Expanded(
                                     child: Text(
-                                      address,
+                                      displayAddress.isNotEmpty ? displayAddress : address,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(fontSize: 12, color: titleTextColor),
@@ -10291,100 +10854,394 @@ class _AdminDashboardState extends State<AdminDashboard> {
         decoration: BoxDecoration(
           color: isDark ? AppTheme.darkSurface : Colors.white,
           borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
           border: Border.all(
             color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
           ),
         ),
+        clipBehavior: Clip.antiAlias,
         child: Column(
           children: [
+            // AquaBot Gradient Header
             Container(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
               decoration: const BoxDecoration(
-                border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+                gradient: LinearGradient(
+                  colors: [AppTheme.navyColor, AppTheme.primaryColor],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
               ),
               child: Row(
-                children: const [
-                  CircleAvatar(
-                    backgroundColor: AppTheme.primaryColor,
-                    child: Icon(Icons.psychology_rounded, color: Colors.white),
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.15),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(2),
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/images/logo_icon.jpg',
+                        fit: BoxFit.cover,
+                        errorBuilder: (ctx, err, stack) => const Icon(
+                          Icons.water_drop_rounded,
+                          color: AppTheme.primaryColor,
+                          size: 22,
+                        ),
+                      ),
+                    ),
                   ),
-                  SizedBox(width: 12),
-                  Text(
-                    'AquaBot Dispatch Agent',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'AquaBot AI Management Desk',
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 16,
+                            color: Colors.white,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            const DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: Color(0xFF10B981),
+                                shape: BoxShape.circle,
+                              ),
+                              child: SizedBox(width: 7, height: 7),
+                            ),
+                            const SizedBox(width: 6),
+                            const Expanded(
+                              child: Text(
+                                'JJAASS Water Market • Online',
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFFBAE6FD),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Reset Conversation',
+                    icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 22),
+                    onPressed: () {
+                      setState(() {
+                        _supportMessages.clear();
+                        _supportMessages.add({
+                          'sender': 'AquaBot',
+                          'message':
+                              "Hello Administrator! I'm **AquaBot 💧**, your JJAASS Water Market management assistant.\n\nTap any topic in the **Quick Inquiry Guide** above, or type your question below for instant guidance on inventory, bulk reservoir levels, driver dispatches, or sales reports!",
+                        });
+                      });
+                    },
                   ),
                 ],
               ),
             ),
+
+            // Collapsible Quick Inquiry FAQ Accordion
+            Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFFF8FAFC),
+                border: Border(
+                  bottom: BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+              ),
+              child: Theme(
+                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  initiallyExpanded: false,
+                  tilePadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 0),
+                  childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+                  leading: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.quiz_rounded,
+                      color: AppTheme.navyColor,
+                      size: 20,
+                    ),
+                  ),
+                  title: const Text(
+                    'Quick Inquiry Guide (FAQs)',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.navyColor,
+                    ),
+                  ),
+                  subtitle: const Text(
+                    'Tap to browse 4 administrator topics for instant operational answers',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                  children: [
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 220),
+                      child: Scrollbar(
+                        controller: _faqScrollController,
+                        thumbVisibility: true,
+                        child: SingleChildScrollView(
+                          controller: _faqScrollController,
+                          primary: false,
+                          padding: const EdgeInsets.only(right: 6),
+                          physics: const BouncingScrollPhysics(),
+                          child: Column(
+                            children: [
+                              _buildInquiryCategoryTile(
+                                title: '💧 Inventory & Bulk Reservoir',
+                                color: const Color(0xFF0284C7),
+                                questions: [
+                                  'How does the 10,000L Bulk Water Reservoir deplete during 5-gallon refills?',
+                                  'How do I restock physical Slim and Round container inventory?',
+                                  'How do I monitor active customer gallon borrowings across all orders?',
+                                ],
+                              ),
+                              _buildInquiryCategoryTile(
+                                title: '🚚 Dispatching & Drivers',
+                                color: const Color(0xFF10B981),
+                                questions: [
+                                  'How do I assign pending delivery orders to an active driver?',
+                                  'How do I track which driver is currently holding unreturned gallons?',
+                                  'How do I view live delivery routes and driver status?',
+                                ],
+                              ),
+                              _buildInquiryCategoryTile(
+                                title: '💰 Revenue & Sales Analytics',
+                                color: const Color(0xFF0F2B5C),
+                                questions: [
+                                  'How do I check today total revenue from GCash vs Cash on Delivery?',
+                                  'Where can I see total liters of water dispensed this week?',
+                                ],
+                              ),
+                              _buildInquiryCategoryTile(
+                                title: '👥 Accounts, Roles & Security',
+                                color: const Color(0xFFD97706),
+                                questions: [
+                                  'How do I create or manage Driver and Customer accounts?',
+                                  'How does the 5-attempt security lockout and password reset work?',
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Message List
             Expanded(
               child: ListView.builder(
                 controller: _chatScrollController,
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(18.0),
                 itemCount: _supportMessages.length,
                 itemBuilder: (context, index) {
                   final msg = _supportMessages[index];
                   final isBot = msg['sender'] == 'AquaBot';
                   return Align(
-                    alignment: isBot
-                        ? Alignment.centerLeft
-                        : Alignment.centerRight,
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: isBot
-                            ? const Color(0xFFF1F9FB)
-                            : AppTheme.primaryColor,
-                        borderRadius: BorderRadius.only(
-                          topLeft: const Radius.circular(12),
-                          topRight: const Radius.circular(12),
-                          bottomLeft: isBot
-                              ? Radius.zero
-                              : const Radius.circular(12),
-                          bottomRight: isBot
-                              ? const Radius.circular(12)
-                              : Radius.zero,
-                        ),
-                        border: isBot
-                            ? Border.all(color: const Color(0xFFE2F0F3))
-                            : null,
-                      ),
-                      child: Text(
-                        msg['message'] as String,
-                        style: TextStyle(
-                          color: isBot ? const Color(0xFF1F2937) : Colors.white,
-                          fontSize: 12,
-                          height: 1.3,
-                        ),
-                      ),
-                    ),
+                    alignment: isBot ? Alignment.centerLeft : Alignment.centerRight,
+                    child: isBot
+                        ? Container(
+                            margin: const EdgeInsets.only(bottom: 14),
+                            padding: const EdgeInsets.all(14),
+                            constraints: const BoxConstraints(maxWidth: 720),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(4),
+                                topRight: Radius.circular(16),
+                                bottomLeft: Radius.circular(16),
+                                bottomRight: Radius.circular(16),
+                              ),
+                              border: Border.all(
+                                color: const Color(0xFFBAE6FD),
+                                width: 1.2,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF0284C7).withValues(alpha: 0.06),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    ClipOval(
+                                      child: Image.asset(
+                                        'assets/images/logo_icon.jpg',
+                                        width: 16,
+                                        height: 16,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (ctx, error, stackTrace) => const Icon(
+                                          Icons.water_drop_rounded,
+                                          size: 16,
+                                          color: AppTheme.primaryColor,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    const Text(
+                                      'AquaBot',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppTheme.primaryColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                SelectableText(
+                                  msg['message'] as String,
+                                  style: const TextStyle(
+                                    color: Color(0xFF0F2B5C),
+                                    fontSize: 13,
+                                    height: 1.45,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : Container(
+                            margin: const EdgeInsets.only(bottom: 14),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            constraints: const BoxConstraints(maxWidth: 620),
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [AppTheme.primaryColor, AppTheme.navyColor],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(16),
+                                topRight: Radius.circular(4),
+                                bottomLeft: Radius.circular(16),
+                                bottomRight: Radius.circular(16),
+                              ),
+                            ),
+                            child: Text(
+                              msg['message'] as String,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                height: 1.35,
+                              ),
+                            ),
+                          ),
                   );
                 },
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
+
+            // Chat Input Bar
+            Container(
+              padding: const EdgeInsets.all(14.0),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+              ),
               child: Row(
                 children: [
                   Expanded(
                     child: TextField(
                       controller: _supportInputController,
                       onSubmitted: _sendSupportMessage,
-                      decoration: const InputDecoration(
-                        hintText: 'Type your support request...',
+                      style: const TextStyle(fontSize: 13.5),
+                      decoration: InputDecoration(
+                        hintText: 'Type administration request or ask anything...',
+                        hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13.5),
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: AppTheme.primaryColor, width: 1.5),
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  FloatingActionButton(
-                    onPressed: () =>
-                        _sendSupportMessage(_supportInputController.text),
-                    backgroundColor: AppTheme.primaryColor,
-                    mini: true,
-                    child: const Icon(
-                      Icons.send_rounded,
-                      color: Colors.white,
-                      size: 18,
+                  const SizedBox(width: 10),
+                  InkWell(
+                    onTap: _isChatLoading ? null : () => _sendSupportMessage(_supportInputController.text),
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [AppTheme.primaryColor, AppTheme.navyColor],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.navyColor.withValues(alpha: 0.25),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: _isChatLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.send_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
                     ),
                   ),
                 ],
@@ -10396,8 +11253,80 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  // TAB 8: USERS TAB (Was user directory role editor)
+  Widget _buildInquiryCategoryTile({
+    required String title,
+    required Color color,
+    required List<String> questions,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          visualDensity: VisualDensity.compact,
+          tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+          childrenPadding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+          title: Text(
+            title,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+          children: questions.map((q) {
+            return InkWell(
+              onTap: () => _sendSupportMessage(q),
+              borderRadius: BorderRadius.circular(6),
+              child: Container(
+                margin: const EdgeInsets.symmetric(vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0F9FF),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: const Color(0xFFBAE6FD)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.help_outline_rounded,
+                      size: 15,
+                      color: AppTheme.primaryColor,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        q,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.navyColor,
+                        ),
+                      ),
+                    ),
+                    const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 11,
+                      color: Color(0xFF94A3B8),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  // TAB 3: USER / ROLES & PERMISSIONS TAB
   Widget _buildUsersTab(bool isDark) {
+    final currentAdmin = Provider.of<AuthProvider>(context, listen: false).currentUser;
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Column(
@@ -10518,6 +11447,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     itemCount: _filteredUsers.length,
                     itemBuilder: (context, index) {
                       final user = _filteredUsers[index];
+                      final bool isSelfAdmin = user.role == UserRole.admin &&
+                          (currentAdmin != null &&
+                              (currentAdmin.id == user.id ||
+                                  (currentAdmin.email.isNotEmpty &&
+                                      currentAdmin.email.trim().toLowerCase() ==
+                                          user.email.trim().toLowerCase())));
                       return Container(
                         margin: const EdgeInsets.only(bottom: 8),
                         decoration: BoxDecoration(
@@ -10590,9 +11525,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              if (user.role == UserRole.admin)
+                              if (isSelfAdmin)
                                 Tooltip(
-                                  message: 'Admin account (Protected - Role cannot be changed)',
+                                  message: 'Active Admin Account (Protected - Cannot be deleted)',
                                   child: Container(
                                     padding: const EdgeInsets.all(6),
                                     decoration: BoxDecoration(
@@ -10601,6 +11536,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                     ),
                                     child: const Icon(
                                       Icons.lock_rounded,
+   
                                       size: 16,
                                       color: Color(0xFF94A3B8),
                                     ),
@@ -10615,7 +11551,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                   ),
                                 )
                               else
-                                PopupMenuButton<UserRole>(
+                                PopupMenuButton<String>(
                                   icon: const Icon(
                                     Icons.more_vert_rounded,
                                     size: 20,
@@ -10623,43 +11559,141 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(8),
                                   ),
-                                  onSelected: (role) =>
-                                      _handleUpdateRole(user, role),
+                                  onSelected: (val) {
+                                    if (val == 'delete') {
+                                      _confirmDeleteUser(user, isDark);
+                                    } else if (val == 'set_driver') {
+                                      _handleUpdateRole(user, UserRole.driver);
+                                    }
+                                  },
                                   itemBuilder: (context) {
-                                    // Admin role is excluded: only Customer and Driver can be set
-                                    final assignableRoles = [
-                                      UserRole.customer,
-                                      UserRole.driver,
-                                    ];
-                                    return assignableRoles.map((role) {
-                                      final isCurrent = user.role == role;
-                                      return PopupMenuItem<UserRole>(
-                                        value: role,
-                                        enabled: !isCurrent,
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              _getRoleIcon(role),
-                                              size: 16,
-                                              color: _getRoleColor(role),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              'Set to ${Helpers.capitalize(role.name)}',
-                                              style: TextStyle(
-                                                fontSize: 13,
-                                                fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
-                                                color: isCurrent ? Colors.grey : null,
+                                    final List<PopupMenuEntry<String>> items = [];
+
+                                    if (user.role == UserRole.customer) {
+                                      // Customer: role cannot be changed at all
+                                      items.add(
+                                        const PopupMenuItem<String>(
+                                          enabled: false,
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.lock_outline_rounded, size: 16, color: Colors.grey),
+                                              SizedBox(width: 8),
+                                              Text(
+                                                'Customer Role (Fixed)',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.grey,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
                                               ),
-                                            ),
-                                            if (isCurrent) ...[
-                                              const SizedBox(width: 6),
-                                              const Icon(Icons.check_rounded, size: 14, color: Colors.green),
                                             ],
-                                          ],
+                                          ),
                                         ),
                                       );
-                                    }).toList();
+                                      items.add(const PopupMenuDivider(height: 1));
+                                      items.add(
+                                        const PopupMenuItem<String>(
+                                          value: 'delete',
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.delete_outline_rounded, size: 16, color: Colors.redAccent),
+                                              SizedBox(width: 8),
+                                              Text(
+                                                'Delete Customer Account',
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  color: Colors.redAccent,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    } else if (user.role == UserRole.driver) {
+                                      items.add(
+                                        const PopupMenuItem<String>(
+                                          enabled: false,
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.local_shipping_rounded, size: 16, color: AppTheme.secondaryColor),
+                                              SizedBox(width: 8),
+                                              Text(
+                                                'Driver Role (Active)',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: AppTheme.secondaryColor,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                      items.add(const PopupMenuDivider(height: 1));
+                                      items.add(
+                                        const PopupMenuItem<String>(
+                                          value: 'delete',
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.delete_outline_rounded, size: 16, color: Colors.redAccent),
+                                              SizedBox(width: 8),
+                                              Text(
+                                                'Delete Driver Account',
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  color: Colors.redAccent,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    } else if (user.role == UserRole.admin) {
+                                      // Another admin (not self)
+                                      items.add(
+                                        const PopupMenuItem<String>(
+                                          enabled: false,
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.admin_panel_settings_rounded, size: 16, color: Color(0xFF6366F1)),
+                                              SizedBox(width: 8),
+                                              Text(
+                                                'Admin Role (Fixed)',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Color(0xFF6366F1),
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                      items.add(const PopupMenuDivider(height: 1));
+                                      items.add(
+                                        const PopupMenuItem<String>(
+                                          value: 'delete',
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.delete_outline_rounded, size: 16, color: Colors.redAccent),
+                                              SizedBox(width: 8),
+                                              Text(
+                                                'Delete Admin Account',
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  color: Colors.redAccent,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    }
+
+                                    return items;
                                   },
                                 ),
                             ],

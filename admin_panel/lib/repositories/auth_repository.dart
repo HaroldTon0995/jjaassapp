@@ -238,10 +238,30 @@ class SupabaseAuthRepository implements AuthRepository {
     if (cleanEmail.isEmpty) {
       throw Exception('Please enter your email address.');
     }
-    await _client.auth.signInWithOtp(
-      email: cleanEmail,
-      shouldCreateUser: false,
-    );
+    try {
+      await _client.auth.resetPasswordForEmail(cleanEmail);
+    } catch (e1) {
+      debugPrint('Supabase resetPasswordForEmail error: $e1');
+      try {
+        await _client.auth.signInWithOtp(
+          email: cleanEmail,
+          shouldCreateUser: false,
+        );
+      } catch (e2) {
+        debugPrint('Supabase signInWithOtp error: $e2');
+        final errStr = '$e1 $e2'.toLowerCase();
+        if (errStr.contains('magic link') ||
+            errStr.contains('unexpected_failure') ||
+            errStr.contains('500') ||
+            errStr.contains('smtp') ||
+            errStr.contains('error sending')) {
+          throw Exception(
+            'Unable to send verification email: ${e1.toString().replaceAll("Exception: ", "")}. Please check your Supabase Dashboard -> Authentication -> SMTP Settings.',
+          );
+        }
+        throw Exception('Failed to send verification code: ${e2.toString().replaceAll("Exception: ", "")}');
+      }
+    }
   }
 
   @override
@@ -259,11 +279,21 @@ class SupabaseAuthRepository implements AuthRepository {
       throw Exception('Password must be at least 6 characters.');
     }
 
-    final response = await _client.auth.verifyOTP(
-      email: cleanEmail,
-      token: cleanOtp,
-      type: OtpType.email,
-    );
+    // Verify 6-digit email OTP (supports both recovery and email token types)
+    AuthResponse response;
+    try {
+      response = await _client.auth.verifyOTP(
+        email: cleanEmail,
+        token: cleanOtp,
+        type: OtpType.recovery,
+      );
+    } catch (_) {
+      response = await _client.auth.verifyOTP(
+        email: cleanEmail,
+        token: cleanOtp,
+        type: OtpType.email,
+      );
+    }
 
     if (response.session == null && response.user == null) {
       throw Exception('Invalid or expired 6-digit code. Please request a new one.');

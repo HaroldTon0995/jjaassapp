@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../screens/splash/splash_screen.dart';
 import '../../screens/auth/login_screen.dart';
-import '../../screens/auth/register_screen.dart';
 import '../../screens/admin/admin_dashboard.dart';
 
 class AppRoutes {
@@ -19,7 +18,7 @@ class AppRoutes {
       case login:
         return MaterialPageRoute(builder: (_) => const LoginScreen());
       case register:
-        return MaterialPageRoute(builder: (_) => const RegisterScreen());
+        return MaterialPageRoute(builder: (_) => const LoginScreen());
       case adminDashboard:
         return MaterialPageRoute(builder: (_) => const AdminDashboard());
       case customerDashboard:

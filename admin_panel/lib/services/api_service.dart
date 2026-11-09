@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/constants/app_constants.dart';
 import '../models/user_model.dart';
@@ -114,8 +116,8 @@ class ApiService {
       try {
         final client = Supabase.instance.client;
         final check = await client.from('profiles').select('role').eq('id', userId).maybeSingle();
-        if (check != null && check['role'] == 'admin') {
-          return false;
+        if (check != null && (check['role'] == 'admin' || check['role'] == 'customer')) {
+          return false; // Customer and Admin roles cannot be changed
         }
         await client.from('profiles').update({'role': role.name}).eq('id', userId);
         return true;
@@ -126,8 +128,8 @@ class ApiService {
     await Future.delayed(AppConstants.apiMockDelay);
     final index = _registeredUsersList.indexWhere((u) => u.id == userId);
     if (index != -1) {
-      if (_registeredUsersList[index].role == UserRole.admin) {
-        return false;
+      if (_registeredUsersList[index].role == UserRole.admin || _registeredUsersList[index].role == UserRole.customer) {
+        return false; // Customer and Admin roles cannot be changed
       }
       final oldUser = _registeredUsersList[index];
       _registeredUsersList[index] = UserModel(
@@ -141,7 +143,27 @@ class ApiService {
     return false;
   }
 
-  // Create a new Customer or Driver account directly from Admin Panel without public sign-up
+  // Permanently delete a user account from Supabase and local cache
+  Future<bool> deleteUserAccount(String userId) async {
+    if (isSupabaseConfigured) {
+      try {
+        final client = Supabase.instance.client;
+        try {
+          // Attempt RPC deletion first (removes from public.profiles and auth.users)
+          await client.rpc('delete_user_by_admin', params: {'target_user_id': userId});
+        } catch (_) {
+          // Fallback to direct profiles table deletion
+          await client.from('profiles').delete().eq('id', userId);
+        }
+      } catch (e) {
+        debugPrint('Supabase delete user error: $e');
+      }
+    }
+    _registeredUsersList.removeWhere((u) => u.id == userId);
+    return true;
+  }
+
+  // Create a new Customer, Driver, or Administrator account directly from Admin Panel without public sign-up
   Future<UserModel?> createUserAccount({
     required String name,
     required String email,
@@ -150,52 +172,91 @@ class ApiService {
     String? phone,
     String? address,
   }) async {
-    if (role == UserRole.admin) {
-      throw Exception('Admin accounts cannot be created from this form.');
-    }
-
-    final newId = 'usr_${DateTime.now().millisecondsSinceEpoch}';
-    String assignedId = newId;
+    String assignedId = 'usr_${DateTime.now().millisecondsSinceEpoch}';
 
     if (isSupabaseConfigured) {
-      try {
-        if (password != null && password.isNotEmpty) {
-          try {
-            final tempClient = SupabaseClient(
-              AppConstants.supabaseUrl,
-              AppConstants.supabaseAnonKey,
-            );
-            final authRes = await tempClient.auth.signUp(
-              email: email.trim(),
-              password: password.trim(),
-              data: {
-                'name': name.trim(),
-                'role': role.name,
-                if (phone != null && phone.isNotEmpty) 'phone': phone.trim(),
-                if (address != null && address.isNotEmpty) 'address': address.trim(),
-              },
-            );
-            if (authRes.user != null) {
-              assignedId = authRes.user!.id;
+      if (password != null && password.isNotEmpty) {
+        final signupUri = Uri.parse('${AppConstants.supabaseUrl}/auth/v1/signup');
+        final response = await http.post(
+          signupUri,
+          headers: {
+            'apikey': AppConstants.supabaseAnonKey,
+            'Authorization': 'Bearer ${AppConstants.supabaseAnonKey}',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'email': email.trim(),
+            'password': password.trim(),
+            'data': {
+              'name': name.trim(),
+              'role': role.name,
+              if (phone != null && phone.isNotEmpty) 'phone': phone.trim(),
+              if (address != null && address.isNotEmpty) 'address': address.trim(),
+            },
+          }),
+        );
+
+        final dynamic responseBody = jsonDecode(response.body);
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          if (responseBody is Map<String, dynamic>) {
+            final authUserId = (responseBody['id'] as String?) ??
+                (responseBody['user'] is Map ? (responseBody['user'] as Map)['id'] as String? : null);
+            if (authUserId != null && authUserId.isNotEmpty) {
+              assignedId = authUserId;
             }
-          } catch (authError) {
-            debugPrint('Direct user auth signup warning: $authError');
+          }
+        } else {
+          final errorMsg = responseBody is Map
+              ? (responseBody['msg'] ?? responseBody['message'] ?? responseBody['error_description'])
+              : null;
+          final message = errorMsg?.toString() ?? 'Registration failed with status code ${response.statusCode}';
+          if (message.toLowerCase().contains('already registered') || message.toLowerCase().contains('already exists')) {
+            // Attempt to retrieve existing auth user UUID if credentials match
+            try {
+              final tokenUri = Uri.parse('${AppConstants.supabaseUrl}/auth/v1/token?grant_type=password');
+              final tokenRes = await http.post(
+                tokenUri,
+                headers: {
+                  'apikey': AppConstants.supabaseAnonKey,
+                  'Authorization': 'Bearer ${AppConstants.supabaseAnonKey}',
+                  'Content-Type': 'application/json',
+                },
+                body: jsonEncode({
+                  'email': email.trim(),
+                  'password': password.trim(),
+                }),
+              );
+              if (tokenRes.statusCode == 200) {
+                final tokenData = jsonDecode(tokenRes.body) as Map<String, dynamic>;
+                final authUserId = (tokenData['user'] is Map ? (tokenData['user'] as Map)['id'] as String? : null) ??
+                    (tokenData['id'] as String?);
+                if (authUserId != null && authUserId.isNotEmpty) {
+                  assignedId = authUserId;
+                }
+              }
+            } catch (_) {}
+
+            if (assignedId.startsWith('usr_')) {
+              throw Exception(
+                'Email ($email) already exists in Supabase Authentication (Authentication > Users). Please delete it in Supabase or use a different email.',
+              );
+            }
+          } else {
+            throw Exception(message);
           }
         }
-
-        final client = Supabase.instance.client;
-        await client.from('profiles').upsert({
-          'id': assignedId,
-          'name': name.trim(),
-          'email': email.trim(),
-          'role': role.name,
-          if (phone != null && phone.isNotEmpty) 'phone': phone.trim(),
-          if (address != null && address.isNotEmpty) 'address': address.trim(),
-          'created_at': DateTime.now().toIso8601String(),
-        });
-      } catch (e) {
-        debugPrint('Supabase profiles create error: $e');
       }
+
+      final client = Supabase.instance.client;
+      await client.from('profiles').upsert({
+        'id': assignedId,
+        'name': name.trim(),
+        'email': email.trim(),
+        'role': role.name,
+        if (phone != null && phone.isNotEmpty) 'phone': phone.trim(),
+        if (address != null && address.isNotEmpty) 'address': address.trim(),
+        'created_at': DateTime.now().toIso8601String(),
+      });
     }
 
     final newUser = UserModel(
@@ -205,6 +266,7 @@ class ApiService {
       role: role,
     );
 
+    _registeredUsersList.removeWhere((u) => u.email.toLowerCase() == email.trim().toLowerCase());
     _registeredUsersList.insert(0, newUser);
     return newUser;
   }

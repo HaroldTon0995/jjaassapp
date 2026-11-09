@@ -19,6 +19,7 @@ class GoogleMapWidget extends StatefulWidget {
   final String? customerPhone;
   final List<OrderModel>? otherActiveOrders;
   final ValueChanged<String>? onOrderPinTapped;
+  final bool isCollectionJob;
 
   const GoogleMapWidget({
     super.key,
@@ -31,6 +32,7 @@ class GoogleMapWidget extends StatefulWidget {
     this.customerPhone,
     this.otherActiveOrders,
     this.onOrderPinTapped,
+    this.isCollectionJob = false,
   });
 
   @override
@@ -423,12 +425,13 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1D63B8).withValues(alpha: 0.12),
+                    color: (widget.isCollectionJob ? const Color(0xFF10B981) : const Color(0xFF1D63B8))
+                        .withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.two_wheeler_rounded,
-                    color: Color(0xFF1D63B8),
+                  child: Icon(
+                    widget.isCollectionJob ? Icons.assignment_return_rounded : Icons.two_wheeler_rounded,
+                    color: widget.isCollectionJob ? const Color(0xFF059669) : const Color(0xFF1D63B8),
                     size: 20,
                   ),
                 ),
@@ -443,15 +446,17 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
                           Container(
                             width: 7,
                             height: 7,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF10B981),
+                            decoration: BoxDecoration(
+                              color: widget.isCollectionJob ? const Color(0xFF059669) : const Color(0xFF10B981),
                               shape: BoxShape.circle,
                             ),
                           ),
                           const SizedBox(width: 5),
                           Expanded(
                             child: Text(
-                              widget.isDriverView ? 'En Route to Delivery Pin' : 'Rider on the Way',
+                              widget.isCollectionJob
+                                  ? 'En Route to Collection: ${widget.customerName ?? "Borrower"}'
+                                  : (widget.isDriverView ? 'En Route to Delivery Pin' : 'Rider on the Way'),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(

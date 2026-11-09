@@ -889,7 +889,9 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget> {
           ? BitmapDescriptor.hueMagenta
           : (isCompleted
               ? BitmapDescriptor.hueGreen
-              : (isActive ? BitmapDescriptor.hueCyan : BitmapDescriptor.hueOrange));
+              : (o.isCollectionJob
+                  ? BitmapDescriptor.hueGreen
+                  : (isActive ? BitmapDescriptor.hueCyan : BitmapDescriptor.hueOrange)));
 
       markers.add(
         Marker(
@@ -897,15 +899,19 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget> {
           position: destCoord,
           icon: BitmapDescriptor.defaultMarkerWithHue(markerHue),
           infoWindow: InfoWindow(
-            title: '${o.id} • ${o.customerName}',
-            snippet: '${o.deliveryAddress} (${o.orderStatus.displayName})',
+            title: o.isCollectionJob
+                ? '${o.id} • ${o.customerName} (Collection Task)'
+                : '${o.id} • ${o.customerName}',
+            snippet: o.isCollectionJob
+                ? '${o.deliveryAddress} (${isCompleted ? 'Collected' : 'Collecting Empties'})'
+                : '${o.deliveryAddress} (${o.orderStatus.displayName})',
             onTap: () => widget.onSelectOrder?.call(o),
           ),
           onTap: () => widget.onSelectOrder?.call(o),
         ),
       );
 
-      // Rider Marker (if active delivery)
+      // Rider Marker (if active delivery or collection)
       if (isActive && o.driverName != null) {
         markers.add(
           Marker(
@@ -914,7 +920,9 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget> {
             icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
             infoWindow: InfoWindow(
               title: '🛵 Rider: ${o.driverName}',
-              snippet: 'Dispatched for ${o.id} • Speed ~28 km/h',
+              snippet: o.isCollectionJob
+                  ? 'Dispatched for Collection ${o.id} • Speed ~28 km/h'
+                  : 'Dispatched for ${o.id} • Speed ~28 km/h',
             ),
             onTap: () => widget.onSelectOrder?.call(o),
           ),
@@ -1090,12 +1098,19 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                        color: (widget.selectedOrder!.isCollectionJob
+                                ? const Color(0xFF10B981)
+                                : AppTheme.primaryColor)
+                            .withValues(alpha: 0.15),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
-                        Icons.delivery_dining_rounded,
-                        color: AppTheme.primaryColor,
+                      child: Icon(
+                        widget.selectedOrder!.isCollectionJob
+                            ? Icons.assignment_return_rounded
+                            : Icons.delivery_dining_rounded,
+                        color: widget.selectedOrder!.isCollectionJob
+                            ? const Color(0xFF059669)
+                            : AppTheme.primaryColor,
                         size: 22,
                       ),
                     ),
@@ -1119,15 +1134,24 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: widget.selectedOrder!.orderStatus.color.withValues(alpha: 0.15),
+                                  color: (widget.selectedOrder!.isCollectionJob
+                                          ? const Color(0xFF10B981)
+                                          : widget.selectedOrder!.orderStatus.color)
+                                      .withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
-                                  widget.selectedOrder!.orderStatus.displayName,
+                                  widget.selectedOrder!.isCollectionJob
+                                      ? (widget.selectedOrder!.orderStatus == OrderStatus.completed
+                                          ? 'Collected'
+                                          : 'Collecting Empties')
+                                      : widget.selectedOrder!.orderStatus.displayName,
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
-                                    color: widget.selectedOrder!.orderStatus.color,
+                                    color: widget.selectedOrder!.isCollectionJob
+                                        ? const Color(0xFF059669)
+                                        : widget.selectedOrder!.orderStatus.color,
                                   ),
                                 ),
                               ),
@@ -1135,7 +1159,9 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'To: ${widget.selectedOrder!.customerName} • ${widget.selectedOrder!.deliveryAddress}',
+                            widget.selectedOrder!.isCollectionJob
+                                ? 'Borrower: ${widget.selectedOrder!.customerName} • ${widget.selectedOrder!.deliveryAddress}'
+                                : 'To: ${widget.selectedOrder!.customerName} • ${widget.selectedOrder!.deliveryAddress}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(

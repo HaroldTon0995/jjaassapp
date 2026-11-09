@@ -40,6 +40,11 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   int _slimQuantity = 1;
   int _roundQuantity = 0;
 
+  // Borrowing Container States
+  bool _isBorrowingContainers = false;
+  int _borrowedSlimQty = 0;
+  int _borrowedRoundQty = 0;
+
   int get _totalOrderQuantity => _slimQuantity + _roundQuantity;
 
   // Selected Add-ons & Accessories Map (itemId -> quantity)
@@ -339,6 +344,9 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
         : '19L Purified Water';
     _slimQuantity = 1;
     _roundQuantity = 0;
+    _isBorrowingContainers = false;
+    _borrowedSlimQty = 0;
+    _borrowedRoundQty = 0;
     _selectedAddonQuantities.clear();
     _selectedProvince = null;
     _selectedCityCode = null;
@@ -493,6 +501,13 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     final addonsTotal = _calculateAddonsTotal(orderProvider);
     final grandTotal = (_totalOrderQuantity * pricePerJug) + addonsTotal;
 
+    final effectiveBorrowedSlim = _isBorrowingContainers
+        ? (_borrowedSlimQty > 0 ? _borrowedSlimQty : _slimQuantity)
+        : 0;
+    final effectiveBorrowedRound = _isBorrowingContainers
+        ? (_borrowedRoundQty > 0 ? _borrowedRoundQty : _roundQuantity)
+        : 0;
+
     final newOrder = await orderProvider.placeOrder(
       customerId: user?.id ?? '',
       customerName: customerName,
@@ -507,6 +522,9 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
       deliveryNote: _deliveryNoteController.text.trim(),
       latitude: _pinnedLocation?.latitude,
       longitude: _pinnedLocation?.longitude,
+      isBorrowingContainers: _isBorrowingContainers,
+      borrowedSlimQty: effectiveBorrowedSlim,
+      borrowedRoundQty: effectiveBorrowedRound,
     );
 
     if (mounted) {
@@ -2019,7 +2037,8 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                       final price = (prod['price'] as num).toDouble();
                       final desc = (prod['description'] as String?) ?? '';
                       final stock = (prod['stock'] as num?)?.toDouble() ?? 0.0;
-                      final isOutOfStock = stock <= 0;
+                      final isWater = (prod['category'] as String?) == 'water' || (prod['unit'] as String?)?.toLowerCase() == 'liters';
+                      final isOutOfStock = isWater ? stock < 19.0 : stock <= 0;
                       final isSelected = _selectedWaterType == name && !isOutOfStock;
                       final isSetA = name.toLowerCase().contains('set a');
                       final Color prodColor =
@@ -2124,7 +2143,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                                                 ),
                                               ),
                                             )
-                                          else if (stock <= 5 && stock > 0)
+                                          else if (stock <= 5 && stock > 0 && !isWater)
                                             Container(
                                               padding: const EdgeInsets.symmetric(
                                                 horizontal: 6,
@@ -2140,6 +2159,25 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                                                   fontSize: 9.5,
                                                   fontWeight: FontWeight.bold,
                                                   color: Colors.orange,
+                                                ),
+                                              ),
+                                            )
+                                          else if (isWater && stock >= 19.0)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 6,
+                                                vertical: 2,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFF0284C7).withValues(alpha: 0.1),
+                                                borderRadius: BorderRadius.circular(4),
+                                              ),
+                                              child: Text(
+                                                '${(stock / 19.0).floor()} refills available',
+                                                style: const TextStyle(
+                                                  fontSize: 9.5,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Color(0xFF0369A1),
                                                 ),
                                               ),
                                             ),
@@ -2269,16 +2307,25 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                               maxLimit: maxSlim,
                               onDecrement: () {
                                 if (_slimQuantity > 0) {
-                                  setState(() => _slimQuantity--);
+                                  setState(() {
+                                    _slimQuantity--;
+                                    if (_isBorrowingContainers) _borrowedSlimQty = _slimQuantity;
+                                  });
                                 }
                               },
                               onIncrement: () {
                                 if (_slimQuantity < maxSlim) {
-                                  setState(() => _slimQuantity++);
+                                  setState(() {
+                                    _slimQuantity++;
+                                    if (_isBorrowingContainers) _borrowedSlimQty = _slimQuantity;
+                                  });
                                 }
                               },
                               onSetQuantity: (val) {
-                                setState(() => _slimQuantity = val);
+                                setState(() {
+                                  _slimQuantity = val;
+                                  if (_isBorrowingContainers) _borrowedSlimQty = _slimQuantity;
+                                });
                               },
                             ),
                           ),
@@ -2293,16 +2340,25 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                               maxLimit: maxRound,
                               onDecrement: () {
                                 if (_roundQuantity > 0) {
-                                  setState(() => _roundQuantity--);
+                                  setState(() {
+                                    _roundQuantity--;
+                                    if (_isBorrowingContainers) _borrowedRoundQty = _roundQuantity;
+                                  });
                                 }
                               },
                               onIncrement: () {
                                 if (_roundQuantity < maxRound) {
-                                  setState(() => _roundQuantity++);
+                                  setState(() {
+                                    _roundQuantity++;
+                                    if (_isBorrowingContainers) _borrowedRoundQty = _roundQuantity;
+                                  });
                                 }
                               },
                               onSetQuantity: (val) {
-                                setState(() => _roundQuantity = val);
+                                setState(() {
+                                  _roundQuantity = val;
+                                  if (_isBorrowingContainers) _borrowedRoundQty = _roundQuantity;
+                                });
                               },
                             ),
                           ),
@@ -2312,6 +2368,11 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                   },
                 ),
                 const SizedBox(height: 14),
+
+                if (_totalOrderQuantity > 0) ...[
+                  _buildContainerExchangeSection(isDark, isMobile),
+                  const SizedBox(height: 14),
+                ],
 
                 // Station Products & Items added by Admin in Inventory
                 Builder(
@@ -3267,6 +3328,285 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor),
             child: const Text('Set Quantity', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContainerExchangeSection(bool isDark, bool isMobile) {
+    final int effectiveSlim = _borrowedSlimQty > 0 ? _borrowedSlimQty : _slimQuantity;
+    final int effectiveRound = _borrowedRoundQty > 0 ? _borrowedRoundQty : _roundQuantity;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: _isBorrowingContainers
+              ? const Color(0xFF0284C7)
+              : (isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+          width: _isBorrowingContainers ? 1.5 : 1.0,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0284C7).withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.swap_horiz_rounded,
+                  size: 18,
+                  color: Color(0xFF0284C7),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Container / Gallon Exchange',
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w800,
+                        color: isDark ? Colors.white : AppTheme.navyColor,
+                      ),
+                    ),
+                    Text(
+                      'Do you have empty jugs ready to swap upon delivery?',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              // Option 1: Exchange Own Empty Jugs
+              Expanded(
+                child: InkWell(
+                  onTap: () {
+                    setState(() {
+                      _isBorrowingContainers = false;
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: !_isBorrowingContainers
+                          ? const Color(0xFF10B981).withValues(alpha: 0.12)
+                          : (isDark ? Colors.white.withValues(alpha: 0.04) : const Color(0xFFF8FAFC)),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: !_isBorrowingContainers
+                            ? const Color(0xFF10B981)
+                            : (isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+                        width: !_isBorrowingContainers ? 1.5 : 1.0,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.check_circle_rounded,
+                              size: 16,
+                              color: !_isBorrowingContainers
+                                  ? const Color(0xFF10B981)
+                                  : const Color(0xFF94A3B8),
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              'Exchange Jugs',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: !_isBorrowingContainers
+                                    ? const Color(0xFF10B981)
+                                    : (isDark ? Colors.white70 : const Color(0xFF475569)),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          'I have empty jugs to swap',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: !_isBorrowingContainers
+                                ? const Color(0xFF059669)
+                                : const Color(0xFF94A3B8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              // Option 2: Borrow Jugs from JJAASS
+              Expanded(
+                child: InkWell(
+                  onTap: () {
+                    setState(() {
+                      _isBorrowingContainers = true;
+                      _borrowedSlimQty = _slimQuantity;
+                      _borrowedRoundQty = _roundQuantity;
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: _isBorrowingContainers
+                          ? const Color(0xFF0284C7).withValues(alpha: 0.12)
+                          : (isDark ? Colors.white.withValues(alpha: 0.04) : const Color(0xFFF8FAFC)),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: _isBorrowingContainers
+                            ? const Color(0xFF0284C7)
+                            : (isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+                        width: _isBorrowingContainers ? 1.5 : 1.0,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.pan_tool_rounded,
+                              size: 16,
+                              color: _isBorrowingContainers
+                                  ? const Color(0xFF0284C7)
+                                  : const Color(0xFF94A3B8),
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              'Borrow Jugs',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: _isBorrowingContainers
+                                    ? const Color(0xFF0284C7)
+                                    : (isDark ? Colors.white70 : const Color(0xFF475569)),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          'Free loan (return later)',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: _isBorrowingContainers
+                                ? const Color(0xFF0284C7)
+                                : const Color(0xFF94A3B8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (_isBorrowingContainers) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF0F9FF),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: isDark ? Colors.white12 : const Color(0xFFBAE6FD)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.info_outline_rounded, size: 15, color: Color(0xFF0284C7)),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Holding ${(effectiveSlim > 0 ? "$effectiveSlim Slim" : "")}${(effectiveSlim > 0 && effectiveRound > 0 ? " & " : "")}${(effectiveRound > 0 ? "$effectiveRound Round" : "")} gallon(s). Free loan tracked by JJAASS Water Market.',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF0369A1),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Jugs to Borrow:',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
+                      ),
+                      Row(
+                        children: [
+                          if (_slimQuantity > 0)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              margin: const EdgeInsets.only(right: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFFCBD5E1)),
+                              ),
+                              child: Text(
+                                'Slim: $_slimQuantity',
+                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0284C7)),
+                              ),
+                            ),
+                          if (_roundQuantity > 0)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFFCBD5E1)),
+                              ),
+                              child: Text(
+                                'Round: $_roundQuantity',
+                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF6366F1)),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

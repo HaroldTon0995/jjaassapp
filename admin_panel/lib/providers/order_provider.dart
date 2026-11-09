@@ -48,15 +48,15 @@ class OrderProvider extends ChangeNotifier {
   final List<Map<String, dynamic>> _inventoryItems = [
     {
       'id': 'prod_purified',
-      'name': '19L Purified Water',
+      'name': 'Purified Water Reservoir',
       'category': 'water',
-      'unit': 'Gallons',
+      'unit': 'Liters',
       'price': 30.0,
-      'stock': 100.0,
-      'capacity': 100.0,
+      'stock': 10000.0,
+      'capacity': 10000.0,
       'color': Colors.blue,
       'icon': Icons.water_drop_rounded,
-      'description': 'Multi-stage filtered pure drinking water refill',
+      'description': '10,000L commercial bulk drinking water filtration tank (19L / refill)',
       'is_refill': true,
       'is_active': true,
     },
@@ -409,6 +409,57 @@ class OrderProvider extends ChangeNotifier {
     return cap > 0 ? cap : 100.0;
   }
 
+  // Bulk Water Reservoir (Liters) Getters
+  double get waterReservoirLiters {
+    final item = _inventoryItems.firstWhere(
+      (i) => i['id'] == 'prod_purified' || i['category'] == 'water',
+      orElse: () => {'stock': 10000.0},
+    );
+    return (item['stock'] as num).toDouble();
+  }
+
+  double get waterReservoirCapacity {
+    final item = _inventoryItems.firstWhere(
+      (i) => i['id'] == 'prod_purified' || i['category'] == 'water',
+      orElse: () => {'capacity': 10000.0},
+    );
+    final cap = (item['capacity'] as num).toDouble();
+    return cap > 0 ? cap : 10000.0;
+  }
+
+  int get availableRefillsCount {
+    return (waterReservoirLiters / 19.0).floor();
+  }
+
+  Future<void> refillBulkWaterReservoir(double liters, {String? notes}) async {
+    final idx = _inventoryItems.indexWhere((i) => i['id'] == 'prod_purified' || i['category'] == 'water');
+    if (idx != -1) {
+      final currentStock = (_inventoryItems[idx]['stock'] as num).toDouble();
+      final capacity = (_inventoryItems[idx]['capacity'] as num).toDouble();
+      final newStock = min(capacity, currentStock + liters);
+      _inventoryItems[idx]['stock'] = newStock;
+
+      final logEntry = {
+        'id': 'water_refill_${DateTime.now().millisecondsSinceEpoch}',
+        'itemId': 'prod_purified',
+        'itemName': 'Purified Water Reservoir',
+        'amount': liters,
+        'previousStock': currentStock,
+        'newStock': newStock,
+        'unit': 'Liters',
+        'timestamp': DateTime.now(),
+        'restockedBy': 'Station Administrator',
+        'notes': notes ?? 'Bulk water filtration tank replenishment (+${liters.toInt()}L)',
+      };
+      _restockLogs.insert(0, logEntry);
+      notifyListeners();
+      InventoryStorage.saveInventory(_inventoryItems);
+      InventoryStorage.saveRestockLogs(_restockLogs);
+      _syncInventoryToSupabase(_inventoryItems[idx], action: 'update');
+      _syncRestockLogToSupabase(logEntry);
+    }
+  }
+
   // Borrowed gallons list
   List<Map<String, dynamic>> get customerBorrows {
     final list = <Map<String, dynamic>>[];
@@ -420,17 +471,31 @@ class OrderProvider extends ChangeNotifier {
       final isNewContainerSale = lower.contains('set a') || lower.contains('new container');
       if (isNewContainerSale) continue; // Brand new container purchase, customer did not borrow
 
-      // Walk-in orders: Customer brings own containers unless explicitly borrowing for bulk
-      if (order.isWalkIn && !order.isBorrowingContainers) {
+      // Only orders that are explicitly marked as borrowing containers, or contain borrowed tag
+      if (!order.isBorrowingContainers && !order.deliveryAddress.contains('[BORROWED_')) {
         continue;
       }
 
-      final isReturned = _returnedGallonOrderIds.contains(order.id);
+      final isReturned = order.isGallonReturned ||
+          _returnedGallonOrderIds.contains(order.id) ||
+          _returnedGallonOrderIds.contains(order.txnId) ||
+          order.deliveryAddress.contains('[GALLONS_RETURNED]') ||
+          (order.deliveryNote?.contains('[GALLONS_RETURNED]') ?? false);
 
       final int slimCount = order.borrowedSlimCount ?? 0;
       final int roundCount = order.borrowedRoundCount ?? 0;
 
       if (order.isBorrowingContainers && (slimCount > 0 || roundCount > 0)) {
+        final bool isSlimReturned = isReturned ||
+            slimCount == 0 ||
+            _returnedGallonOrderIds.contains('${order.id}_slim') ||
+            _returnedGallonOrderIds.contains('${order.txnId}_slim');
+
+        final bool isRoundReturned = isReturned ||
+            roundCount == 0 ||
+            _returnedGallonOrderIds.contains('${order.id}_round') ||
+            _returnedGallonOrderIds.contains('${order.txnId}_round');
+
         if (slimCount > 0) {
           list.add({
             'orderId': order.id,
@@ -443,7 +508,7 @@ class OrderProvider extends ChangeNotifier {
             'quantity': slimCount,
             'orderStatus': order.orderStatus,
             'borrowedAt': order.createdAt,
-            'isReturned': isReturned,
+            'isReturned': isSlimReturned,
             'isBulkBorrow': true,
           });
         }
@@ -459,7 +524,7 @@ class OrderProvider extends ChangeNotifier {
             'quantity': roundCount,
             'orderStatus': order.orderStatus,
             'borrowedAt': order.createdAt,
-            'isReturned': isReturned,
+            'isReturned': isRoundReturned,
             'isBulkBorrow': true,
           });
         }
@@ -576,20 +641,41 @@ class OrderProvider extends ChangeNotifier {
       }
 
     _returnedGallonOrderIds.add(orderId);
+    final orderIdx = _orders.indexWhere((o) => o.id == orderId);
+    if (orderIdx != -1) {
+      _orders[orderIdx].isBorrowingContainers = false;
+      _orders[orderIdx].isGallonReturned = true;
+      if (_isSupabaseConfigured) {
+        try {
+          final client = Supabase.instance.client;
+          client.from('orders').update({
+            'isBorrowingContainers': false,
+            'isGallonReturned': true,
+          }).eq('id', orderId).catchError((_) {
+            final safeAddr = _orders[orderIdx].deliveryAddress.contains('[GALLONS_RETURNED]')
+                ? _orders[orderIdx].deliveryAddress
+                : '${_orders[orderIdx].deliveryAddress} [GALLONS_RETURNED]';
+            _orders[orderIdx].deliveryAddress = safeAddr;
+            client.from('orders').update({'deliveryAddress': safeAddr}).eq('id', orderId).catchError((_) {});
+          });
+        } catch (_) {}
+      }
+    }
     notifyListeners();
     InventoryStorage.saveInventory(_inventoryItems);
     InventoryStorage.saveRestockLogs(_restockLogs);
     InventoryStorage.saveReturnedGallonOrders(_returnedGallonOrderIds);
   }
 
-  void collectDriverReturnedGallons({
+  Future<void> collectDriverReturnedGallons({
     required String orderId,
     required String customerName,
     required int slimCount,
     required int roundCount,
     required String driverName,
     String? notes,
-  }) {
+  }) async {
+    // 1. Replenish Slim stock if collected
     if (slimCount > 0) {
       final slimIdx = _inventoryItems.indexWhere((p) => p['id'] == 'item_slim_gallon');
       if (slimIdx != -1) {
@@ -598,7 +684,7 @@ class OrderProvider extends ChangeNotifier {
         final capacity = (_inventoryItems[slimIdx]['capacity'] as num).toDouble();
         _inventoryItems[slimIdx]['stock'] = newStock;
         _inventoryItems[slimIdx]['capacity'] = max(capacity, newStock);
-        _syncInventoryToSupabase(_inventoryItems[slimIdx], action: 'update');
+        await _syncInventoryToSupabase(_inventoryItems[slimIdx], action: 'update');
 
         final logEntry = {
           'id': 'return_slim_${DateTime.now().millisecondsSinceEpoch}',
@@ -613,10 +699,11 @@ class OrderProvider extends ChangeNotifier {
           'notes': notes ?? 'Order reference: $orderId - Gallon return collected',
         };
         _restockLogs.insert(0, logEntry);
-        _syncRestockLogToSupabase(logEntry);
+        await _syncRestockLogToSupabase(logEntry);
       }
     }
 
+    // 2. Replenish Round stock if collected
     if (roundCount > 0) {
       final roundIdx = _inventoryItems.indexWhere((p) => p['id'] == 'item_round_gallon');
       if (roundIdx != -1) {
@@ -625,7 +712,7 @@ class OrderProvider extends ChangeNotifier {
         final capacity = (_inventoryItems[roundIdx]['capacity'] as num).toDouble();
         _inventoryItems[roundIdx]['stock'] = newStock;
         _inventoryItems[roundIdx]['capacity'] = max(capacity, newStock);
-        _syncInventoryToSupabase(_inventoryItems[roundIdx], action: 'update');
+        await _syncInventoryToSupabase(_inventoryItems[roundIdx], action: 'update');
 
         final logEntry = {
           'id': 'return_round_${DateTime.now().millisecondsSinceEpoch}',
@@ -640,11 +727,112 @@ class OrderProvider extends ChangeNotifier {
           'notes': notes ?? 'Order reference: $orderId - Gallon return collected',
         };
         _restockLogs.insert(0, logEntry);
-        _syncRestockLogToSupabase(logEntry);
+        await _syncRestockLogToSupabase(logEntry);
       }
     }
 
-    _returnedGallonOrderIds.add(orderId);
+    // 3. Update the customer's borrow record & reduce outstanding debt in memory and in Supabase
+    int targetIdx = _orders.indexWhere((o) => o.id == orderId || o.txnId == orderId);
+    if (targetIdx == -1) {
+      targetIdx = _orders.indexWhere((o) =>
+          (o.customerId == orderId ||
+           o.customerName.trim().toLowerCase() == customerName.trim().toLowerCase()) &&
+          !o.isCollectionJob &&
+          !o.isGallonReturned);
+    }
+
+    if (targetIdx != -1) {
+      final o = _orders[targetIdx];
+      int remainingSlim = (o.borrowedSlimCount ?? 0) - slimCount;
+      if (remainingSlim < 0) remainingSlim = 0;
+      o.borrowedSlimCount = remainingSlim;
+
+      int remainingRound = (o.borrowedRoundCount ?? 0) - roundCount;
+      if (remainingRound < 0) remainingRound = 0;
+      o.borrowedRoundCount = remainingRound;
+
+      if (remainingSlim == 0 && remainingRound == 0) {
+        o.isBorrowingContainers = false;
+        o.isGallonReturned = true;
+        _returnedGallonOrderIds.add(orderId);
+        _returnedGallonOrderIds.add(o.id);
+        _returnedGallonOrderIds.add(o.txnId);
+      } else {
+        if (slimCount > 0 && remainingSlim == 0) {
+          _returnedGallonOrderIds.add('${orderId}_slim');
+          _returnedGallonOrderIds.add('${o.id}_slim');
+          _returnedGallonOrderIds.add('${o.txnId}_slim');
+        }
+        if (roundCount > 0 && remainingRound == 0) {
+          _returnedGallonOrderIds.add('${orderId}_round');
+          _returnedGallonOrderIds.add('${o.id}_round');
+          _returnedGallonOrderIds.add('${o.txnId}_round');
+        }
+      }
+
+      String safeAddr = o.deliveryAddress
+          .replaceAll(RegExp(r'\[BORROWED_[A-Z]+:\d+\]'), '')
+          .replaceAll('[GALLONS_RETURNED]', '')
+          .trim();
+
+      if (o.isGallonReturned) {
+        safeAddr = '$safeAddr [GALLONS_RETURNED]';
+      } else {
+        safeAddr = '$safeAddr [BORROWED_SLIM:${o.borrowedSlimCount ?? 0}][BORROWED_ROUND:${o.borrowedRoundCount ?? 0}]';
+      }
+      o.deliveryAddress = safeAddr;
+
+      if (_isSupabaseConfigured) {
+        try {
+          final client = Supabase.instance.client;
+          final updatePayload = <String, dynamic>{
+            'deliveryAddress': safeAddr,
+            'isBorrowingContainers': o.isBorrowingContainers,
+            'isGallonReturned': o.isGallonReturned,
+          };
+          if (o.borrowedSlimCount != null) updatePayload['borrowedSlimCount'] = o.borrowedSlimCount;
+          if (o.borrowedRoundCount != null) updatePayload['borrowedRoundCount'] = o.borrowedRoundCount;
+
+          try {
+            await client.from('orders').update(updatePayload).eq('id', o.id);
+          } catch (_) {
+            await client.from('orders').update({'deliveryAddress': safeAddr}).eq('id', o.id);
+          }
+        } catch (e) {
+          debugPrint('Supabase customer borrow update failed: $e');
+        }
+      }
+    } else {
+      _returnedGallonOrderIds.add(orderId);
+    }
+
+    // 5. Complete matching collection job orders in memory and in Supabase
+    final matchingCollectionJobs = _orders.where((o) =>
+        o.isCollectionJob &&
+        (o.customerName.trim().toLowerCase() == customerName.trim().toLowerCase() ||
+         o.customerName.trim().toLowerCase().contains(customerName.trim().toLowerCase()) ||
+         customerName.trim().toLowerCase().contains(o.customerName.trim().toLowerCase()) ||
+         o.id == orderId ||
+         o.txnId == orderId) &&
+        o.orderStatus != OrderStatus.completed &&
+        o.orderStatus != OrderStatus.cancelled).toList();
+
+    for (final job in matchingCollectionJobs) {
+      job.orderStatus = OrderStatus.completed;
+      job.completedAt = DateTime.now();
+      if (_isSupabaseConfigured) {
+        try {
+          final client = Supabase.instance.client;
+          await client.from('orders').update({
+            'orderStatus': OrderStatus.completed.name,
+            'completedAt': DateTime.now().toIso8601String(),
+          }).eq('id', job.id);
+        } catch (e) {
+          debugPrint('Supabase collection job completion update failed: $e');
+        }
+      }
+    }
+
     notifyListeners();
     InventoryStorage.saveInventory(_inventoryItems);
     InventoryStorage.saveRestockLogs(_restockLogs);
@@ -691,7 +879,7 @@ class OrderProvider extends ChangeNotifier {
       pricePerUnit: 0.0,
       totalAmount: 0.0,
       paymentMethod: 'Collection Service',
-      paymentStatus: 'Paid',
+      paymentStatus: 'Scheduled',
       orderStatus: OrderStatus.assigned,
       driverId: driverId,
       driverName: driverName,
@@ -710,13 +898,15 @@ class OrderProvider extends ChangeNotifier {
     if (_isSupabaseConfigured) {
       try {
         final client = Supabase.instance.client;
-        final insertMap = {
+        final insertMap = <String, dynamic>{
           'id': newOrder.id,
           'txnId': newOrder.txnId,
           'customerId': newOrder.customerId,
           'customerName': newOrder.customerName,
           'customerPhone': newOrder.customerPhone,
-          'deliveryAddress': newOrder.deliveryAddress,
+          'deliveryAddress': newOrder.deliveryNote != null && newOrder.deliveryNote!.isNotEmpty
+              ? '${newOrder.deliveryAddress} • Note: ${newOrder.deliveryNote}'
+              : newOrder.deliveryAddress,
           'waterType': newOrder.waterType,
           'quantity': newOrder.quantity,
           'pricePerUnit': newOrder.pricePerUnit,
@@ -728,22 +918,25 @@ class OrderProvider extends ChangeNotifier {
           'driverName': newOrder.driverName,
           'createdAt': newOrder.createdAt.toIso8601String(),
           'distance': newOrder.distance,
-          'deliveryNote': newOrder.deliveryNote,
-          'latitude': newOrder.latitude,
-          'longitude': newOrder.longitude,
-          'isCollectionJob': true,
-          'borrowedSlimCount': newOrder.borrowedSlimCount,
-          'borrowedRoundCount': newOrder.borrowedRoundCount,
         };
+        if (newOrder.latitude != null) insertMap['latitude'] = newOrder.latitude!;
+        if (newOrder.longitude != null) insertMap['longitude'] = newOrder.longitude!;
+
         try {
-          await client.from('orders').insert(insertMap);
+          final richMap = Map<String, dynamic>.from(insertMap);
+          richMap['isCollectionJob'] = true;
+          richMap['borrowedSlimCount'] = newOrder.borrowedSlimCount;
+          richMap['borrowedRoundCount'] = newOrder.borrowedRoundCount;
+          if (newOrder.deliveryNote != null) richMap['deliveryNote'] = newOrder.deliveryNote;
+          await client.from('orders').insert(richMap);
         } catch (e) {
-          insertMap.remove('isCollectionJob');
-          insertMap.remove('borrowedSlimCount');
-          insertMap.remove('borrowedRoundCount');
+          debugPrint('Supabase collection job rich insert failed ($e). Retrying with base columns...');
           try {
             await client.from('orders').insert(insertMap);
-          } catch (_) {}
+            debugPrint('Successfully inserted collection job ${newOrder.id} to Supabase with base columns!');
+          } catch (retryErr) {
+            debugPrint('Supabase collection job retry insert failed: $retryErr');
+          }
         }
       } catch (e) {
         debugPrint('Supabase collection job order insert error: $e');
@@ -780,28 +973,30 @@ class OrderProvider extends ChangeNotifier {
     int? borrowedRoundQty,
   }) {
     final lowerName = name.toLowerCase();
-    // 1. Deduct water product stock (water volume was sold)
+    // 1. Deduct water volume (19 Liters per refilled 5-gallon jug)
     final waterIdx = _inventoryItems.indexWhere(
       (p) =>
           p['category'] == 'water' &&
-          (p['name'] == name ||
-              lowerName.contains(p['name'].toString().toLowerCase()) ||
-              p['name'].toString().toLowerCase().contains(lowerName) ||
-              (lowerName.contains('set a') && p['id'] == 'prod_set_a') ||
-              (lowerName.contains('purified') && p['id'] == 'prod_purified')),
+          (p['id'] == 'prod_purified' ||
+              p['name'] == name ||
+              lowerName.contains('purified') ||
+              lowerName.contains('water') ||
+              lowerName.contains('refill') ||
+              lowerName.contains('set a')),
     );
     if (waterIdx != -1) {
       final currentStock = (_inventoryItems[waterIdx]['stock'] as num).toDouble();
-      _inventoryItems[waterIdx]['stock'] = max(0.0, currentStock - qty);
+      final litersDeducted = qty * 19.0;
+      _inventoryItems[waterIdx]['stock'] = max(0.0, currentStock - litersDeducted);
       _syncInventoryToSupabase(_inventoryItems[waterIdx], action: 'update');
     }
 
-    // 2. Physical Container Inventory Deduction
+    // 2. Physical Container Inventory Deduction:
+    // In a water refilling station, regular refills with container exchange DO NOT deplete physical container stock!
     final isNewContainerSale = lowerName.contains('set a') || lowerName.contains('new container');
 
-    // Walk-in order with customer's own container:
-    // DO NOT deduct physical container inventory (Slim / Round jugs)!
-    if (isWalkIn && !isNewContainerSale && !isBorrowingContainers) {
+    if (!isNewContainerSale && !isBorrowingContainers && !lowerName.contains('container') && !lowerName.contains('jug')) {
+      adjustContainerReserves(emptyChange: qty, refilledChange: -qty);
       notifyListeners();
       InventoryStorage.saveInventory(_inventoryItems);
       return;
@@ -992,8 +1187,10 @@ class OrderProvider extends ChangeNotifier {
     for (final item in _inventoryItems) {
       final id = item['id'];
       if (id == 'prod_purified') {
-        item['stock'] = 100.0;
-        item['capacity'] = 100.0;
+        item['stock'] = 10000.0;
+        item['capacity'] = 10000.0;
+        item['unit'] = 'Liters';
+        item['name'] = 'Purified Water Reservoir';
       } else if (id == 'prod_set_a') {
         item['stock'] = 30.0;
         item['capacity'] = 50.0;
@@ -1500,13 +1697,22 @@ class OrderProvider extends ChangeNotifier {
     final txnId = '#TXN-88$randomNum';
     final totalAmount = customTotalAmount ?? (pricePerUnit * quantity);
 
+    String taggedAddress = deliveryAddress;
+    if (isBorrowingContainers) {
+      final slim = borrowedSlimQty ?? 0;
+      final round = borrowedRoundQty ?? 0;
+      if (!taggedAddress.contains('[BORROWED_SLIM:') && !taggedAddress.contains('[BORROWED_ROUND:')) {
+        taggedAddress = '$taggedAddress [BORROWED_SLIM:$slim] [BORROWED_ROUND:$round]';
+      }
+    }
+
     final newOrder = OrderModel(
       id: orderId,
       txnId: txnId,
       customerId: customerId,
       customerName: customerName,
       customerPhone: customerPhone,
-      deliveryAddress: deliveryAddress,
+      deliveryAddress: taggedAddress,
       waterType: waterType,
       quantity: quantity,
       pricePerUnit: pricePerUnit,
@@ -1587,14 +1793,26 @@ class OrderProvider extends ChangeNotifier {
         if (newOrder.longitude != null) {
           insertMap['longitude'] = newOrder.longitude!;
         }
+        if (newOrder.isBorrowingContainers) {
+          insertMap['isBorrowingContainers'] = true;
+          if (newOrder.borrowedSlimCount != null) {
+            insertMap['borrowedSlimCount'] = newOrder.borrowedSlimCount!;
+          }
+          if (newOrder.borrowedRoundCount != null) {
+            insertMap['borrowedRoundCount'] = newOrder.borrowedRoundCount!;
+          }
+        }
 
         try {
           await client.from('orders').insert(insertMap);
           debugPrint('Successfully inserted order ${newOrder.id} to Supabase!');
         } catch (colErr) {
           debugPrint('Supabase initial insert failed: $colErr. Retrying with safe base columns...');
-          // Remove deliveryNote if column does not exist in the database table
+          // Remove custom columns if they do not exist in the database table
           insertMap.remove('deliveryNote');
+          insertMap.remove('isBorrowingContainers');
+          insertMap.remove('borrowedSlimCount');
+          insertMap.remove('borrowedRoundCount');
           if (newOrder.deliveryNote != null && newOrder.deliveryNote!.isNotEmpty) {
             insertMap['deliveryAddress'] =
                 '${newOrder.deliveryAddress} (Note: ${newOrder.deliveryNote})';
@@ -1887,31 +2105,65 @@ class OrderProvider extends ChangeNotifier {
   }
 
   // Driver Queries
-  List<OrderModel> getAvailableDriverJobs(String driverId) {
-    if (driverId.isEmpty) return [];
+  bool _driverMatches(OrderModel o, String driverId, String? driverName, String? driverEmail) {
+    final cleanId = driverId.trim();
+    final cleanName = driverName?.trim().toLowerCase();
+    final cleanEmail = driverEmail?.trim().toLowerCase();
+
+    if (cleanId.isNotEmpty && o.driverId != null && o.driverId == cleanId) {
+      return true;
+    }
+    if (cleanName != null && cleanName.isNotEmpty && o.driverName != null) {
+      final oName = o.driverName!.trim().toLowerCase();
+      if (oName == cleanName || oName.contains(cleanName) || cleanName.contains(oName)) {
+        return true;
+      }
+    }
+    if (cleanEmail != null && cleanEmail.isNotEmpty) {
+      if (o.driverId != null && o.driverId!.trim().toLowerCase() == cleanEmail) {
+        return true;
+      }
+      final emailPrefix = cleanEmail.split('@').first;
+      if (emailPrefix.length >= 3 && o.driverName != null) {
+        if (o.driverName!.toLowerCase().replaceAll(' ', '').contains(emailPrefix)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  List<OrderModel> getAvailableDriverJobs(String driverId, {String? driverName, String? driverEmail}) {
     return _orders
         .where(
           (o) =>
               (o.orderStatus == OrderStatus.assigned || o.orderStatus == OrderStatus.confirmed) &&
-              (o.driverId == driverId || o.driverId == null || o.driverId!.isEmpty),
+              (o.driverId == null || o.driverId!.isEmpty || _driverMatches(o, driverId, driverName, driverEmail)),
         )
         .toList();
   }
 
-  OrderModel? getActiveDriverJob(String driverId) {
-    if (driverId.isEmpty) return null;
+  List<OrderModel> getAssignedDriverJobs(String driverId, {String? driverName, String? driverEmail}) {
+    return _orders
+        .where(
+          (o) =>
+              o.orderStatus == OrderStatus.assigned && _driverMatches(o, driverId, driverName, driverEmail),
+        )
+        .toList();
+  }
+
+  OrderModel? getActiveDriverJob(String driverId, {String? driverName, String? driverEmail}) {
     final list = _orders.where(
-      (o) => o.driverId == driverId && o.orderStatus == OrderStatus.onDelivery,
+      (o) => o.orderStatus == OrderStatus.onDelivery && _driverMatches(o, driverId, driverName, driverEmail),
     );
     return list.isNotEmpty ? list.first : null;
   }
 
-  List<OrderModel> getDriverCompletedJobs(String driverId) {
-    if (driverId.isEmpty) return [];
+  List<OrderModel> getDriverCompletedJobs(String driverId, {String? driverName, String? driverEmail}) {
     return _orders
         .where(
           (o) =>
-              o.driverId == driverId && o.orderStatus == OrderStatus.completed,
+              o.orderStatus == OrderStatus.completed && _driverMatches(o, driverId, driverName, driverEmail),
         )
         .toList();
   }
