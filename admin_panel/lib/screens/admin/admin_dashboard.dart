@@ -91,8 +91,139 @@ class _AdminDashboardState extends State<AdminDashboard> {
   // Realtime Live Notifications
   final List<Map<String, dynamic>> _notifications = [];
 
-  // Realtime Live Inbox Messages
-  final List<Map<String, dynamic>> _inboxMessages = [];
+  // Global Header Search Controller
+  final TextEditingController _globalSearchController = TextEditingController();
+
+  // Orders Search Controller
+  final TextEditingController _orderSearchController = TextEditingController();
+
+  // Admin Profile Controllers (Settings)
+  final TextEditingController _adminNameController =
+      TextEditingController(text: 'harold borbo');
+  final TextEditingController _adminEmailController =
+      TextEditingController(text: 'admin@jjaasswater.com');
+  final TextEditingController _adminPhoneController =
+      TextEditingController(text: '+63 995 113 3652');
+
+  // Water Refilling Station Regulatory & Compliance Permits (Settings)
+  final List<Map<String, dynamic>> _compliancePermits = [
+    {
+      'id': 'permit_mayor',
+      'title': "Mayor's / Business Permit (LGU Albay)",
+      'category': 'LGU Local Governance & Operation License',
+      'fileName': 'Mayors_Permit_TabacoCity_2026.pdf',
+      'status': 'Valid & Uploaded',
+      'uploadedAt': '2026-01-15',
+      'expiryDate': '2026-12-31',
+      'isUploaded': true,
+    },
+    {
+      'id': 'permit_sanitary',
+      'title': 'DOH Sanitary Permit & Health Certificates',
+      'category': 'DOH & City Health Office Sanitation Clearance',
+      'fileName': 'DOH_Sanitary_Permit_Albay_2026.pdf',
+      'status': 'Valid & Uploaded',
+      'uploadedAt': '2026-01-20',
+      'expiryDate': '2026-12-31',
+      'isUploaded': true,
+    },
+    {
+      'id': 'permit_water_lab',
+      'title': 'Water Laboratory Test (Microbiological & Physical-Chemical)',
+      'category': 'PNSDW Standards Potability Certificate',
+      'fileName': 'Water_Lab_Report_PNSDW_Nov2026.pdf',
+      'status': 'Valid & Uploaded',
+      'uploadedAt': '2026-11-01',
+      'expiryDate': '2026-11-30',
+      'isUploaded': true,
+    },
+    {
+      'id': 'permit_dti',
+      'title': 'DTI / SEC Business Name Registration',
+      'category': 'Department of Trade & Industry Certificate',
+      'fileName': 'DTI_Registration_JJAASS_Water_Market.pdf',
+      'status': 'Valid & Uploaded',
+      'uploadedAt': '2024-06-10',
+      'expiryDate': '2029-06-10',
+      'isUploaded': true,
+    },
+    {
+      'id': 'permit_fsic',
+      'title': 'Fire Safety Inspection Certificate (FSIC)',
+      'category': 'Bureau of Fire Protection Safety Clearance',
+      'fileName': 'BFP_Fire_Safety_Inspection_2026.pdf',
+      'status': 'Valid & Uploaded',
+      'uploadedAt': '2026-02-05',
+      'expiryDate': '2027-02-05',
+      'isUploaded': true,
+    },
+  ];
+
+  // Customer & Driver Direct Messages (Decoupled from order system notifications)
+  final List<Map<String, dynamic>> _inboxMessages = [
+    {
+      'id': 'msg_001',
+      'sender': 'haroldcristonborbo',
+      'role': 'Customer',
+      'snippet':
+          'Hi Admin, can you schedule delivery every Monday for our household?',
+      'time': '12 mins ago',
+      'isRead': false,
+      'messages': [
+        {
+          'sender': 'haroldcristonborbo',
+          'text':
+              'Hi Admin, can you schedule delivery every Monday for our household?',
+          'time': '12 mins ago',
+          'isAdmin': false,
+        },
+      ],
+      'timestamp': DateTime.now(),
+    },
+    {
+      'id': 'msg_002',
+      'sender': 'Tonton Borbo',
+      'role': 'Driver',
+      'snippet':
+          'Traffic in Malilipot highway, will finish delivery deliveries in 20 mins.',
+      'time': '35 mins ago',
+      'isRead': false,
+      'messages': [
+        {
+          'sender': 'Tonton Borbo',
+          'text':
+              'Traffic in Malilipot highway, will finish delivery deliveries in 20 mins.',
+          'time': '35 mins ago',
+          'isAdmin': false,
+        },
+      ],
+      'timestamp': DateTime.now(),
+    },
+    {
+      'id': 'msg_003',
+      'sender': 'Carl Customer',
+      'role': 'Customer',
+      'snippet': 'Thank you! The purified water quality is very clean.',
+      'time': '2 hours ago',
+      'isRead': true,
+      'messages': [
+        {
+          'sender': 'Carl Customer',
+          'text': 'Thank you! The purified water quality is very clean.',
+          'time': '2 hours ago',
+          'isAdmin': false,
+        },
+        {
+          'sender': 'Station Admin',
+          'text':
+              'You are very welcome! We test our filtration systems weekly for highest purity.',
+          'time': '1 hour ago',
+          'isAdmin': true,
+        },
+      ],
+      'timestamp': DateTime.now(),
+    },
+  ];
 
   // Order state tracking
   List<OrderModel> _previousOrders = [];
@@ -137,16 +268,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
             'timestamp': DateTime.now(),
           });
 
-          // Log customer concern inbox alert for new order
-          _inboxMessages.insert(0, {
-            'id': 'msg_order_${o.id}',
-            'sender': o.customerName,
-            'snippet':
-                'New Order placed (${o.id}) requesting ${o.quantity}x ${o.waterType}. Please prepare.',
-            'time': 'Just now',
-            'isRead': false,
-            'timestamp': DateTime.now(),
-          });
           // Realtime alert toast for admin
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
@@ -200,17 +321,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
             body = 'Order ${o.id} was cancelled.';
             icon = Icons.cancel_outlined;
             color = Colors.red;
-
-            // Log customer cancel concern inbox alert
-            _inboxMessages.insert(0, {
-              'id': 'msg_cancel_${o.id}',
-              'sender': o.customerName,
-              'snippet':
-                  'Concern: My order ${o.id} was cancelled. Can you explain why?',
-              'time': 'Just now',
-              'isRead': false,
-              'timestamp': DateTime.now(),
-            });
           }
 
           _notifications.insert(0, {
@@ -346,16 +456,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
           'timestamp': DateTime.now(),
         });
 
-        _inboxMessages.insert(0, {
-          'id': 'msg_reg_${p.id}',
-          'sender': p.name,
-          'snippet':
-              'Hi Admin! I just completed my registration for ${p.roleDisplayName.toLowerCase()} profile.',
-          'time': 'Just now',
-          'isRead': false,
-          'timestamp': DateTime.now(),
-        });
-
         Helpers.showSnackBar(
           context,
           'Database Alert: New $roleLabel ${p.name} has registered!',
@@ -404,6 +504,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
     _chatScrollController.dispose();
     _faqScrollController.dispose();
     _paymentsSearchController.dispose();
+    _globalSearchController.dispose();
+    _orderSearchController.dispose();
+    _adminNameController.dispose();
+    _adminEmailController.dispose();
+    _adminPhoneController.dispose();
     super.dispose();
   }
 
@@ -456,6 +561,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     });
   }
 
+  // ignore: unused_element
   void _updateOrderStatus(String id, String newStatusStr) async {
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
     OrderStatus status = OrderStatus.pending;
@@ -760,6 +866,248 @@ class _AdminDashboardState extends State<AdminDashboard> {
         setState(() {
           _isActionLoading = false;
         });
+      }
+    }
+  }
+
+  // Global Header Search Router
+  void _handleGlobalSearch(String rawQuery) {
+    final query = rawQuery.trim().toLowerCase();
+    if (query.isEmpty) return;
+
+    if (query.contains('user') ||
+        query.contains('role') ||
+        query.contains('account') ||
+        query.contains('customer') ||
+        query.contains('driver')) {
+      setState(() {
+        _selectedTab = 3;
+        _activeSidebarMenu = 3;
+        _searchController.text = rawQuery.trim();
+      });
+      _applyFilters();
+      Helpers.showSnackBar(context, 'Navigated to Users & Roles for "$rawQuery"');
+    } else if (query.contains('order') ||
+        query.startsWith('#col') ||
+        query.startsWith('#ord') ||
+        query.startsWith('col') ||
+        query.startsWith('ord')) {
+      setState(() {
+        _selectedTab = 1;
+        _activeSidebarMenu = 1;
+        _orderSearchController.text = rawQuery.trim();
+      });
+      Helpers.showSnackBar(
+          context, 'Navigated to Orders Management for "$rawQuery"');
+    } else if (query.contains('deliver') ||
+        query.contains('fleet') ||
+        query.contains('rider') ||
+        query.contains('route') ||
+        query.contains('track')) {
+      setState(() {
+        _selectedTab = 2;
+        _activeSidebarMenu = 2;
+        _deliveriesSearchController.text = rawQuery.trim();
+      });
+      Helpers.showSnackBar(
+          context, 'Navigated to Fleet Deliveries for "$rawQuery"');
+    } else if (query.contains('invent') ||
+        query.contains('stock') ||
+        query.contains('tank') ||
+        query.contains('gallon') ||
+        query.contains('jug')) {
+      setState(() {
+        _selectedTab = 4;
+        _activeSidebarMenu = 4;
+        _inventorySearchController.text = rawQuery.trim();
+      });
+      Helpers.showSnackBar(context, 'Navigated to Inventory for "$rawQuery"');
+    } else if (query.contains('pay') ||
+        query.contains('gcash') ||
+        query.contains('cash') ||
+        query.contains('sales') ||
+        query.contains('revenue')) {
+      setState(() {
+        _selectedTab = 5;
+        _activeSidebarMenu = 5;
+        _paymentsSearchController.text = rawQuery.trim();
+      });
+      Helpers.showSnackBar(context, 'Navigated to Payments for "$rawQuery"');
+    } else if (query.contains('report') ||
+        query.contains('analyt') ||
+        query.contains('kpi') ||
+        query.contains('export')) {
+      setState(() {
+        _selectedTab = 6;
+        _activeSidebarMenu = 6;
+      });
+      Helpers.showSnackBar(
+          context, 'Navigated to Analytics & Reports for "$rawQuery"');
+    } else if (query.contains('ai') ||
+        query.contains('chat') ||
+        query.contains('bot') ||
+        query.contains('support') ||
+        query.contains('aquabot')) {
+      setState(() {
+        _selectedTab = 7;
+        _activeSidebarMenu = 7;
+      });
+      Helpers.showSnackBar(
+          context, 'Navigated to AI Chat Support for "$rawQuery"');
+    } else if (query.contains('setting') ||
+        query.contains('permit') ||
+        query.contains('sanitary') ||
+        query.contains('profile') ||
+        query.contains('compliance')) {
+      setState(() {
+        _selectedTab = 8;
+        _activeSidebarMenu = 8;
+      });
+      Helpers.showSnackBar(context, 'Navigated to Settings for "$rawQuery"');
+    } else {
+      // Check if matches an order id or customer in order provider
+      final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+      final hasOrder = orderProvider.orders.any((o) =>
+          o.id.toLowerCase().contains(query) ||
+          o.customerName.toLowerCase().contains(query));
+      if (hasOrder) {
+        setState(() {
+          _selectedTab = 1;
+          _activeSidebarMenu = 1;
+          _orderSearchController.text = rawQuery.trim();
+        });
+        Helpers.showSnackBar(
+            context, 'Found matching order for "$rawQuery"');
+      } else {
+        setState(() {
+          _selectedTab = 3;
+          _activeSidebarMenu = 3;
+          _searchController.text = rawQuery.trim();
+        });
+        _applyFilters();
+        Helpers.showSnackBar(context, 'Searching database for "$rawQuery"...');
+      }
+    }
+  }
+
+  // Confirmation warning dialog for permanently deleting an order transaction
+  Future<void> _confirmDeleteOrder(OrderModel order, bool isDark) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.delete_forever_rounded,
+                    color: Colors.red, size: 22),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Delete Order Transaction',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Are you sure you want to permanently delete this order record?',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.05)
+                      : const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Order ID: ${order.id}',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: AppTheme.primaryColor)),
+                    const SizedBox(height: 4),
+                    Text('Customer: ${order.customerName}',
+                        style: const TextStyle(fontSize: 12)),
+                    const SizedBox(height: 4),
+                    Text('Products: ${order.itemsSummary}',
+                        style: const TextStyle(fontSize: 12)),
+                    const SizedBox(height: 4),
+                    Text('Grand Total: ${order.formattedTotal}',
+                        style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                '⚠️ Warning: This action cannot be undone and will permanently remove this transaction from the database and revenue reports.',
+                style: TextStyle(
+                    fontSize: 11.5,
+                    color: Colors.redAccent,
+                    fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+          actions: [
+            OutlinedButton(
+              onPressed: () => Navigator.of(dialogCtx).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.of(dialogCtx).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              icon: const Icon(Icons.delete_outline_rounded,
+                  size: 16, color: Colors.white),
+              label: const Text('Delete Permanently',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+      final success = await orderProvider.deleteOrder(order.id);
+      if (mounted) {
+        if (success) {
+          Helpers.showSnackBar(
+              context, 'Order ${order.id} has been permanently deleted.');
+        } else {
+          Helpers.showSnackBar(
+              context, 'Failed to delete order. Please check connection.',
+              isError: true);
+        }
       }
     }
   }
@@ -1314,6 +1662,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
               border: Border.all(color: const Color(0xFFCBD5E1)),
             ),
             child: TextField(
+              controller: _globalSearchController,
+              onSubmitted: _handleGlobalSearch,
               textAlignVertical: TextAlignVertical.center,
               style: const TextStyle(
                 color: AppTheme.navyColor,
@@ -1322,7 +1672,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ),
               decoration: const InputDecoration(
                 isDense: true,
-                hintText: 'Search anything...',
+                hintText: 'Search anything (e.g. users, orders, inventory)...',
                 hintStyle: TextStyle(color: Color(0xFF64748B), fontSize: 13),
                 prefixIcon: Icon(
                   Icons.search_rounded,
@@ -1338,12 +1688,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ),
           const SizedBox(width: 24),
 
-          // Realtime Notifications Popup
+          // Realtime Notifications Popup Button
           _buildRealtimeNotificationsPopup(isDark),
 
           const SizedBox(width: 16),
 
-          // Realtime Messages/Inbox Popup
+          // Realtime Messages/Inbox Popup Button
           _buildRealtimeMessagesPopup(isDark),
 
           const SizedBox(width: 24),
@@ -1397,382 +1747,724 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildRealtimeNotificationsPopup(bool isDark) {
-    final unreadCount = _notifications
-        .where((n) => !(n['isRead'] as bool))
-        .length;
+    final unreadCount = _notifications.where((n) => !(n['isRead'] as bool)).length;
 
-    return PopupMenuButton<String>(
-      tooltip: 'System Notifications',
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      offset: const Offset(0, 48),
-      color: isDark ? AppTheme.darkSurface : Colors.white,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.05)
-                  : const Color(0xFFF8FAFC),
-              shape: BoxShape.circle,
+    return Tooltip(
+      message: 'System Notifications',
+      child: InkWell(
+        onTap: () => _showNotificationsDialog(isDark),
+        borderRadius: BorderRadius.circular(24),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF8FAFC),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.notifications_none_rounded,
+                color: Color(0xFF64748B),
+                size: 20,
+              ),
             ),
-            child: Icon(
-              Icons.notifications_none_rounded,
-              color: isDark ? const Color(0xFF64748B) : const Color(0xFF64748B),
-              size: 20,
-            ),
-          ),
-          if (unreadCount > 0)
-            Positioned(
-              right: 0,
-              top: 0,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: Colors.redAccent,
-                  shape: BoxShape.circle,
-                ),
-                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                child: Center(
-                  child: Text(
-                    '$unreadCount',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 8,
-                      fontWeight: FontWeight.bold,
+            if (unreadCount > 0)
+              Positioned(
+                right: 0,
+                top: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: Colors.redAccent,
+                    shape: BoxShape.circle,
+                  ),
+                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                  child: Center(
+                    child: Text(
+                      '$unreadCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 8,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
-      onSelected: (val) {
-        if (val == 'mark_read') {
-          setState(() {
-            for (var n in _notifications) {
-              n['isRead'] = true;
-            }
-          });
-          Helpers.showSnackBar(context, 'All notifications marked as read.');
-        }
-      },
-      itemBuilder: (context) {
-        final List<PopupMenuEntry<String>> items = [];
+    );
+  }
 
-        // Header
-        items.add(
-          PopupMenuItem<String>(
-            enabled: false,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Notifications',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                    color: AppTheme.primaryColor,
-                    fontSize: 14,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop('mark_read');
-                  },
-                  child: const Text(
-                    'Read All',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-        items.add(const PopupMenuDivider(height: 1));
+  // Full Scrollable System Notifications Dialog with Back to Dashboard button
+  void _showNotificationsDialog(bool isDark) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            final unreadCount =
+                _notifications.where((n) => !(n['isRead'] as bool)).length;
 
-        if (_notifications.isEmpty) {
-          items.add(
-            const PopupMenuItem<String>(
-              enabled: false,
-              child: Center(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16.0),
-                  child: Text(
-                    'No notifications yet',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
+            return AlertDialog(
+              backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
+              shape:
+                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              contentPadding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+              titlePadding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.notifications_active_rounded,
+                        color: AppTheme.primaryColor, size: 20),
                   ),
-                ),
-              ),
-            ),
-          );
-        } else {
-          for (var i = 0; i < min(_notifications.length, 5); i++) {
-            final n = _notifications[i];
-            final bool isRead = n['isRead'] as bool;
-            items.add(
-              PopupMenuItem<String>(
-                value: 'nt_${n['id']}',
-                onTap: () {
-                  setState(() {
-                    n['isRead'] = true;
-                  });
-                },
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                  const SizedBox(width: 10),
+                  const Text(
+                    'System Notifications',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                        color: AppTheme.navyColor),
+                  ),
+                  if (unreadCount > 0) ...[
+                    const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.all(6),
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: (n['color'] as Color).withValues(alpha: 0.08),
-                        shape: BoxShape.circle,
+                        color: Colors.redAccent,
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(
-                        n['icon'] as IconData,
-                        color: n['color'] as Color,
-                        size: 16,
+                      child: Text(
+                        '$unreadCount new',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                  ],
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        for (var n in _notifications) {
+                          n['isRead'] = true;
+                        }
+                      });
+                      setDialogState(() {});
+                      Helpers.showSnackBar(
+                          context, 'All notifications marked as read.');
+                    },
+                    icon: const Icon(Icons.done_all_rounded, size: 14),
+                    label: const Text('Mark All Read',
+                        style: TextStyle(
+                            fontSize: 11, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: 540,
+                height: 480,
+                child: Column(
+                  children: [
+                    const Divider(height: 16),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                n['title'] as String,
-                                style: TextStyle(
-                                  fontWeight: isRead
-                                      ? FontWeight.bold
-                                      : FontWeight.w900,
-                                  fontSize: 11,
-                                  color: isDark
-                                      ? Colors.white
-                                      : const Color(0xFF1E293B),
-                                ),
+                      child: _notifications.isEmpty
+                          ? const Center(
+                              child: Text('No system notifications yet.',
+                                  style: TextStyle(color: Colors.grey)))
+                          : Scrollbar(
+                              thumbVisibility: true,
+                              child: ListView.separated(
+                                itemCount: _notifications.length,
+                                separatorBuilder: (_, __) =>
+                                    const Divider(height: 1),
+                                itemBuilder: (context, i) {
+                                  final n = _notifications[i];
+                                  final bool isRead = n['isRead'] as bool;
+                                  return ListTile(
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 4, vertical: 4),
+                                    leading: CircleAvatar(
+                                      radius: 18,
+                                      backgroundColor: (n['color'] as Color? ??
+                                              Colors.blue)
+                                          .withValues(alpha: 0.12),
+                                      child: Icon(
+                                        n['icon'] as IconData? ??
+                                            Icons.notifications,
+                                        color: n['color'] as Color? ??
+                                            Colors.blue,
+                                        size: 18,
+                                      ),
+                                    ),
+                                    title: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          n['title'] as String,
+                                          style: TextStyle(
+                                            fontWeight: isRead
+                                                ? FontWeight.w600
+                                                : FontWeight.w900,
+                                            fontSize: 13,
+                                            color: isDark
+                                                ? Colors.white
+                                                : const Color(0xFF1E293B),
+                                          ),
+                                        ),
+                                        Text(
+                                          n['time'] as String,
+                                          style: const TextStyle(
+                                              color: Color(0xFF64748B),
+                                              fontSize: 10),
+                                        ),
+                                      ],
+                                    ),
+                                    subtitle: Padding(
+                                      padding: const EdgeInsets.only(top: 4.0),
+                                      child: Text(
+                                        n['body'] as String,
+                                        style: TextStyle(
+                                          fontSize: 11.5,
+                                          color: isRead
+                                              ? Colors.grey
+                                              : const Color(0xFF475569),
+                                        ),
+                                      ),
+                                    ),
+                                    onTap: () {
+                                      setState(() {
+                                        n['isRead'] = true;
+                                      });
+                                      setDialogState(() {});
+                                      if ((n['id'] as String)
+                                              .startsWith('new_') ||
+                                          (n['id'] as String)
+                                              .startsWith('status_')) {
+                                        Navigator.of(ctx).pop();
+                                        setState(() {
+                                          _selectedTab = 1;
+                                          _activeSidebarMenu = 1;
+                                        });
+                                      }
+                                    },
+                                  );
+                                },
                               ),
-                              Text(
-                                n['time'] as String,
-                                style: TextStyle(
-                                  color: const Color(0xFF64748B),
-                                  fontSize: 8,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            n['body'] as String,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: isRead
-                                  ? Colors.grey
-                                  : (isDark
-                                        ? Colors.grey.shade300
-                                        : const Color(0xFF475569)),
                             ),
+                    ),
+                    const Divider(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 18, vertical: 10),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
                           ),
-                        ],
-                      ),
+                          icon: const Icon(Icons.arrow_back_rounded, size: 16),
+                          label: const Text('Back to Dashboard',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 12)),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
             );
-            if (i < 4 && i < _notifications.length - 1) {
-              items.add(const PopupMenuDivider(height: 1));
-            }
-          }
-        }
-        return items;
+          },
+        );
       },
     );
   }
 
   Widget _buildRealtimeMessagesPopup(bool isDark) {
-    final unreadCount = _inboxMessages
-        .where((m) => !(m['isRead'] as bool))
-        .length;
+    final unreadCount = _inboxMessages.where((m) => !(m['isRead'] as bool)).length;
 
-    return PopupMenuButton<String>(
-      tooltip: 'Customer Messages',
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      offset: const Offset(0, 48),
-      color: isDark ? AppTheme.darkSurface : Colors.white,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.05)
-                  : const Color(0xFFF8FAFC),
-              shape: BoxShape.circle,
+    return Tooltip(
+      message: 'Customer & Driver Messages',
+      child: InkWell(
+        onTap: () => _showInboxDialog(isDark),
+        borderRadius: BorderRadius.circular(24),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF8FAFC),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.chat_bubble_outline_rounded,
+                color: Color(0xFF64748B),
+                size: 20,
+              ),
             ),
-            child: Icon(
-              Icons.chat_bubble_outline_rounded,
-              color: isDark ? const Color(0xFF64748B) : const Color(0xFF64748B),
-              size: 20,
-            ),
-          ),
-          if (unreadCount > 0)
-            Positioned(
-              right: 0,
-              top: 0,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: Colors.redAccent,
-                  shape: BoxShape.circle,
-                ),
-                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                child: Center(
-                  child: Text(
-                    '$unreadCount',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 8,
-                      fontWeight: FontWeight.bold,
+            if (unreadCount > 0)
+              Positioned(
+                right: 0,
+                top: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: Colors.redAccent,
+                    shape: BoxShape.circle,
+                  ),
+                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                  child: Center(
+                    child: Text(
+                      '$unreadCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 8,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
-      onSelected: (val) {
-        if (val.startsWith('msg_')) {
-          setState(() {
-            final msgId = val.replaceFirst('msg_', '');
-            final msgIndex = _inboxMessages.indexWhere(
-              (m) => m['id'] == msgId || 'msg_${m['id']}' == val,
-            );
-            if (msgIndex != -1) {
-              _inboxMessages[msgIndex]['isRead'] = true;
-            }
-            // Navigate to AI Chat Support Tab (Tab 7)
-            _selectedTab = 7;
-            _activeSidebarMenu = 7;
-          });
-        }
-      },
-      itemBuilder: (context) {
-        final List<PopupMenuEntry<String>> items = [];
+    );
+  }
 
-        // Header
-        items.add(
-          const PopupMenuItem<String>(
-            enabled: false,
-            child: Text(
-              'Inbox Messages',
-              style: TextStyle(
-                fontWeight: FontWeight.w900,
-                color: AppTheme.primaryColor,
-                fontSize: 14,
-              ),
-            ),
-          ),
-        );
-        items.add(const PopupMenuDivider(height: 1));
+  // Customer & Driver Direct Communication Hub Dialog
+  void _showInboxDialog(bool isDark) {
+    Map<String, dynamic>? selectedConvo =
+        _inboxMessages.isNotEmpty ? _inboxMessages.first : null;
+    final TextEditingController replyController = TextEditingController();
 
-        if (_inboxMessages.isEmpty) {
-          items.add(
-            const PopupMenuItem<String>(
-              enabled: false,
-              child: Center(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16.0),
-                  child: Text(
-                    'No messages yet',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ),
-              ),
-            ),
-          );
-        } else {
-          for (var i = 0; i < min(_inboxMessages.length, 5); i++) {
-            final m = _inboxMessages[i];
-            final bool isRead = m['isRead'] as bool;
-            items.add(
-              PopupMenuItem<String>(
-                value: 'msg_${m['id']}',
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    CircleAvatar(
-                      radius: 14,
-                      backgroundColor: AppTheme.primaryColor.withValues(
-                        alpha: 0.1,
-                      ),
-                      child: Text(
-                        (m['sender'] as String).substring(0, 1).toUpperCase(),
-                        style: const TextStyle(
-                          color: AppTheme.primaryColor,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            return AlertDialog(
+              backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
+              shape:
+                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              contentPadding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+              titlePadding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
                     ),
-                    const SizedBox(width: 10),
+                    child: const Icon(Icons.mark_chat_unread_rounded,
+                        color: Colors.green, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Customer & Driver Communication Hub',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                        color: AppTheme.navyColor),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    icon: const Icon(Icons.close_rounded),
+                    tooltip: 'Close',
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: 760,
+                height: 520,
+                child: Column(
+                  children: [
+                    const Divider(height: 16),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Row(
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                m['sender'] as String,
-                                style: TextStyle(
-                                  fontWeight: isRead
-                                      ? FontWeight.bold
-                                      : FontWeight.w900,
-                                  fontSize: 12,
+                          // Left: Conversation List
+                          Container(
+                            width: 280,
+                            decoration: BoxDecoration(
+                              border: Border(
+                                right: BorderSide(
                                   color: isDark
-                                      ? Colors.white
-                                      : const Color(0xFF1E293B),
+                                      ? Colors.white12
+                                      : const Color(0xFFE2E8F0),
                                 ),
                               ),
-                              Text(
-                                m['time'] as String,
-                                style: TextStyle(
-                                  color: const Color(0xFF64748B),
-                                  fontSize: 8,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            m['snippet'] as String,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: isRead
-                                  ? Colors.grey
-                                  : (isDark
-                                        ? Colors.grey.shade300
-                                        : const Color(0xFF475569)),
                             ),
+                            child: _inboxMessages.isEmpty
+                                ? const Center(
+                                    child: Text('No active messages.',
+                                        style: TextStyle(color: Colors.grey)))
+                                : ListView.separated(
+                                    itemCount: _inboxMessages.length,
+                                    separatorBuilder: (_, __) =>
+                                        const Divider(height: 1),
+                                    itemBuilder: (context, i) {
+                                      final convo = _inboxMessages[i];
+                                      final isSelected =
+                                          selectedConvo?['id'] == convo['id'];
+                                      final bool isRead =
+                                          convo['isRead'] as bool? ?? true;
+                                      return ListTile(
+                                        selected: isSelected,
+                                        selectedTileColor: AppTheme.primaryColor
+                                            .withValues(alpha: 0.08),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 10, vertical: 4),
+                                        leading: CircleAvatar(
+                                          radius: 16,
+                                          backgroundColor: AppTheme.primaryColor
+                                              .withValues(alpha: 0.15),
+                                          child: Text(
+                                            (convo['sender'] as String)[0]
+                                                .toUpperCase(),
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                color: AppTheme.primaryColor),
+                                          ),
+                                        ),
+                                        title: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                convo['sender'] as String,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  fontWeight: isRead
+                                                      ? FontWeight.w600
+                                                      : FontWeight.w900,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ),
+                                            Text(
+                                              convo['role'] ?? '',
+                                              style: TextStyle(
+                                                fontSize: 9,
+                                                color: convo['role'] == 'Driver'
+                                                    ? Colors.orange
+                                                    : Colors.blue,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        subtitle: Text(
+                                          convo['snippet'] as String,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style:
+                                              const TextStyle(fontSize: 10.5),
+                                        ),
+                                        onTap: () {
+                                          setDialogState(() {
+                                            selectedConvo = convo;
+                                            convo['isRead'] = true;
+                                          });
+                                          setState(() {});
+                                        },
+                                      );
+                                    },
+                                  ),
+                          ),
+
+                          // Right: Message Thread & Reply
+                          Expanded(
+                            child: selectedConvo == null
+                                ? const Center(
+                                    child: Text(
+                                        'Select a conversation to message.'))
+                                : Padding(
+                                    padding: const EdgeInsets.only(left: 16.0),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        // Header
+                                        Row(
+                                          children: [
+                                            CircleAvatar(
+                                              radius: 14,
+                                              backgroundColor: AppTheme
+                                                  .primaryColor
+                                                  .withValues(alpha: 0.1),
+                                              child: Text(
+                                                (selectedConvo!['sender']
+                                                        as String)[0]
+                                                    .toUpperCase(),
+                                                style: const TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.bold,
+                                                    color:
+                                                        AppTheme.primaryColor),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  selectedConvo!['sender']
+                                                      as String,
+                                                  style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 13),
+                                                ),
+                                                Text(
+                                                  'Role: ${selectedConvo!['role'] ?? "User"}',
+                                                  style: const TextStyle(
+                                                      fontSize: 10,
+                                                      color: Colors.grey),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                        const Divider(height: 16),
+
+                                        // Thread
+                                        Expanded(
+                                          child: ListView(
+                                            children: [
+                                              ...?((selectedConvo!['messages']
+                                                      as List?)
+                                                  ?.map((msg) {
+                                                final bool isAdmin =
+                                                    msg['isAdmin'] == true;
+                                                return Align(
+                                                  alignment: isAdmin
+                                                      ? Alignment.centerRight
+                                                      : Alignment.centerLeft,
+                                                  child: Container(
+                                                    margin: const EdgeInsets
+                                                        .symmetric(vertical: 4),
+                                                    padding:
+                                                        const EdgeInsets.all(10),
+                                                    constraints:
+                                                        const BoxConstraints(
+                                                            maxWidth: 340),
+                                                    decoration: BoxDecoration(
+                                                      color: isAdmin
+                                                          ? AppTheme.primaryColor
+                                                          : (isDark
+                                                              ? Colors.white10
+                                                              : const Color(
+                                                                  0xFFF1F5F9)),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              10),
+                                                    ),
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Text(
+                                                          isAdmin
+                                                              ? 'Admin (You)'
+                                                              : (msg['sender'] ??
+                                                                  selectedConvo![
+                                                                      'sender']),
+                                                          style: TextStyle(
+                                                            fontSize: 9,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            color: isAdmin
+                                                                ? Colors.white70
+                                                                : AppTheme
+                                                                    .primaryColor,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(height: 2),
+                                                        Text(
+                                                          msg['text'] ?? '',
+                                                          style: TextStyle(
+                                                            fontSize: 11.5,
+                                                            color: isAdmin
+                                                                ? Colors.white
+                                                                : (isDark
+                                                                    ? Colors
+                                                                        .white
+                                                                    : Colors
+                                                                        .black87),
+                                                          ),
+                                                        ),
+                                                        const SizedBox(height: 2),
+                                                        Align(
+                                                          alignment: Alignment
+                                                              .bottomRight,
+                                                          child: Text(
+                                                            msg['time'] ??
+                                                                'Just now',
+                                                            style: TextStyle(
+                                                              fontSize: 8,
+                                                              color: isAdmin
+                                                                  ? Colors
+                                                                      .white60
+                                                                  : Colors.grey,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                );
+                                              })),
+                                            ],
+                                          ),
+                                        ),
+
+                                        // Reply Input
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: TextField(
+                                                controller: replyController,
+                                                style: const TextStyle(
+                                                    fontSize: 12),
+                                                decoration: InputDecoration(
+                                                  hintText:
+                                                      'Type reply to ${selectedConvo!['sender']}...',
+                                                  hintStyle: const TextStyle(
+                                                      fontSize: 11),
+                                                  isDense: true,
+                                                  contentPadding:
+                                                      const EdgeInsets
+                                                          .symmetric(
+                                                          horizontal: 12,
+                                                          vertical: 10),
+                                                  border: OutlineInputBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              8)),
+                                                ),
+                                                onSubmitted: (text) {
+                                                  if (text.trim().isEmpty) return;
+                                                  final thread =
+                                                      (selectedConvo!['messages']
+                                                              as List? ??
+                                                          []);
+                                                  thread.add({
+                                                    'sender': 'Station Admin',
+                                                    'text': text.trim(),
+                                                    'time': 'Just now',
+                                                    'isAdmin': true,
+                                                  });
+                                                  selectedConvo!['messages'] =
+                                                      thread;
+                                                  selectedConvo!['snippet'] =
+                                                      'Admin: ${text.trim()}';
+                                                  replyController.clear();
+                                                  setDialogState(() {});
+                                                  setState(() {});
+                                                  Helpers.showSnackBar(context,
+                                                      'Reply sent to ${selectedConvo!['sender']}!');
+                                                },
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            ElevatedButton(
+                                              onPressed: () {
+                                                final text =
+                                                    replyController.text.trim();
+                                                if (text.isEmpty) return;
+                                                final thread =
+                                                    (selectedConvo!['messages']
+                                                            as List? ??
+                                                        []);
+                                                thread.add({
+                                                  'sender': 'Station Admin',
+                                                  'text': text,
+                                                  'time': 'Just now',
+                                                  'isAdmin': true,
+                                                });
+                                                selectedConvo!['messages'] =
+                                                    thread;
+                                                selectedConvo!['snippet'] =
+                                                    'Admin: $text';
+                                                replyController.clear();
+                                                setDialogState(() {});
+                                                setState(() {});
+                                                Helpers.showSnackBar(context,
+                                                    'Reply sent to ${selectedConvo!['sender']}!');
+                                              },
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor:
+                                                    AppTheme.primaryColor,
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 14,
+                                                        vertical: 10),
+                                                shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            8)),
+                                              ),
+                                              child: const Icon(
+                                                  Icons.send_rounded,
+                                                  size: 16,
+                                                  color: Colors.white),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                           ),
                         ],
                       ),
+                    ),
+                    const Divider(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.navyColor,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                          ),
+                          icon: const Icon(Icons.arrow_back_rounded, size: 16),
+                          label: const Text('Back to Dashboard',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 12)),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
             );
-            if (i < 4 && i < _inboxMessages.length - 1) {
-              items.add(const PopupMenuDivider(height: 1));
-            }
-          }
-        }
-        return items;
+          },
+        );
       },
     );
   }
@@ -2473,7 +3165,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 ),
               ),
               GestureDetector(
-                onTap: () => setState(() => _selectedTab = 1),
+                onTap: () => setState(() {
+                  _selectedTab = 1;
+                  _activeSidebarMenu = 1;
+                }),
                 child: Text(
                   'View All',
                   style: TextStyle(
@@ -2619,7 +3314,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 ),
               ),
               OutlinedButton(
-                onPressed: () => setState(() => _selectedTab = 1),
+                onPressed: () => setState(() {
+                  _selectedTab = 1;
+                  _activeSidebarMenu = 1;
+                }),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -2652,9 +3350,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ],
           ),
           const SizedBox(height: 16),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
+          SizedBox(
+            height: 380,
+            child: Scrollbar(
+              thumbVisibility: true,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.vertical,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
               columnSpacing: 28,
               horizontalMargin: 0,
               headingRowHeight: 40,
@@ -2820,6 +3524,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ],
                 );
               }).toList(),
+                  ),
+                ),
+              ),
             ),
           ),
         ],
@@ -2862,49 +3569,76 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 'New Order',
                 Icons.add_shopping_cart_rounded,
                 const Color(0xFF0284C7),
-                () => setState(() => _selectedTab = 1),
+                () {
+                  setState(() {
+                    _selectedTab = 1;
+                    _activeSidebarMenu = 1;
+                  });
+                  _showCreateOrderDialog(isDark);
+                },
               ),
               _buildQuickActionItem(
                 'Users & Roles',
                 Icons.manage_accounts_rounded,
                 const Color(0xFF0284C7),
-                () => setState(() => _selectedTab = 3),
+                () => setState(() {
+                  _selectedTab = 3;
+                  _activeSidebarMenu = 3;
+                }),
               ),
               _buildQuickActionItem(
                 'New Delivery',
                 Icons.local_shipping_rounded,
                 const Color(0xFF0EA5E9),
-                () => setState(() => _selectedTab = 2),
+                () => setState(() {
+                  _selectedTab = 2;
+                  _activeSidebarMenu = 2;
+                }),
               ),
               _buildQuickActionItem(
                 'Add Inventory',
                 Icons.add_box_rounded,
                 const Color(0xFF10B981),
-                () => setState(() => _selectedTab = 4),
+                () => setState(() {
+                  _selectedTab = 4;
+                  _activeSidebarMenu = 4;
+                }),
               ),
               _buildQuickActionItem(
                 'View Reports',
                 Icons.analytics_rounded,
                 const Color(0xFF6366F1),
-                () => setState(() => _selectedTab = 6),
+                () => setState(() {
+                  _selectedTab = 6;
+                  _activeSidebarMenu = 6;
+                }),
               ),
               _buildQuickActionItem(
                 'Payments',
                 Icons.payments_rounded,
                 const Color(0xFFEC4899),
-                () => setState(() => _selectedTab = 5),
+                () => setState(() {
+                  _selectedTab = 5;
+                  _activeSidebarMenu = 5;
+                }),
               ),
               _buildQuickActionItem(
                 'AI Support',
                 Icons.support_agent_rounded,
                 const Color(0xFF8B5CF6),
-                () => setState(() => _selectedTab = 7),
+                () => setState(() {
+                  _selectedTab = 7;
+                  _activeSidebarMenu = 7;
+                }),
               ),
               _buildQuickActionItem(
                 'Settings',
                 Icons.settings_rounded,
                 const Color(0xFF64748B),
-                () => setState(() => _selectedTab = 8),
+                () => setState(() {
+                  _selectedTab = 8;
+                  _activeSidebarMenu = 8;
+                }),
               ),
             ],
           ),
@@ -3043,7 +3777,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ),
                   child: TextField(
                     controller: _supportInputController,
-                    onSubmitted: _sendSupportMessage,
+                    onSubmitted: (text) {
+                      setState(() {
+                        _selectedTab = 7;
+                        _activeSidebarMenu = 7;
+                      });
+                      _sendSupportMessage(text);
+                    },
                     textAlignVertical: TextAlignVertical.center,
                     style: const TextStyle(fontSize: 12),
                     decoration: const InputDecoration(
@@ -3067,8 +3807,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: IconButton(
-                  onPressed: () =>
-                      _sendSupportMessage(_supportInputController.text),
+                  onPressed: () {
+                    final text = _supportInputController.text;
+                    setState(() {
+                      _selectedTab = 7;
+                      _activeSidebarMenu = 7;
+                    });
+                    _sendSupportMessage(text);
+                  },
                   icon: const Icon(
                     Icons.send_rounded,
                     size: 14,
@@ -3971,8 +4717,27 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final filtered = _activeOrderFilter == 'All'
         ? allOrders
         : allOrders
-              .where((o) => o.orderStatus.displayName == _activeOrderFilter)
-              .toList();
+            .where((o) => o.orderStatus.displayName == _activeOrderFilter)
+            .toList();
+
+    final searchQuery = _orderSearchController.text.trim().toLowerCase();
+    final searchFiltered = searchQuery.isEmpty
+        ? filtered
+        : filtered.where((o) {
+            return o.id.toLowerCase().contains(searchQuery) ||
+                o.customerName.toLowerCase().contains(searchQuery) ||
+                o.customerPhone.toLowerCase().contains(searchQuery) ||
+                o.deliveryAddress.toLowerCase().contains(searchQuery) ||
+                o.itemsSummary.toLowerCase().contains(searchQuery);
+          }).toList();
+
+    // Group orders by Customer Division
+    final Map<String, List<OrderModel>> customerDivisions = {};
+    for (var o in searchFiltered) {
+      final key =
+          o.customerName.trim().isEmpty ? 'Guest Customer' : o.customerName.trim();
+      customerDivisions.putIfAbsent(key, () => []).add(o);
+    }
 
     return Padding(
       padding: const EdgeInsets.all(24.0),
@@ -4014,7 +4779,50 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
+
+          // Search & Filter Bar
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF1E293B)
+                        : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFCBD5E1)),
+                  ),
+                  child: TextField(
+                    controller: _orderSearchController,
+                    onChanged: (_) => setState(() {}),
+                    style: const TextStyle(fontSize: 12),
+                    decoration: InputDecoration(
+                      hintText:
+                          'Search orders by ID (#COL, #ORD), customer name, address...',
+                      hintStyle: const TextStyle(
+                          fontSize: 11, color: Color(0xFF64748B)),
+                      prefixIcon: const Icon(Icons.search_rounded,
+                          size: 16, color: AppTheme.primaryColor),
+                      suffixIcon: _orderSearchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.close_rounded, size: 14),
+                              onPressed: () => setState(
+                                  () => _orderSearchController.clear()),
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                          vertical: 9, horizontal: 10),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
           // Filter Tabs
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -4047,15 +4855,65 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ),
           const SizedBox(height: 20),
           Expanded(
-            child: filtered.isEmpty
-                ? const Center(child: Text('No orders match this status.'))
-                : ListView.builder(
-                    itemCount: filtered.length,
-                    itemBuilder: (context, index) {
-                      final order = filtered[index];
-                      final bool isPending =
-                          order.orderStatus == OrderStatus.pending;
-                      return PulsingBorder(
+            child: searchFiltered.isEmpty
+                ? const Center(
+                    child: Text('No orders match this status or search query.'))
+                : ListView(
+                    children: [
+                      for (var entry in customerDivisions.entries) ...[
+                        Container(
+                          margin: const EdgeInsets.only(top: 10, bottom: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? const Color(0xFF1E293B)
+                                : const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: AppTheme.primaryColor
+                                  .withValues(alpha: 0.25),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.badge_rounded,
+                                  color: AppTheme.primaryColor, size: 17),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Customer Division: ${entry.key}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 13,
+                                  color: isDark
+                                      ? Colors.white
+                                      : AppTheme.navyColor,
+                                ),
+                              ),
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryColor,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  '${entry.value.length} Order${entry.value.length > 1 ? "s" : ""}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        ...entry.value.map((order) {
+                          final bool isPending =
+                              order.orderStatus == OrderStatus.pending;
+                          return PulsingBorder(
                         active: isPending,
                         color: Colors.orange,
                         margin: const EdgeInsets.only(bottom: 12),
@@ -4300,54 +5158,36 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                     ),
                                   ),
                                 ],
-                                const Divider(height: 20),
-                                Wrap(
-                                  alignment: WrapAlignment.end,
-                                  crossAxisAlignment: WrapCrossAlignment.center,
-                                  spacing: 6,
-                                  runSpacing: 6,
+                                const Divider(height: 16),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
                                   children: [
-                                    const Text(
-                                      'Change Status: ',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey,
+                                    OutlinedButton.icon(
+                                      onPressed: () =>
+                                          _confirmDeleteOrder(order, isDark),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: Colors.redAccent,
+                                        side: const BorderSide(
+                                            color: Colors.redAccent),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 6,
+                                        ),
+                                      ),
+                                      icon: const Icon(
+                                        Icons.delete_outline_rounded,
+                                        size: 14,
+                                        color: Colors.redAccent,
+                                      ),
+                                      label: const Text(
+                                        'Delete Order',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.redAccent,
+                                        ),
                                       ),
                                     ),
-                                    ...[
-                                      'Pending',
-                                      'Confirmed',
-                                      if (order.paymentMethod ==
-                                          'Cash on Delivery') ...[
-                                        'Assigned',
-                                        'On Delivery',
-                                      ],
-                                      'Completed',
-                                      'Cancelled',
-                                    ].map((st) {
-                                      if (st == order.orderStatus.displayName) {
-                                        return const SizedBox.shrink();
-                                      }
-                                      return OutlinedButton(
-                                        onPressed: () =>
-                                            _updateOrderStatus(order.id, st),
-                                        style: OutlinedButton.styleFrom(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 4,
-                                          ),
-                                          minimumSize: Size.zero,
-                                          tapTargetSize: MaterialTapTargetSize
-                                              .shrinkWrap,
-                                        ),
-                                        child: Text(
-                                          st,
-                                          style: const TextStyle(
-                                            fontSize: 10,
-                                          ),
-                                        ),
-                                      );
-                                    }),
                                   ],
                                 ),
                               ],
@@ -4355,8 +5195,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           ),
                         ),
                       );
-                    },
-                  ),
+                    }),
+                  ],
+                ],
+              ),
           ),
         ],
       ),
@@ -4746,12 +5588,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     ),
                   )
                 else
-                  ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: filteredDeliveries.length,
-                    separatorBuilder: (context, index) =>
-                        Divider(color: borderColor, height: 16),
+                  SizedBox(
+                    height: 480,
+                    child: Scrollbar(
+                      thumbVisibility: true,
+                      child: ListView.separated(
+                        itemCount: filteredDeliveries.length,
+                        separatorBuilder: (context, index) =>
+                            Divider(color: borderColor, height: 16),
                     itemBuilder: (context, index) {
                       final o = filteredDeliveries[index];
                       final isSelected = _selectedDeliveryOrder?.id == o.id;
@@ -5073,6 +5917,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       );
                     },
                   ),
+                ),
+              ),
               ],
             ),
           ),
@@ -10384,45 +11230,106 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             ),
                           ),
                         )
-                      : ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: reportOrders.length,
-                          separatorBuilder: (context, index) =>
-                              const Divider(height: 1),
-                          itemBuilder: (context, index) {
-                            final o = reportOrders[index];
-                            return ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              leading: CircleAvatar(
-                                backgroundColor: AppTheme.primaryColor
-                                    .withValues(alpha: 0.08),
-                                child: const Icon(
-                                  Icons.receipt_long_rounded,
-                                  color: AppTheme.primaryColor,
-                                  size: 18,
-                                ),
-                              ),
-                              title: Text(
-                                '${o.id} • ${o.customerName}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              subtitle: Text(
-                                '${o.itemsSummary} • ${o.paymentMethod}\nPlaced at: ${o.createdAt.toString().split('.')[0]}',
-                                style: const TextStyle(fontSize: 10),
-                              ),
-                              trailing: Text(
-                                o.formattedTotal,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            );
-                          },
+                      : SizedBox(
+                          height: 420,
+                          child: Scrollbar(
+                            thumbVisibility: true,
+                            child: Builder(
+                              builder: (context) {
+                                final Map<String, List<OrderModel>> reportDivisions = {};
+                                for (var o in reportOrders) {
+                                  final key = o.customerName.trim().isEmpty
+                                      ? 'Guest Customer'
+                                      : o.customerName.trim();
+                                  reportDivisions.putIfAbsent(key, () => []).add(o);
+                                }
+
+                                return ListView(
+                                  children: [
+                                    for (var entry in reportDivisions.entries) ...[
+                                      Container(
+                                        margin: const EdgeInsets.only(top: 8, bottom: 6),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 7),
+                                        decoration: BoxDecoration(
+                                          color: AppTheme.primaryColor
+                                              .withValues(alpha: 0.08),
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(
+                                            color: AppTheme.primaryColor
+                                                .withValues(alpha: 0.2),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.person_pin_circle_rounded,
+                                              size: 16,
+                                              color: AppTheme.primaryColor,
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              'Customer Division: ${entry.key}',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 12,
+                                                color: AppTheme.primaryColor,
+                                              ),
+                                            ),
+                                            const Spacer(),
+                                            Text(
+                                              '${entry.value.length} Order${entry.value.length > 1 ? "s" : ""}',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 11,
+                                                color: AppTheme.navyColor,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      for (var o in entry.value) ...[
+                                        ListTile(
+                                          contentPadding: const EdgeInsets.symmetric(
+                                              horizontal: 4, vertical: 2),
+                                          leading: CircleAvatar(
+                                            radius: 16,
+                                            backgroundColor: AppTheme.primaryColor
+                                                .withValues(alpha: 0.08),
+                                            child: const Icon(
+                                              Icons.receipt_long_rounded,
+                                              color: AppTheme.primaryColor,
+                                              size: 16,
+                                            ),
+                                          ),
+                                          title: Text(
+                                            '${o.id} • ${o.customerName}',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                          subtitle: Text(
+                                            '${o.itemsSummary} • ${o.paymentMethod}\nPlaced at: ${o.createdAt.toString().split('.')[0]}',
+                                            style: const TextStyle(fontSize: 10),
+                                          ),
+                                          trailing: Text(
+                                            o.formattedTotal,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                              color: Colors.green,
+                                            ),
+                                          ),
+                                        ),
+                                        const Divider(height: 1),
+                                      ],
+                                    ],
+                                  ],
+                                );
+                              },
+                            ),
+                          ),
                         ),
                 ],
               ),
@@ -11525,6 +12432,359 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
   }
 
+  // Upload Permit Dialog with strict document validation
+  void _showUploadPermitDialog(Map<String, dynamic> permit, bool isDark) {
+    final TextEditingController fileNameController = TextEditingController(
+        text: permit['fileName']?.toString().isNotEmpty == true
+            ? permit['fileName']
+            : '${permit['id'].toString().replaceAll("permit_", "").toUpperCase()}_Document.pdf');
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.upload_file_rounded,
+                    color: AppTheme.primaryColor, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Upload Compliance Document',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold)),
+                    Text(permit['title'] as String,
+                        style: const TextStyle(
+                            fontSize: 12, color: AppTheme.primaryColor)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Please provide the official government-issued permit or certified water test result. Only valid PDF, PNG, or JPG documents are accepted.',
+                style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Document File Name / Path',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 6),
+              TextField(
+                controller: fileNameController,
+                style: const TextStyle(fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'e.g. Sanitary_Permit_2026.pdf',
+                  isDense: true,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                  prefixIcon: const Icon(Icons.description_rounded, size: 18),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFCBD5E1)),
+                ),
+                child: Row(
+                  children: const [
+                    Icon(Icons.verified_user_rounded,
+                        size: 16, color: Colors.blue),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Accepted official extensions: .pdf, .png, .jpg, .jpeg (PNSDW / LGU standards)',
+                        style: TextStyle(fontSize: 10.5, color: Color(0xFF334155)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            OutlinedButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                final file = fileNameController.text.trim();
+                final lower = file.toLowerCase();
+
+                // Document validation: only valid permit document formats accepted
+                final isValidFormat = lower.endsWith('.pdf') ||
+                    lower.endsWith('.png') ||
+                    lower.endsWith('.jpg') ||
+                    lower.endsWith('.jpeg');
+
+                if (file.isEmpty || !isValidFormat) {
+                  Helpers.showSnackBar(
+                    context,
+                    'Invalid document! Only official permits in PDF, PNG, or JPG format can be uploaded.',
+                    isError: true,
+                  );
+                  return;
+                }
+
+                setState(() {
+                  permit['isUploaded'] = true;
+                  permit['fileName'] = file;
+                  permit['status'] = 'Valid & Uploaded';
+                  permit['uploadedAt'] =
+                      DateTime.now().toString().split(' ')[0];
+                });
+                Navigator.of(ctx).pop();
+                Helpers.showSnackBar(
+                  context,
+                  'Compliance document "${permit['title']}" saved and uploaded successfully!',
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+              ),
+              icon: const Icon(Icons.check_circle_rounded, size: 16),
+              label: const Text('Save Document',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // View Permit Certificate Preview Dialog
+  void _showViewPermitDialog(Map<String, dynamic> permit, bool isDark) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.verified_rounded,
+                    color: Colors.green, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  permit['title'] as String,
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.picture_as_pdf_rounded,
+                            color: Colors.redAccent, size: 28),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                permit['fileName'] ?? 'Official_Permit.pdf',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
+                              Text(
+                                'Category: ${permit['category']}',
+                                style: const TextStyle(
+                                    fontSize: 11, color: Color(0xFF64748B)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 20),
+                    _buildSettingRow('Jurisdiction', 'Albay 1st District'),
+                    const SizedBox(height: 6),
+                    _buildSettingRow(
+                        'Upload Date', permit['uploadedAt'] ?? '2026-01-15'),
+                    const SizedBox(height: 6),
+                    _buildSettingRow(
+                        'Valid Until', permit['expiryDate'] ?? '2026-12-31'),
+                    const SizedBox(height: 6),
+                    _buildSettingRow('Verification Status', 'CERTIFIED ACTIVE',
+                        isSuccess: true),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor),
+              child: const Text('Close',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Confirmation warning dialog before permanently erasing a compliance document
+  Future<void> _confirmDeletePermit(
+      Map<String, dynamic> permit, bool isDark) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.delete_forever_rounded,
+                    color: Colors.red, size: 22),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Delete Compliance Document',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Are you sure you want to permanently erase the document for "${permit['title']}"?',
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.05)
+                      : const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Document: ${permit['fileName']}',
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Text('Category: ${permit['category']}',
+                        style: const TextStyle(fontSize: 11)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                '⚠️ Warning: This compliance document is legally required for station operation. Erasing it will mark this requirement as Missing.',
+                style: TextStyle(
+                    fontSize: 11.5,
+                    color: Colors.redAccent,
+                    fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+          actions: [
+            OutlinedButton(
+              onPressed: () => Navigator.of(dialogCtx).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.of(dialogCtx).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              icon: const Icon(Icons.delete_outline_rounded,
+                  size: 16, color: Colors.white),
+              label: const Text('Erase Document',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      setState(() {
+        permit['isUploaded'] = false;
+        permit['fileName'] = '';
+        permit['status'] = 'Missing / Required';
+        permit['uploadedAt'] = '';
+      });
+      Helpers.showSnackBar(
+        context,
+        'Compliance document for "${permit['title']}" was erased.',
+      );
+    }
+  }
+
   // TAB 9: SETTINGS
   Widget _buildSettingsTab(bool isDark) {
     return SingleChildScrollView(
@@ -11532,15 +12792,380 @@ class _AdminDashboardState extends State<AdminDashboard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 1. Admin Profile Management
           Text(
-            'Global Application Configuration',
+            'Administrator Profile Information',
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
               color: isDark ? Colors.white : Colors.grey.shade800,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(20.0),
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.darkSurface : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: const [
+                    Icon(
+                      Icons.admin_panel_settings_rounded,
+                      color: AppTheme.primaryColor,
+                      size: 22,
+                    ),
+                    SizedBox(width: 10),
+                    Text(
+                      'Admin Account & Station Details',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: [
+                    SizedBox(
+                      width: 280,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Admin Full Name',
+                              style: TextStyle(
+                                  fontSize: 12, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 6),
+                          TextField(
+                            controller: _adminNameController,
+                            style: const TextStyle(fontSize: 13),
+                            decoration: InputDecoration(
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 10),
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(
+                      width: 280,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Admin Contact Phone',
+                              style: TextStyle(
+                                  fontSize: 12, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 6),
+                          TextField(
+                            controller: _adminPhoneController,
+                            style: const TextStyle(fontSize: 13),
+                            decoration: InputDecoration(
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 10),
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(
+                      width: 280,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Station Email Address',
+                              style: TextStyle(
+                                  fontSize: 12, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 6),
+                          TextField(
+                            controller: _adminEmailController,
+                            style: const TextStyle(fontSize: 13),
+                            decoration: InputDecoration(
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 10),
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                        color: AppTheme.primaryColor.withValues(alpha: 0.15)),
+                  ),
+                  child: Row(
+                    children: const [
+                      Icon(Icons.place_rounded,
+                          size: 18, color: AppTheme.primaryColor),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Business Scope: Albay 1st District Exclusively (Tabaco City, Bacacay, Malilipot, Malinao, Santo Domingo, Tiwi)',
+                          style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.navyColor),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Helpers.showSnackBar(
+                        context,
+                        'Admin profile updated successfully for ${_adminNameController.text}!',
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                    ),
+                    icon: const Icon(Icons.save_rounded, size: 16),
+                    label: const Text('Save Profile Changes',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // 2. Water Refilling Station Compliance & Business Permits
+          Text(
+            'Water Refilling Station Regulatory & Business Permits',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: isDark ? Colors.white : Colors.grey.shade800,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Mandatory government permits, sanitary inspection clearances, and PNSDW water testing certificates.',
+            style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+          ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(20.0),
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.darkSurface : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: const [
+                    Icon(
+                      Icons.fact_check_rounded,
+                      color: Colors.teal,
+                      size: 22,
+                    ),
+                    SizedBox(width: 10),
+                    Text(
+                      'Official Station Permits & Water Potability Certificates',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _compliancePermits.length,
+                  separatorBuilder: (context, index) =>
+                      const Divider(height: 24),
+                  itemBuilder: (context, index) {
+                    final permit = _compliancePermits[index];
+                    final bool isUploaded = permit['isUploaded'] == true;
+
+                    return Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 12,
+                      runSpacing: 10,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: (isUploaded ? Colors.green : Colors.red)
+                                    .withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                isUploaded
+                                    ? Icons.verified_user_rounded
+                                    : Icons.warning_amber_rounded,
+                                color: isUploaded ? Colors.green : Colors.red,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  permit['title'] as String,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Category: ${permit['category']}',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Color(0xFF64748B),
+                                  ),
+                                ),
+                                if (isUploaded) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '📄 File: ${permit['fileName']} • Expiry: ${permit['expiryDate']}',
+                                    style: const TextStyle(
+                                      fontSize: 10.5,
+                                      color: Colors.green,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: (isUploaded ? Colors.green : Colors.red)
+                                    .withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                permit['status'] as String,
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.bold,
+                                  color:
+                                      isUploaded ? Colors.green : Colors.red,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            if (isUploaded) ...[
+                              OutlinedButton.icon(
+                                onPressed: () =>
+                                    _showViewPermitDialog(permit, isDark),
+                                icon: const Icon(Icons.visibility_rounded,
+                                    size: 14),
+                                label: const Text('View',
+                                    style: TextStyle(fontSize: 11)),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 6),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              OutlinedButton.icon(
+                                onPressed: () =>
+                                    _confirmDeletePermit(permit, isDark),
+                                icon: const Icon(Icons.delete_outline_rounded,
+                                    size: 14, color: Colors.redAccent),
+                                label: const Text('Erase',
+                                    style: TextStyle(
+                                        fontSize: 11, color: Colors.redAccent)),
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(
+                                      color: Colors.redAccent),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 6),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                            ],
+                            ElevatedButton.icon(
+                              onPressed: () =>
+                                  _showUploadPermitDialog(permit, isDark),
+                              icon: const Icon(Icons.upload_file_rounded,
+                                  size: 14, color: Colors.white),
+                              label: Text(
+                                isUploaded ? 'Replace' : 'Upload',
+                                style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primaryColor,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 8),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // 3. Global Database & System Integration
+          Text(
+            'Global System & Database Configuration',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: isDark ? Colors.white : Colors.grey.shade800,
+            ),
+          ),
+          const SizedBox(height: 14),
           Container(
             padding: const EdgeInsets.all(20.0),
             decoration: BoxDecoration(

@@ -1268,6 +1268,12 @@ class _DriverDashboardState extends State<DriverDashboard> {
         'tab': 4,
       },
       {
+        'title': 'Message Admin',
+        'icon': Icons.chat_bubble_outline_rounded,
+        'color': const Color(0xFFD97706),
+        'tab': 4,
+      },
+      {
         'title': 'Settings',
         'icon': Icons.settings_rounded,
         'color': const Color(0xFF059669),

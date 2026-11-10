@@ -2184,6 +2184,24 @@ class OrderProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Delete an order transaction permanently
+  Future<bool> deleteOrder(String orderId) async {
+    _orders.removeWhere((o) => o.id == orderId);
+    _returnedGallonOrderIds.remove(orderId);
+    bool success = true;
+    if (_isSupabaseConfigured) {
+      try {
+        final client = Supabase.instance.client;
+        await client.from('orders').delete().eq('id', orderId);
+      } catch (e) {
+        debugPrint('Supabase delete order error: $e');
+        success = false;
+      }
+    }
+    notifyListeners();
+    return success;
+  }
+
   // Helper Queries
 
   // Customer Queries

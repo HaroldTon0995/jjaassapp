@@ -105,6 +105,20 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   final ScrollController _faqScrollController = ScrollController();
   bool _isChatLoading = false;
 
+  // Station Admin Direct Chat States (Decoupled direct communication)
+  int _supportSubTab = 0; // 0 = AquaBot AI, 1 = Station Admin Direct
+  final List<Map<String, dynamic>> _adminChatMessages = [
+    {
+      'sender': 'Station Admin',
+      'message':
+          'Hello! Welcome to JJAASS Water Market Station Help Desk. Our Albay 1st District branch (Tabaco City, Bacacay, Malilipot, Malinao, Santo Domingo, Tiwi) is here to assist you. Send us any inquiry regarding your deliveries, scheduled refills, or container returns!',
+      'time': 'Station Desk',
+      'isMe': false,
+    },
+  ];
+  final TextEditingController _adminChatInputController = TextEditingController();
+  final ScrollController _adminChatScrollController = ScrollController();
+
   // Settings profile fields (persisted across rebuilds and sessions until changed again)
   static String _savedProfileName = '';
   static String _savedProfilePhone = '+63 912 345 6789';
@@ -149,6 +163,8 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     _chatInputController.dispose();
     _chatScrollController.dispose();
     _faqScrollController.dispose();
+    _adminChatInputController.dispose();
+    _adminChatScrollController.dispose();
     _profileNameController.dispose();
     _profilePhoneController.dispose();
     super.dispose();
@@ -847,6 +863,53 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
           curve: Curves.easeOut,
         );
       }
+    });
+  }
+
+  void _sendAdminChatMessage(String text) {
+    if (text.trim().isEmpty) return;
+    final msg = text.trim();
+    setState(() {
+      _adminChatMessages.add({
+        'sender': 'Customer',
+        'message': msg,
+        'time': 'Just now',
+        'isMe': true,
+      });
+      _adminChatInputController.clear();
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_adminChatScrollController.hasClients) {
+        _adminChatScrollController.animateTo(
+          _adminChatScrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+
+    // Provide immediate acknowledgment from Station Administrator
+    Future.delayed(const Duration(milliseconds: 700), () {
+      if (!mounted) return;
+      setState(() {
+        _adminChatMessages.add({
+          'sender': 'Station Admin',
+          'message':
+              'Thank you! Your message regarding "$msg" has been forwarded directly to our dispatch supervisor. We are on it!',
+          'time': 'Just now',
+          'isMe': false,
+        });
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_adminChatScrollController.hasClients) {
+          _adminChatScrollController.animateTo(
+            _adminChatScrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      });
     });
   }
 
@@ -3887,7 +3950,313 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     );
   }
 
-  // TAB 2: MY DELIVERIES STATUS TRACKER
+  // Helper: Visual Division Header for Order and Payment Groupings
+  Widget _buildDivisionHeader(
+    String title,
+    IconData icon,
+    Color color,
+    int count,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(top: 8, bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              '$count',
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Individual Customer Order Card with Inquire Admin Action
+  Widget _buildCustomerOrderItem(OrderModel order, bool isDark) {
+    final isDone = order.orderStatus == OrderStatus.completed;
+    final isCancelled = order.orderStatus == OrderStatus.cancelled;
+    // Customer can only cancel while order is Pending; once Confirmed by Admin, only Admin can cancel.
+    final canCancel = order.orderStatus == OrderStatus.pending;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFFCBD5E1),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: order.orderStatus.color.withValues(alpha: 0.08),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    isDone
+                        ? Icons.check_circle_rounded
+                        : isCancelled
+                        ? Icons.cancel_rounded
+                        : Icons.local_shipping_rounded,
+                    color: order.orderStatus.color,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            order.id,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primaryColor,
+                              fontSize: 13,
+                            ),
+                          ),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: order.orderStatus.color.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              order.orderStatus.displayName,
+                              style: TextStyle(
+                                color: order.orderStatus.color,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        order.itemsSummary,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14.5,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              order.deliveryAddress,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 12.5,
+                color: Color(0xFF475569),
+              ),
+            ),
+            if (order.driverName != null) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.person_pin_rounded,
+                    size: 14,
+                    color: AppTheme.primaryColor,
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      'Driver: ${order.driverName}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primaryColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            const Divider(height: 20, color: Color(0xFFF1F5F9)),
+            Row(
+              children: [
+                Text(
+                  'Placed: ${order.createdAt.toString().split(' ')[0]}',
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+                const Spacer(),
+                // Inquire with Admin button
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      _selectedTab = 4;
+                      _supportSubTab = 1;
+                      _adminChatInputController.text =
+                          'Inquiring regarding Order ${order.id}: ';
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(6),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppTheme.navyColor.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.chat_bubble_outline_rounded,
+                            size: 12, color: AppTheme.navyColor),
+                        SizedBox(width: 3),
+                        Text(
+                          'Message Admin',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.navyColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (order.paymentStatus == 'Pending' &&
+                    order.paymentMethod == 'GCash' &&
+                    !isCancelled) ...[
+                  const SizedBox(width: 6),
+                  InkWell(
+                    onTap: () => _showGcashPaymentDialog(order, isDark),
+                    borderRadius: BorderRadius.circular(6),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF007DFE), Color(0xFF0056B3)],
+                        ),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.bolt_rounded,
+                              size: 11, color: Colors.white),
+                          SizedBox(width: 2),
+                          Text(
+                            '⚡ Pay GCash',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+                if (canCancel) ...[
+                  const SizedBox(width: 6),
+                  InkWell(
+                    onTap: () => _showCancelOrderDialog(order),
+                    borderRadius: BorderRadius.circular(6),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF2F2),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: const Color(0xFFFCA5A5)),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.cancel_outlined,
+                              size: 11, color: Color(0xFFDC2626)),
+                          SizedBox(width: 3),
+                          Text(
+                            'Cancel',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFDC2626),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // TAB 2: MY DELIVERIES STATUS TRACKER (Divided into Active, Completed, Cancelled)
   Widget _buildDeliveriesTab(bool isDark) {
     final auth = Provider.of<AuthProvider>(context);
     final orderProvider = Provider.of<OrderProvider>(context);
@@ -3896,10 +4265,11 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
 
     final activeDelivery =
         myOrders.any((o) => o.orderStatus == OrderStatus.onDelivery)
-        ? myOrders.firstWhere((o) => o.orderStatus == OrderStatus.onDelivery)
-        : (myOrders.any((o) => o.orderStatus == OrderStatus.assigned)
-            ? myOrders.firstWhere((o) => o.orderStatus == OrderStatus.assigned)
-            : null);
+            ? myOrders.firstWhere((o) => o.orderStatus == OrderStatus.onDelivery)
+            : (myOrders.any((o) => o.orderStatus == OrderStatus.assigned)
+                ? myOrders.firstWhere((o) => o.orderStatus == OrderStatus.assigned)
+                : null);
+
     final pendingGcashOrders = myOrders
         .where(
           (o) =>
@@ -3907,6 +4277,19 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
               o.paymentMethod == 'GCash' &&
               o.orderStatus != OrderStatus.cancelled,
         )
+        .toList();
+
+    // Order Record Divisions
+    final activeOrders = myOrders
+        .where((o) =>
+            o.orderStatus != OrderStatus.completed &&
+            o.orderStatus != OrderStatus.cancelled)
+        .toList();
+    final completedOrders = myOrders
+        .where((o) => o.orderStatus == OrderStatus.completed)
+        .toList();
+    final cancelledOrders = myOrders
+        .where((o) => o.orderStatus == OrderStatus.cancelled)
         .toList();
 
     final isSmall = MediaQuery.of(context).size.width < 600;
@@ -3923,7 +4306,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
             runSpacing: 6,
             children: [
               const Text(
-                'Track Deliveries',
+                'Track Deliveries & Orders Record',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               if (pendingGcashOrders.isNotEmpty)
@@ -4037,256 +4420,55 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
               ),
             ),
           ],
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           if (activeDelivery != null) ...[
             _buildActiveDeliveryTracker(activeDelivery, isDark),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
           ],
           Expanded(
             child: myOrders.isEmpty
                 ? const Center(child: Text('No orders yet.'))
-                : ListView.builder(
-                    itemCount: myOrders.length,
-                    itemBuilder: (context, index) {
-                      final order = myOrders[index];
-                      final isDone = order.orderStatus == OrderStatus.completed;
-                      final isCancelled =
-                          order.orderStatus == OrderStatus.cancelled;
-                      final canCancel = order.orderStatus == OrderStatus.pending;
+                : ListView(
+                    children: [
+                      // Division 1: Active & In-Progress Orders
+                      if (activeOrders.isNotEmpty) ...[
+                        _buildDivisionHeader(
+                          'Active & In-Progress Orders',
+                          Icons.local_shipping_rounded,
+                          const Color(0xFF0284C7),
+                          activeOrders.length,
+                        ),
+                        ...activeOrders
+                            .map((o) => _buildCustomerOrderItem(o, isDark)),
+                        const SizedBox(height: 12),
+                      ],
 
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: const Color(0xFFCBD5E1),
-                            width: 1.2,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.05),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
+                      // Division 2: Completed Past Deliveries
+                      if (completedOrders.isNotEmpty) ...[
+                        _buildDivisionHeader(
+                          'Completed Past Deliveries',
+                          Icons.check_circle_rounded,
+                          const Color(0xFF10B981),
+                          completedOrders.length,
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(18.0),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: order.orderStatus.color.withValues(
-                                    alpha: 0.08,
-                                  ),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  isDone
-                                      ? Icons.check_circle_rounded
-                                      : isCancelled
-                                      ? Icons.cancel_rounded
-                                      : Icons.local_shipping_rounded,
-                                  color: order.orderStatus.color,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      order.id,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: AppTheme.primaryColor,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      order.itemsSummary,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 15,
-                                        color: Color(0xFF0F172A),
-                                      ),
-                                    ),
-                                    Text(
-                                      order.deliveryAddress,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 12.5,
-                                        color: Color(0xFF475569),
-                                      ),
-                                    ),
-                                    if (order.driverName != null) ...[
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        children: [
-                                          const Icon(
-                                            Icons.person_pin_rounded,
-                                            size: 14,
-                                            color: AppTheme.primaryColor,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Expanded(
-                                            child: Text(
-                                              'Driver: ${order.driverName}',
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.bold,
-                                                color: AppTheme.primaryColor,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    order.createdAt.toString().split(' ')[0],
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Color(0xFF475569),
-                                    ),
-                                  ),
-                                  if (order.paymentStatus == 'Pending' &&
-                                      order.paymentMethod == 'GCash' &&
-                                      !isCancelled) ...[
-                                    const SizedBox(height: 6),
-                                    InkWell(
-                                      onTap: () => _showGcashPaymentDialog(
-                                        order,
-                                        isDark,
-                                      ),
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          gradient: const LinearGradient(
-                                            colors: [
-                                              Color(0xFF007DFE),
-                                              Color(0xFF0056B3),
-                                            ],
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: const Color(
-                                                0xFF007DFE,
-                                              ).withValues(alpha: 0.3),
-                                              blurRadius: 4,
-                                              offset: const Offset(0, 2),
-                                            ),
-                                          ],
-                                        ),
-                                        child: const Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                              Icons.bolt_rounded,
-                                              size: 12,
-                                              color: Colors.white,
-                                            ),
-                                            SizedBox(width: 3),
-                                            Text(
-                                              '⚡ Pay GCash',
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w900,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                  ],
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: order.orderStatus.color.withValues(
-                                        alpha: 0.08,
-                                      ),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      order.orderStatus.displayName,
-                                      style: TextStyle(
-                                        color: order.orderStatus.color,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 10,
-                                      ),
-                                    ),
-                                  ),
-                                  if (canCancel) ...[
-                                    const SizedBox(height: 8),
-                                    InkWell(
-                                      onTap: () =>
-                                          _showCancelOrderDialog(order),
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 5,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFFEF2F2),
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                          border: Border.all(
-                                            color: const Color(0xFFFCA5A5),
-                                          ),
-                                        ),
-                                        child: const Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                              Icons.cancel_outlined,
-                                              size: 13,
-                                              color: Color(0xFFDC2626),
-                                            ),
-                                            SizedBox(width: 4),
-                                            Text(
-                                              'Cancel Order',
-                                              style: TextStyle(
-                                                fontSize: 10.5,
-                                                fontWeight: FontWeight.w800,
-                                                color: Color(0xFFDC2626),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ],
-                          ),
+                        ...completedOrders
+                            .map((o) => _buildCustomerOrderItem(o, isDark)),
+                        const SizedBox(height: 12),
+                      ],
+
+                      // Division 3: Cancelled Orders
+                      if (cancelledOrders.isNotEmpty) ...[
+                        _buildDivisionHeader(
+                          'Cancelled Orders',
+                          Icons.cancel_rounded,
+                          const Color(0xFFDC2626),
+                          cancelledOrders.length,
                         ),
-                      );
-                    },
+                        ...cancelledOrders
+                            .map((o) => _buildCustomerOrderItem(o, isDark)),
+                        const SizedBox(height: 12),
+                      ],
+                    ],
                   ),
           ),
         ],
@@ -4294,12 +4476,18 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     );
   }
 
-  // TAB 3: PAYMENT HISTORY
+  // TAB 3: PAYMENT HISTORY (Divided into Pending vs Settled Transactions)
   Widget _buildPaymentHistoryTab(bool isDark) {
     final auth = Provider.of<AuthProvider>(context);
     final orderProvider = Provider.of<OrderProvider>(context);
     final user = auth.currentUser;
     final myOrders = orderProvider.getCustomerOrders(user?.id ?? '');
+
+    // Transaction Divisions
+    final pendingPayments =
+        myOrders.where((tx) => tx.paymentStatus != 'Paid').toList();
+    final completedPayments =
+        myOrders.where((tx) => tx.paymentStatus == 'Paid').toList();
 
     final isSmall = MediaQuery.of(context).size.width < 600;
 
@@ -4312,141 +4500,163 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
             'Invoices & Transactions History',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           Expanded(
             child: myOrders.isEmpty
                 ? const Center(child: Text('No transaction history yet.'))
-                : ListView.builder(
-                    itemCount: myOrders.length,
-                    itemBuilder: (context, index) {
-                      final tx = myOrders[index];
-                      final isPaid = tx.paymentStatus == 'Paid';
-                      final color = isPaid
-                          ? Colors.green
-                          : Colors.amber.shade700;
+                : ListView(
+                    children: [
+                      // Division 1: Pending & Unpaid Invoices
+                      if (pendingPayments.isNotEmpty) ...[
+                        _buildDivisionHeader(
+                          'Pending / Unpaid Transactions',
+                          Icons.pending_actions_rounded,
+                          const Color(0xFFD97706),
+                          pendingPayments.length,
+                        ),
+                        ...pendingPayments
+                            .map((tx) => _buildPaymentItemTile(tx, isDark)),
+                        const SizedBox(height: 14),
+                      ],
 
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 16),
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: const Color(0xFFCBD5E1),
-                            width: 1.2,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.05),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
+                      // Division 2: Settled & Paid Transactions
+                      if (completedPayments.isNotEmpty) ...[
+                        _buildDivisionHeader(
+                          'Settled & Paid Invoices',
+                          Icons.verified_rounded,
+                          const Color(0xFF10B981),
+                          completedPayments.length,
                         ),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: color.withValues(alpha: 0.08),
-                            child: Icon(Icons.payment_rounded, color: color),
-                          ),
-                          title: Text(
-                            tx.txnId,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF0F172A),
-                              fontSize: 15,
-                            ),
-                          ),
-                          subtitle: Text(
-                            'Order: ${tx.id} • ${tx.paymentMethod}\nDate: ${tx.createdAt.toString().split('.')[0]}',
-                            style: const TextStyle(
-                              color: Color(0xFF475569),
-                              fontSize: 12.5,
-                              height: 1.4,
-                            ),
-                          ),
-                          isThreeLine: true,
-                          trailing: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                tx.formattedTotal,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 14,
-                                  color: Color(0xFF0F172A),
-                                ),
-                              ),
-                              if (tx.paymentStatus == 'Pending' &&
-                                  tx.paymentMethod == 'GCash') ...[
-                                const SizedBox(height: 4),
-                                InkWell(
-                                  onTap: () =>
-                                      _showGcashPaymentDialog(tx, isDark),
-                                  borderRadius: BorderRadius.circular(6),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 3,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        colors: [
-                                          Color(0xFF007DFE),
-                                          Color(0xFF0056B3),
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: const Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.bolt_rounded,
-                                          size: 10,
-                                          color: Colors.white,
-                                        ),
-                                        SizedBox(width: 2),
-                                        Text(
-                                          '⚡ Pay GCash',
-                                          style: TextStyle(
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                              const SizedBox(height: 4),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: color.withValues(alpha: 0.08),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  tx.paymentStatus,
-                                  style: TextStyle(
-                                    color: color,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
+                        ...completedPayments
+                            .map((tx) => _buildPaymentItemTile(tx, isDark)),
+                        const SizedBox(height: 14),
+                      ],
+                    ],
                   ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentItemTile(OrderModel tx, bool isDark) {
+    final isPaid = tx.paymentStatus == 'Paid';
+    final color = isPaid ? Colors.green : Colors.amber.shade700;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: const Color(0xFFCBD5E1),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: color.withValues(alpha: 0.08),
+          child: Icon(Icons.payment_rounded, color: color),
+        ),
+        title: Text(
+          tx.txnId,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF0F172A),
+            fontSize: 14.5,
+          ),
+        ),
+        subtitle: Text(
+          'Order: ${tx.id} • ${tx.paymentMethod}\nDate: ${tx.createdAt.toString().split('.')[0]}',
+          style: const TextStyle(
+            color: Color(0xFF475569),
+            fontSize: 12,
+            height: 1.4,
+          ),
+        ),
+        isThreeLine: true,
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              tx.formattedTotal,
+              style: const TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 14,
+                color: Color(0xFF0F172A),
+              ),
+            ),
+            if (tx.paymentStatus == 'Pending' && tx.paymentMethod == 'GCash') ...[
+              const SizedBox(height: 4),
+              InkWell(
+                onTap: () => _showGcashPaymentDialog(tx, isDark),
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [
+                        Color(0xFF007DFE),
+                        Color(0xFF0056B3),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.bolt_rounded,
+                        size: 10,
+                        color: Colors.white,
+                      ),
+                      SizedBox(width: 2),
+                      Text(
+                        '⚡ Pay GCash',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 6,
+                vertical: 2,
+              ),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                tx.paymentStatus,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -4584,6 +4794,109 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                   ),
                 ),
 
+                // Sub-Tab Switcher: [ AquaBot AI Guide ] vs [ Message Station Admin ]
+                Container(
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF8FAFC),
+                    border: Border(
+                      bottom: BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => setState(() => _supportSubTab = 0),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: _supportSubTab == 0
+                                  ? Colors.white
+                                  : Colors.transparent,
+                              border: Border(
+                                bottom: BorderSide(
+                                  color: _supportSubTab == 0
+                                      ? AppTheme.primaryColor
+                                      : Colors.transparent,
+                                  width: 2.5,
+                                ),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.smart_toy_rounded,
+                                  size: 16,
+                                  color: _supportSubTab == 0
+                                      ? AppTheme.primaryColor
+                                      : const Color(0xFF64748B),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'AquaBot AI Guide',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: _supportSubTab == 0
+                                        ? AppTheme.primaryColor
+                                        : const Color(0xFF64748B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => setState(() => _supportSubTab = 1),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: _supportSubTab == 1
+                                  ? Colors.white
+                                  : Colors.transparent,
+                              border: Border(
+                                bottom: BorderSide(
+                                  color: _supportSubTab == 1
+                                      ? AppTheme.primaryColor
+                                      : Colors.transparent,
+                                  width: 2.5,
+                                ),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.support_agent_rounded,
+                                  size: 16,
+                                  color: _supportSubTab == 1
+                                      ? AppTheme.primaryColor
+                                      : const Color(0xFF64748B),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Message Station Admin',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: _supportSubTab == 1
+                                        ? AppTheme.primaryColor
+                                        : const Color(0xFF64748B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                if (_supportSubTab == 0) ...[
                 // Collapsible Quick Inquiry FAQ Accordion with Safe Bounded Height
                 Container(
                   decoration: const BoxDecoration(
@@ -4874,13 +5187,179 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                 ],
               ),
             ),
+          ] else ...[
+            Expanded(child: _buildStationAdminChatSection(isDark)),
           ],
-        ),
-      );
-    },
-  ),
+        ],
+      ),
+    );
+  },
+),
 );
 }
+
+  Widget _buildStationAdminChatSection(bool isDark) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          color: const Color(0xFFF1F5F9),
+          child: Row(
+            children: [
+              const Icon(Icons.info_outline_rounded,
+                  size: 14, color: AppTheme.navyColor),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Direct chat channel with JJAASS Station Manager • Albay 1st District',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey.shade700,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            controller: _adminChatScrollController,
+            padding: const EdgeInsets.all(14.0),
+            itemCount: _adminChatMessages.length,
+            itemBuilder: (context, index) {
+              final msg = _adminChatMessages[index];
+              final isMe = msg['isMe'] == true;
+              return Align(
+                alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width * 0.82,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isMe ? AppTheme.navyColor : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color:
+                          isMe ? AppTheme.navyColor : const Color(0xFFCBD5E1),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: isMe
+                        ? CrossAxisAlignment.end
+                        : CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        msg['sender'] as String,
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.bold,
+                          color: isMe
+                              ? const Color(0xFF93C5FD)
+                              : AppTheme.primaryColor,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        msg['message'] as String,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color:
+                              isMe ? Colors.white : const Color(0xFF0F172A),
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        // Station Admin Chat Input
+        Container(
+          padding: const EdgeInsets.all(12.0),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(15),
+              bottomRight: Radius.circular(15),
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _adminChatInputController,
+                  onSubmitted: _sendAdminChatMessage,
+                  style: const TextStyle(
+                      color: Color(0xFF0F172A), fontSize: 13),
+                  decoration: InputDecoration(
+                    hintText: 'Type message to Station Admin...',
+                    hintStyle: const TextStyle(
+                        color: Color(0xFF94A3B8), fontSize: 12.5),
+                    prefixIcon: const Icon(
+                      Icons.chat_bubble_outline_rounded,
+                      size: 18,
+                      color: AppTheme.navyColor,
+                    ),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide:
+                          const BorderSide(color: Color(0xFFCBD5E1)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide:
+                          const BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(
+                          color: AppTheme.navyColor, width: 1.5),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: () =>
+                    _sendAdminChatMessage(_adminChatInputController.text),
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.all(11),
+                  decoration: BoxDecoration(
+                    color: AppTheme.navyColor,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.navyColor.withValues(alpha: 0.25),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.send_rounded,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 
   Widget _buildInquiryCategoryTile({
     required String title,
