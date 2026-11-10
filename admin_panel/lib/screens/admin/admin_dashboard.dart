@@ -285,9 +285,26 @@ class _AdminDashboardState extends State<AdminDashboard> {
           .listen(
             (List<Map<String, dynamic>> response) {
               if (!mounted) return;
-              final currentProfiles = response
-                  .map((item) => UserModel.fromJson(item))
-                  .toList();
+              final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+              final currentProfiles = response.map((item) {
+                final model = UserModel.fromJson(item);
+                final lower = model.name.trim().toLowerCase();
+                if (lower.isEmpty || lower == 'new user' || lower == 'registered user') {
+                  for (final o in orderProvider.orders) {
+                    if (o.customerId == model.id &&
+                        o.customerName.trim().isNotEmpty &&
+                        o.customerName.trim().toLowerCase() != 'new user') {
+                      return UserModel(
+                        id: model.id,
+                        name: o.customerName.trim(),
+                        email: model.email,
+                        role: model.role,
+                      );
+                    }
+                  }
+                }
+                return model;
+              }).toList();
               _syncProfileNotifications(currentProfiles);
             },
             onError: (e) {
@@ -1006,18 +1023,44 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       ),
                       const SizedBox(height: 14),
 
-                      // Address / Fleet Station
+                      // Address / Fleet Station (Albay 1st District Scope)
                       TextField(
                         controller: addressController,
                         decoration: InputDecoration(
                           labelText: selectedRole == UserRole.driver
-                              ? 'Assigned Area / Vehicle Details (Optional)'
-                              : 'Delivery Address (Optional)',
+                              ? 'Assigned Area (Albay 1st District) / Vehicle'
+                              : 'Delivery Address (Albay 1st District)',
                           hintText: selectedRole == UserRole.driver
-                              ? 'e.g. Sector B - Motorcycle (Plate #1234)'
-                              : 'e.g. Block 5 Lot 12, Sunrise Village',
+                              ? 'e.g. Tabaco City / Bacacay Route'
+                              : 'e.g. Purok 2, Tabaco City, Albay',
                           prefixIcon: Icon(selectedRole == UserRole.driver ? Icons.two_wheeler_rounded : Icons.location_on_outlined),
                         ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: const [
+                          'Tabaco City',
+                          'Bacacay',
+                          'Malilipot',
+                          'Malinao',
+                          'Santo Domingo',
+                          'Tiwi',
+                        ].map((mun) {
+                          return ActionChip(
+                            visualDensity: VisualDensity.compact,
+                            label: Text(mun, style: const TextStyle(fontSize: 11)),
+                            onPressed: () {
+                              final current = addressController.text.trim();
+                              if (!current.contains(mun)) {
+                                addressController.text = current.isEmpty
+                                    ? '$mun, Albay'
+                                    : '$current, $mun, Albay';
+                              }
+                            },
+                          );
+                        }).toList(),
                       ),
                     ],
                   ),
@@ -1141,40 +1184,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
               foregroundColor: Colors.white,
               elevation: 2,
               titleSpacing: 8,
-              title: Row(
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(3),
-                    decoration: const BoxDecoration(
+                  Text(
+                    _getTabTitle(),
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
                       color: Colors.white,
-                      shape: BoxShape.circle,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
                     ),
-                    child: const WaterDropletLogo(size: 28),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _getTabTitle(),
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const Text(
-                          'JJAASS Water Market • Admin',
-                          style: TextStyle(
-                            color: Color(0xFFBFDBFE),
-                            fontWeight: FontWeight.w600,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
+                  const Text(
+                    'JJAASS Water Market • Admin',
+                    style: TextStyle(
+                      color: Color(0xFFBFDBFE),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 11,
                     ),
                   ),
                 ],
@@ -1286,12 +1314,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
               border: Border.all(color: const Color(0xFFCBD5E1)),
             ),
             child: TextField(
+              textAlignVertical: TextAlignVertical.center,
               style: const TextStyle(
                 color: AppTheme.navyColor,
                 fontSize: 13.5,
                 fontWeight: FontWeight.w600,
               ),
               decoration: const InputDecoration(
+                isDense: true,
                 hintText: 'Search anything...',
                 hintStyle: TextStyle(color: Color(0xFF64748B), fontSize: 13),
                 prefixIcon: Icon(
@@ -1302,7 +1332,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
-                contentPadding: EdgeInsets.only(bottom: 8),
+                contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
               ),
             ),
           ),
@@ -1874,46 +1904,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   },
                 );
               },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14.0),
-              decoration: BoxDecoration(
-                color: const Color(0xFFEFF6FF),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: AppTheme.secondaryColor.withValues(alpha: 0.35),
-                  width: 1,
-                ),
-              ),
-              child: const Column(
-                children: [
-                  WaterJugIllustration(width: 68, height: 76),
-                  SizedBox(height: 8),
-                  Text(
-                    'Fresh & Pure Water',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w900,
-                      color: AppTheme.navyColor,
-                    ),
-                  ),
-                  SizedBox(height: 3),
-                  Text(
-                    'Admin Management Console',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.mutedText,
-                    ),
-                  ),
-                ],
-              ),
             ),
           ),
           _SidebarItemTile(
@@ -3054,14 +3044,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   child: TextField(
                     controller: _supportInputController,
                     onSubmitted: _sendSupportMessage,
+                    textAlignVertical: TextAlignVertical.center,
                     style: const TextStyle(fontSize: 12),
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
+                      isDense: true,
                       hintText: 'Type your message...',
-                      hintStyle: TextStyle(color: const Color(0xFF64748B)),
+                      hintStyle: TextStyle(color: Color(0xFF64748B)),
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,
                       focusedBorder: InputBorder.none,
-                      contentPadding: const EdgeInsets.only(bottom: 12),
+                      contentPadding: EdgeInsets.symmetric(vertical: 10),
                     ),
                   ),
                 ),
@@ -3410,11 +3402,44 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         controller: addressController,
                         enabled: isDelivery,
                         decoration: InputDecoration(
-                          labelText: isDelivery ? 'Delivery Address (House no., street, brgy.) *' : 'Pickup Location',
+                          labelText: isDelivery ? 'Delivery Address (Albay 1st District) *' : 'Pickup Location',
+                          hintText: isDelivery ? 'e.g. Purok 1, Tabaco City, Albay' : null,
                           prefixIcon: Icon(isDelivery ? Icons.location_on : Icons.storefront_rounded),
-                          helperText: !isDelivery ? 'Store pickup orders are collected at the station' : null,
+                          helperText: !isDelivery
+                              ? 'Store pickup orders are collected at the station'
+                              : 'Service Scope: Tabaco City, Bacacay, Malilipot, Malinao, Santo Domingo, Tiwi',
                         ),
                       ),
+                      if (isDelivery) ...[
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: const [
+                            'Tabaco City',
+                            'Bacacay',
+                            'Malilipot',
+                            'Malinao',
+                            'Santo Domingo',
+                            'Tiwi',
+                          ].map((mun) {
+                            return ActionChip(
+                              visualDensity: VisualDensity.compact,
+                              label: Text(mun, style: const TextStyle(fontSize: 11)),
+                              onPressed: () {
+                                setDialogState(() {
+                                  final current = addressController.text.trim();
+                                  if (!current.contains(mun)) {
+                                    addressController.text = current.isEmpty
+                                        ? '$mun, Albay'
+                                        : '$current, $mun, Albay';
+                                  }
+                                });
+                              },
+                            );
+                          }).toList(),
+                        ),
+                      ],
                       const SizedBox(height: 18),
 
                       // 3. DRIVER ASSIGNMENT (Only shown for Home Delivery)
@@ -4448,7 +4473,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Live GPS route tracking, rider dispatches, and delivery telemetry across Ligao City.',
+                    'Live GPS route tracking, rider dispatches, and delivery telemetry across Albay 1st District (Tabaco City, Bacacay, Malilipot, Malinao, Santo Domingo, Tiwi).',
                     style: TextStyle(fontSize: 12, color: titleTextColor),
                   ),
                 ],
@@ -4634,8 +4659,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     Expanded(
                       child: TextField(
                         controller: _deliveriesSearchController,
+                        textAlignVertical: TextAlignVertical.center,
                         onChanged: (_) => setState(() {}),
                         decoration: InputDecoration(
+                          isDense: true,
                           hintText:
                               'Search deliveries by ID, customer, rider, or address...',
                           prefixIcon: const Icon(Icons.search_rounded),
@@ -4651,7 +4678,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               : null,
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 14,
-                            vertical: 10,
+                            vertical: 12,
                           ),
                         ),
                       ),
@@ -5326,10 +5353,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
               Expanded(
                 child: TextField(
                   controller: _searchController,
+                  textAlignVertical: TextAlignVertical.center,
                   onChanged: (val) => _applyFilters(),
                   decoration: InputDecoration(
+                    isDense: true,
                     hintText: 'Search registered user database...',
                     prefixIcon: const Icon(Icons.search_rounded),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
                     suffixIcon: _searchController.text.isNotEmpty
                         ? IconButton(
                             icon: const Icon(Icons.clear_rounded, size: 18),
@@ -6185,180 +6218,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     isEditing ? 'Save Changes' : 'Add Item',
                     style: const TextStyle(color: Colors.white),
                   ),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  // Direct Set Stock & Capacity Dialog (Admin input directly sets inventory & capacity)
-  void _showRefillWaterReservoirDialog(bool isDark) {
-    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
-    final waterRemaining = orderProvider.waterReservoirLiters;
-    final waterCap = orderProvider.waterReservoirCapacity;
-    final needed = max(0.0, waterCap - waterRemaining);
-
-    final litersController = TextEditingController(text: needed > 0 ? needed.toInt().toString() : '2000');
-    final notesController = TextEditingController(text: 'Deep well / filtration water replenishment');
-
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0284C7).withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.water_rounded, color: Color(0xFF0284C7), size: 24),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Refill Bulk Water Supply',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          'Replenish 10,000L Commercial Reservoir',
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              content: SizedBox(
-                width: 440,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0284C7).withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFF0284C7).withValues(alpha: 0.2)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.info_outline_rounded, size: 18, color: Color(0xFF0284C7)),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              'Current Reservoir: ${waterRemaining.toInt()}L / ${waterCap.toInt()}L. Space available: ${needed.toInt()} Liters.',
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0369A1)),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    const Text('Quick Add Amount:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      children: [
-                        ActionChip(
-                          label: const Text('+1,000 L'),
-                          onPressed: () {
-                            litersController.text = '1000';
-                            setDialogState(() {});
-                          },
-                        ),
-                        ActionChip(
-                          label: const Text('+2,500 L'),
-                          onPressed: () {
-                            litersController.text = '2500';
-                            setDialogState(() {});
-                          },
-                        ),
-                        ActionChip(
-                          label: const Text('+5,000 L'),
-                          onPressed: () {
-                            litersController.text = '5000';
-                            setDialogState(() {});
-                          },
-                        ),
-                        if (needed > 0)
-                          ActionChip(
-                            label: Text('Fill to Max (${needed.toInt()}L)'),
-                            backgroundColor: const Color(0xFF0284C7).withValues(alpha: 0.15),
-                            onPressed: () {
-                              litersController.text = needed.toInt().toString();
-                              setDialogState(() {});
-                            },
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    TextField(
-                      controller: litersController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Liters to Add *',
-                        prefixIcon: Icon(Icons.water_drop_rounded, color: Color(0xFF0284C7)),
-                        helperText: 'Volume in Liters (L) to add to filtration tank',
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: notesController,
-                      decoration: const InputDecoration(
-                        labelText: 'Restock Notes (Optional)',
-                        prefixIcon: Icon(Icons.notes_rounded),
-                        hintText: 'e.g., Municipal water supply delivery / RO filter top-up',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0284C7),
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: () async {
-                    final liters = double.tryParse(litersController.text.trim()) ?? 0.0;
-                    if (liters <= 0) {
-                      Helpers.showSnackBar(context, 'Please enter a valid volume greater than 0 Liters.', isError: true);
-                      return;
-                    }
-                    final messenger = ScaffoldMessenger.of(context);
-                    await orderProvider.refillBulkWaterReservoir(
-                      liters,
-                      notes: notesController.text.trim().isNotEmpty ? notesController.text.trim() : null,
-                    );
-                    if (ctx.mounted) Navigator.pop(ctx);
-                    messenger.showSnackBar(
-                      SnackBar(
-                        content: Text('Successfully added ${liters.toInt()} Liters to Bulk Water Reservoir!'),
-                        backgroundColor: const Color(0xFF0284C7),
-                      ),
-                    );
-                    if (mounted) setState(() {});
-                  },
-                  icon: const Icon(Icons.check_circle_rounded, size: 16),
-                  label: const Text('Confirm Refill'),
                 ),
               ],
             );
@@ -7664,13 +7523,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
       return i['category'] == _inventoryCategoryFilter;
     }).toList();
 
-    // Bulk Water Reservoir Metrics
-    final waterRemaining = orderProvider.waterReservoirLiters;
-    final waterCap = orderProvider.waterReservoirCapacity;
-    final waterRatio = waterCap > 0 ? (waterRemaining / waterCap).clamp(0.0, 1.0) : 0.0;
-    final availableRefills = (waterRemaining / 19.0).floor();
-    final isWaterLow = waterRemaining <= 1500.0;
-
     // Gallon Metrics
     final slimRemaining = orderProvider.remainingSlimGallons;
     final slimCap = orderProvider.slimGallonCapacity;
@@ -7740,9 +7592,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       color: isDark ? Colors.white : const Color(0xFF1E293B),
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
-                    'Track remaining Round & Slim gallons and monitor active customer gallon borrows.',
+                    'Manage products, container stocks, and borrowed gallons.',
                     style: TextStyle(fontSize: 12, color: titleTextColor),
                   ),
                 ],
@@ -7790,177 +7642,98 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
-          // SECTION 1: BULK WATER RESERVOIR (COMMERCIAL FILTRATION TANK)
+          // SECTION 1: PURIFIED WATER (PRODUCT THAT NEVER RUNS OUT)
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
             decoration: BoxDecoration(
               color: cardBgColor,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: isWaterLow
-                    ? Colors.red.withValues(alpha: 0.5)
-                    : const Color(0xFF0284C7).withValues(alpha: 0.3),
-                width: isWaterLow ? 1.5 : 1.0,
+                color: const Color(0xFF0284C7).withValues(alpha: 0.3),
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF0284C7), Color(0xFF2563EB)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: const Icon(
-                        Icons.water_rounded,
-                        color: Colors.white,
-                        size: 26,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Wrap(
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            spacing: 10,
-                            runSpacing: 4,
-                            children: [
-                              Text(
-                                'Bulk Water Reservoir (10,000L Commercial Tank)',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                  color: valueTextColor,
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: (isWaterLow ? Colors.red : const Color(0xFF10B981)).withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: (isWaterLow ? Colors.red : const Color(0xFF10B981)).withValues(alpha: 0.3),
-                                  ),
-                                ),
-                                child: Text(
-                                  isWaterLow ? '⚠️ Low Water Alert (<1,500L)' : '✅ Optimal Supply',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: isWaterLow ? Colors.red : const Color(0xFF047857),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            'Continuous bulk drinking water volume. Dispenses 19 Liters per 5-gallon jug refill without depleting physical station container inventory.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: titleTextColor,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    ElevatedButton.icon(
-                      onPressed: () => _showRefillWaterReservoirDialog(isDark),
-                      icon: const Icon(Icons.add_circle_outline_rounded, size: 16),
-                      label: const Text('+ Refill Water Supply', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0284C7),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        elevation: 0,
-                      ),
-                    ),
-                  ],
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0284C7).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.water_drop_rounded,
+                    color: Color(0xFF0284C7),
+                    size: 22,
+                  ),
                 ),
-                const SizedBox(height: 18),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '${waterRemaining.toInt()} Liters',
-                      style: const TextStyle(
-                        fontSize: 30,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF0284C7),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 5, left: 8),
-                      child: Text(
-                        '/ ${waterCap.toInt()} Liters Total Capacity  •  Approx. $availableRefills Jugs Refillable',
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Purified Water',
                         style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: titleTextColor,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: valueTextColor,
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 2),
+                      Text(
+                        'Primary water refill product • ₱30.00 / refill',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: titleTextColor,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: LinearProgressIndicator(
-                    value: waterRatio,
-                    minHeight: 10,
-                    backgroundColor: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      isWaterLow ? Colors.red : const Color(0xFF0284C7),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.3),
                     ),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.all_inclusive_rounded, size: 15, color: Color(0xFF047857)),
+                      SizedBox(width: 6),
+                      Text(
+                        'Always Available',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF047857),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
           // SECTION 2: PHYSICAL CONTAINERS
-          Wrap(
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 8,
-            children: [
-              Text(
-                'Physical Container Stocks (Countable Assets)',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : const Color(0xFF1E293B),
-                ),
-              ),
-              Text(
-                '• Depletes only when brand new jugs are purchased or loaned to customers',
-                style: TextStyle(fontSize: 12, color: titleTextColor),
-              ),
-            ],
+          Text(
+            'Container Stocks',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : const Color(0xFF1E293B),
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
           // TOP HERO CARDS: Remaining Slim & Round Gallons
           LayoutBuilder(
@@ -8627,8 +8400,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 children: [
                   TextField(
                     controller: _inventorySearchController,
+                    textAlignVertical: TextAlignVertical.center,
                     onChanged: (_) => setState(() {}),
                     decoration: InputDecoration(
+                      isDense: true,
                       hintText: 'Search products, refills, containers, or accessories...',
                       prefixIcon: const Icon(Icons.search_rounded),
                       suffixIcon: _inventorySearchController.text.isNotEmpty
@@ -8642,7 +8417,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           : null,
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 14,
-                        vertical: 10,
+                        vertical: 12,
                       ),
                     ),
                   ),
@@ -8738,7 +8513,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   final double capacity = (prod['capacity'] as num).toDouble();
                   final double price = (prod['price'] as num).toDouble();
                   final String unit = prod['unit'] as String? ?? 'Units';
-                  final String description = prod['description'] as String? ?? '';
                   final Color color =
                       prod['color'] as Color? ?? AppTheme.primaryColor;
                   final String? imagePath = prod['image'] as String?;
@@ -8762,19 +8536,24 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   }
 
                   final String category = prod['category'] as String? ?? 'container';
+                  final bool isUnlimitedWater =
+                      prod['id'] == 'prod_purified' ||
+                      name.toLowerCase() == 'purified water';
                   final bool isRefillItem = prod['is_refill'] == true ||
                       (category == 'water' &&
                           (unit.toLowerCase() == 'gallons' ||
                               name.toLowerCase().contains('refill') ||
+                              name.toLowerCase().contains('purified') ||
                               name.toLowerCase().contains('19l')));
-                  String categoryBadgeText = isRefillItem
-                      ? '💧 5-Gallon Refill'
-                      : (category == 'water'
-                          ? '💧 Bottled Water'
-                          : (category == 'accessory' ? '📦 Accessory' : '🪣 Container'));
-                  if (description.isNotEmpty) {
-                    categoryBadgeText = '$categoryBadgeText • $description';
+                  if (isUnlimitedWater) {
+                    statusLabel = 'Always Available';
+                    statusColor = const Color(0xFF047857);
                   }
+                  final String categoryBadgeText = isRefillItem
+                      ? 'Water Refill'
+                      : (category == 'water'
+                          ? 'Water Product'
+                          : (category == 'accessory' ? 'Accessory' : 'Container'));
 
                   return Container(
                     padding: const EdgeInsets.all(16.0),
@@ -8782,12 +8561,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       color: cardBgColor,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: isLowStock
+                        color: !isUnlimitedWater && isLowStock
                             ? Colors.orange.withValues(alpha: 0.4)
-                            : (isOutOfStock
+                            : (!isUnlimitedWater && isOutOfStock
                                   ? Colors.red.withValues(alpha: 0.4)
                                   : borderColor),
-                        width: (isLowStock || isOutOfStock) ? 1.5 : 1.0,
+                        width: (!isUnlimitedWater && (isLowStock || isOutOfStock)) ? 1.5 : 1.0,
                       ),
                     ),
                     child: Column(
@@ -8842,7 +8621,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                         Text(
                                           categoryBadgeText,
                                           style: TextStyle(
-                                            fontSize: 10,
+                                            fontSize: 10.5,
                                             color: titleTextColor,
                                             fontWeight: FontWeight.w600,
                                           ),
@@ -8877,29 +8656,34 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
                         // Stock Available Text
                         Text(
-                          '${stock.toStringAsFixed(stock % 1 == 0 ? 0 : 1)} / ${capacity.toStringAsFixed(0)} $unit Available',
+                          isUnlimitedWater
+                              ? 'Unlimited Supply • Never Runs Out'
+                              : '${stock.toStringAsFixed(stock % 1 == 0 ? 0 : 1)} / ${capacity.toStringAsFixed(0)} $unit',
                           style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w900,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
                             color: valueTextColor,
                           ),
                         ),
                         const SizedBox(height: 6),
 
                         // Progress Indicator
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: ratio,
-                            minHeight: 6,
-                            backgroundColor: isDark
-                                ? Colors.white10
-                                : Colors.grey.shade200,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              statusColor,
+                        if (!isUnlimitedWater)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: ratio,
+                              minHeight: 6,
+                              backgroundColor: isDark
+                                  ? Colors.white10
+                                  : Colors.grey.shade200,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                statusColor,
+                              ),
                             ),
-                          ),
-                        ),
+                          )
+                        else
+                          const SizedBox(height: 6),
                         const SizedBox(height: 8),
 
                         // Price and actions row
@@ -9873,14 +9657,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ),
                   child: TextField(
                     controller: _paymentsSearchController,
+                    textAlignVertical: TextAlignVertical.center,
                     onChanged: (_) => setState(() {}),
                     style: TextStyle(fontSize: 12, color: titleColor),
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
+                      isDense: true,
                       hintText: 'Search by Txn Ref, Order #, or Customer...',
-                      hintStyle: TextStyle(fontSize: 12, color: const Color(0xFF64748B)),
-                      prefixIcon: const Icon(Icons.search, size: 18),
+                      hintStyle: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                      prefixIcon: Icon(Icons.search, size: 18),
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                      contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                     ),
                   ),
                 ),
@@ -10123,8 +9909,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final orderProvider = Provider.of<OrderProvider>(context);
     final allOrders = orderProvider.orders;
 
-    // 1. Filter orders matching report criteria
+    // 1. Filter orders matching report criteria (excluding Gallon Collection jobs)
     final reportOrders = allOrders.where((o) {
+      if (o.isCollectionJob ||
+          o.waterType.toLowerCase().contains('gallon collection')) {
+        return false;
+      }
       // Only count completed or paid orders as income
       if (o.orderStatus != OrderStatus.completed && o.paymentStatus != 'Paid') {
         return false;
@@ -10161,21 +9951,22 @@ class _AdminDashboardState extends State<AdminDashboard> {
     // 2. Calculations
     double totalRevenue = 0;
     int purifiedJugQty = 0;
-    int alkalineJugQty = 0;
+    int setProductQty = 0;
     for (var o in reportOrders) {
       totalRevenue += o.totalAmount;
-      if (o.waterType.toLowerCase().contains('purified')) {
-        purifiedJugQty += o.quantity;
+      if (o.waterType.toLowerCase().contains('set a') ||
+          o.waterType.toLowerCase().contains('new container')) {
+        setProductQty += o.quantity;
       } else {
-        alkalineJugQty += o.quantity;
+        purifiedJugQty += o.quantity;
       }
     }
     double averageOrderValue = reportOrders.isEmpty
         ? 0
         : totalRevenue / reportOrders.length;
-    String popularType = (purifiedJugQty >= alkalineJugQty)
-        ? '19L Purified'
-        : '19L Alkaline';
+    String popularType = (purifiedJugQty >= setProductQty)
+        ? 'Purified Water'
+        : '19L + Container';
 
     // 3. Group income for Chart Visualizer
     final List<Map<String, dynamic>> chartData = [];
@@ -10347,8 +10138,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
 
     final screenWidth = MediaQuery.of(context).size.width;
-    final int metricCrossCount = screenWidth < 600 ? 1 : 2;
-    final double metricAspectRatio = screenWidth < 600 ? 3.0 : 2.2;
+    final int metricCrossCount = screenWidth < 550 ? 1 : (screenWidth < 900 ? 2 : 4);
+    final double metricAspectRatio = screenWidth < 550 ? 3.8 : (screenWidth < 900 ? 3.0 : 2.6);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
@@ -10797,10 +10588,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
     bool isDark,
   ) {
     return Container(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
       decoration: BoxDecoration(
         color: isDark ? AppTheme.darkSurface : Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
           width: 1.0,
@@ -10815,17 +10606,21 @@ class _AdminDashboardState extends State<AdminDashboard> {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
-                    color: const Color(0xFF475569),
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF64748B),
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 3),
                 Text(
                   value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w900,
                     color: isDark ? Colors.white : const Color(0xFF0F172A),
                   ),
@@ -10834,12 +10629,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
           ),
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: color, size: 18),
+            child: Icon(icon, color: color, size: 15),
           ),
         ],
       ),

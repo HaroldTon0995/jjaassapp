@@ -158,148 +158,16 @@ class _WaterDropletPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-/// Renders a 5-gallon blue plastic water jug on top of waves and leaves.
+/// Sticker illustration removed for a clean, professional layout.
 class WaterJugIllustration extends StatelessWidget {
   final double width;
   final double height;
-  const WaterJugIllustration({super.key, this.width = 120, this.height = 140});
+  const WaterJugIllustration({super.key, this.width = 0, this.height = 0});
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: width,
-      height: height,
-      child: CustomPaint(
-        painter: _WaterJugPainter(),
-      ),
-    );
+    return const SizedBox.shrink();
   }
-}
-
-class _WaterJugPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-
-    // Draw water ripples at the bottom (nested ovals/circles)
-    final ripplePaint = Paint()
-      ..color = const Color(0xFF0284C7).withValues(alpha: 0.2)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-
-    canvas.drawOval(Rect.fromLTRB(w * 0.05, h * 0.76, w * 0.95, h * 0.94), ripplePaint);
-    canvas.drawOval(Rect.fromLTRB(w * 0.15, h * 0.81, w * 0.85, h * 0.91), ripplePaint);
-
-    // Splash ripples filled
-    final splashPaint = Paint()
-      ..color = const Color(0xFF0284C7).withValues(alpha: 0.08)
-      ..style = PaintingStyle.fill;
-    canvas.drawOval(Rect.fromLTRB(w * 0.25, h * 0.83, w * 0.75, h * 0.89), splashPaint);
-
-    // Draw leaves on the left/right
-    final leafPaint = Paint()
-      ..color = const Color(0xFF10B981) // Emerald Green
-      ..style = PaintingStyle.fill;
-
-    // Left leaf
-    final leftLeaf = Path();
-    leftLeaf.moveTo(w * 0.18, h * 0.82);
-    leftLeaf.quadraticBezierTo(w * 0.05, h * 0.72, w * 0.1, h * 0.64);
-    leftLeaf.quadraticBezierTo(w * 0.22, h * 0.72, w * 0.18, h * 0.82);
-    canvas.drawPath(leftLeaf, leafPaint);
-
-    // Right leaf
-    final rightLeaf = Path();
-    rightLeaf.moveTo(w * 0.82, h * 0.82);
-    rightLeaf.quadraticBezierTo(w * 0.95, h * 0.72, w * 0.9, h * 0.64);
-    rightLeaf.quadraticBezierTo(w * 0.78, h * 0.72, w * 0.82, h * 0.82);
-    canvas.drawPath(rightLeaf, leafPaint);
-
-    // Draw the Water Jug
-    final jugPaint = Paint()
-      ..shader = const LinearGradient(
-        colors: [Color(0xFF38BDF8), Color(0xFF0284C7)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ).createShader(Rect.fromLTRB(w * 0.28, h * 0.25, w * 0.72, h * 0.8))
-      ..style = PaintingStyle.fill;
-
-    final jugPath = Path();
-    // Cap/Neck at the top
-    jugPath.moveTo(w * 0.44, h * 0.24);
-    jugPath.lineTo(w * 0.56, h * 0.24);
-    jugPath.lineTo(w * 0.56, h * 0.29);
-    jugPath.lineTo(w * 0.44, h * 0.29);
-    jugPath.close();
-
-    // Neck connection
-    jugPath.moveTo(w * 0.46, h * 0.29);
-    jugPath.lineTo(w * 0.54, h * 0.29);
-    jugPath.lineTo(w * 0.56, h * 0.35);
-    jugPath.lineTo(w * 0.44, h * 0.35);
-    jugPath.close();
-
-    // Main jug body
-    jugPath.moveTo(w * 0.44, h * 0.35);
-    // Shoulder left
-    jugPath.quadraticBezierTo(w * 0.26, h * 0.37, w * 0.29, h * 0.47);
-    // Body left side
-    jugPath.lineTo(w * 0.29, h * 0.75);
-    // Bottom left corner
-    jugPath.quadraticBezierTo(w * 0.29, h * 0.81, w * 0.38, h * 0.81);
-    // Bottom side
-    jugPath.lineTo(w * 0.62, h * 0.81);
-    // Bottom right corner
-    jugPath.quadraticBezierTo(w * 0.71, h * 0.81, w * 0.71, h * 0.75);
-    // Body right side
-    jugPath.lineTo(w * 0.71, h * 0.47);
-    // Shoulder right
-    jugPath.quadraticBezierTo(w * 0.74, h * 0.37, w * 0.56, h * 0.35);
-    jugPath.close();
-    canvas.drawPath(jugPath, jugPaint);
-
-    // Cap on top
-    final capPaint = Paint()
-      ..color = const Color(0xFF0284C7)
-      ..style = PaintingStyle.fill;
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(Rect.fromLTRB(w * 0.41, h * 0.18, w * 0.59, h * 0.24), const Radius.circular(4)),
-      capPaint,
-    );
-
-    // Ribs on the jug body (horizontal styling lines)
-    final ribPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.3)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3;
-    canvas.drawLine(Offset(w * 0.31, h * 0.50), Offset(w * 0.69, h * 0.50), ribPaint);
-    canvas.drawLine(Offset(w * 0.30, h * 0.58), Offset(w * 0.70, h * 0.58), ribPaint);
-    canvas.drawLine(Offset(w * 0.30, h * 0.66), Offset(w * 0.70, h * 0.66), ribPaint);
-    canvas.drawLine(Offset(w * 0.31, h * 0.74), Offset(w * 0.69, h * 0.74), ribPaint);
-
-    // Highlight sheen
-    final reflectionPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.2)
-      ..style = PaintingStyle.fill;
-    final reflectionPath = Path();
-    reflectionPath.moveTo(w * 0.34, h * 0.46);
-    reflectionPath.lineTo(w * 0.37, h * 0.46);
-    reflectionPath.lineTo(w * 0.37, h * 0.76);
-    reflectionPath.lineTo(w * 0.34, h * 0.76);
-    reflectionPath.close();
-    canvas.drawPath(reflectionPath, reflectionPaint);
-
-    final shoulderHighlight = Path();
-    shoulderHighlight.moveTo(w * 0.38, h * 0.38);
-    shoulderHighlight.quadraticBezierTo(w * 0.32, h * 0.40, w * 0.34, h * 0.44);
-    shoulderHighlight.quadraticBezierTo(w * 0.35, h * 0.42, w * 0.40, h * 0.39);
-    shoulderHighlight.close();
-    canvas.drawPath(shoulderHighlight, reflectionPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 /// A wrapper widget that paints double overlapping waves at the bottom.
@@ -794,14 +662,14 @@ class LiveFleetGpsMapWidget extends StatefulWidget {
 class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget> {
   GoogleMapController? _mapController;
 
-  // JJAASS Water Market HQ in Ligao City, Albay, Philippines
-  static const LatLng _stationHQ = LatLng(13.2415, 123.5358);
+  // JJAASS Water Market HQ in Albay 1st District (Tabaco City / Bacacay)
+  static const LatLng _stationHQ = LatLng(13.3583, 123.7336);
 
   LatLng _getOrderCoord(OrderModel order, int index) {
     if (order.latitude != null && order.longitude != null) {
       return LatLng(order.latitude!, order.longitude!);
     }
-    // Deterministic offset in Ligao City for orders without raw GPS
+    // Deterministic offset in Albay 1st District for orders without raw GPS
     final hash = order.id.hashCode;
     final latOffset = ((hash % 100) / 10000.0) - 0.005 + (index * 0.0018);
     final lngOffset = (((hash >> 4) % 100) / 10000.0) - 0.005 - (index * 0.0016);
@@ -869,8 +737,8 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget> {
         position: _stationHQ,
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
         infoWindow: const InfoWindow(
-          title: '💧 JJAASS Water Market HQ',
-          snippet: 'Station Central Hub • Ligao City, Albay',
+          title: 'JJAASS Water Market HQ',
+          snippet: 'Station Central Hub • Albay 1st District',
         ),
       ),
     );
@@ -1010,7 +878,7 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'Google Maps Live Fleet • Ligao City Hub',
+                    'Live Fleet Map • Albay 1st District Hub',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,

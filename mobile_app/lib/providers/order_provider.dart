@@ -48,15 +48,15 @@ class OrderProvider extends ChangeNotifier {
   final List<Map<String, dynamic>> _inventoryItems = [
     {
       'id': 'prod_purified',
-      'name': 'Purified Water Reservoir',
+      'name': 'Purified Water',
       'category': 'water',
-      'unit': 'Liters',
+      'unit': 'Gallons',
       'price': 30.0,
-      'stock': 10000.0,
-      'capacity': 10000.0,
+      'stock': 999999.0,
+      'capacity': 999999.0,
       'color': Colors.blue,
       'icon': Icons.water_drop_rounded,
-      'description': '10,000L commercial bulk drinking water filtration tank (19L / refill)',
+      'description': 'Purified drinking water refill (Always available)',
       'is_refill': true,
       'is_active': true,
     },
@@ -968,22 +968,14 @@ class OrderProvider extends ChangeNotifier {
     int? borrowedRoundQty,
   }) {
     final lowerName = name.toLowerCase();
-    // 1. Deduct water volume (19 Liters per refilled 5-gallon jug)
-    final waterIdx = _inventoryItems.indexWhere(
-      (p) =>
-          p['category'] == 'water' &&
-          (p['id'] == 'prod_purified' ||
-              p['name'] == name ||
-              lowerName.contains('purified') ||
-              lowerName.contains('water') ||
-              lowerName.contains('refill') ||
-              lowerName.contains('set a')),
-    );
-    if (waterIdx != -1) {
-      final currentStock = (_inventoryItems[waterIdx]['stock'] as num).toDouble();
-      final litersDeducted = qty * 19.0;
-      _inventoryItems[waterIdx]['stock'] = max(0.0, currentStock - litersDeducted);
-      _syncInventoryToSupabase(_inventoryItems[waterIdx], action: 'update');
+    // 1. Deduct stock only for finite water set products (Purified Water never runs out)
+    if (lowerName.contains('set a')) {
+      final setIdx = _inventoryItems.indexWhere((p) => p['id'] == 'prod_set_a');
+      if (setIdx != -1) {
+        final currentStock = (_inventoryItems[setIdx]['stock'] as num).toDouble();
+        _inventoryItems[setIdx]['stock'] = max(0.0, currentStock - qty);
+        _syncInventoryToSupabase(_inventoryItems[setIdx], action: 'update');
+      }
     }
 
     // 2. Physical Container Inventory Deduction:
@@ -1182,10 +1174,11 @@ class OrderProvider extends ChangeNotifier {
     for (final item in _inventoryItems) {
       final id = item['id'];
       if (id == 'prod_purified') {
-        item['stock'] = 10000.0;
-        item['capacity'] = 10000.0;
-        item['unit'] = 'Liters';
-        item['name'] = 'Purified Water Reservoir';
+        item['stock'] = 999999.0;
+        item['capacity'] = 999999.0;
+        item['unit'] = 'Gallons';
+        item['name'] = 'Purified Water';
+        item['description'] = 'Purified drinking water refill (Always available)';
       } else if (id == 'prod_set_a') {
         item['stock'] = 30.0;
         item['capacity'] = 50.0;
@@ -1327,13 +1320,16 @@ class OrderProvider extends ChangeNotifier {
       fetchedIds.add(id);
 
       final idx = _inventoryItems.indexWhere((i) => i['id'] == id);
-      final newStock = (row['stock'] as num?)?.toDouble() ?? 0.0;
-      final newCap = (row['capacity'] as num?)?.toDouble() ?? 100.0;
+      final isPurified = id == 'prod_purified';
+      final newStock = isPurified ? 999999.0 : ((row['stock'] as num?)?.toDouble() ?? 0.0);
+      final newCap = isPurified ? 999999.0 : ((row['capacity'] as num?)?.toDouble() ?? 100.0);
       final newPrice = (row['price'] as num?)?.toDouble() ?? 0.0;
-      final newName = row['name']?.toString() ?? '';
-      final newUnit = row['unit']?.toString() ?? 'Units';
+      final newName = isPurified ? 'Purified Water' : (row['name']?.toString() ?? '');
+      final newUnit = isPurified ? 'Gallons' : (row['unit']?.toString() ?? 'Units');
       final newCat = row['category']?.toString() ?? 'water';
-      final newDesc = row['description']?.toString() ?? '';
+      final newDesc = isPurified
+          ? 'Purified drinking water refill (Always available)'
+          : (row['description']?.toString() ?? '');
       final newIsActive = row['is_active'] is bool ? row['is_active'] as bool : true;
       final newIsRefill = row['is_refill'] is bool
           ? row['is_refill'] as bool
@@ -1531,10 +1527,16 @@ class OrderProvider extends ChangeNotifier {
       }
     }
 
-    // Ensure container capacities are at least 100
+    // Ensure container capacities are at least 100 and Purified Water never runs out
     for (final item in _inventoryItems) {
       final id = item['id']?.toString() ?? '';
-      if (id == 'item_slim_gallon' || id == 'item_round_gallon') {
+      if (id == 'prod_purified') {
+        item['name'] = 'Purified Water';
+        item['unit'] = 'Gallons';
+        item['stock'] = 999999.0;
+        item['capacity'] = 999999.0;
+        item['description'] = 'Purified drinking water refill (Always available)';
+      } else if (id == 'item_slim_gallon' || id == 'item_round_gallon') {
         final cap = (item['capacity'] as num?)?.toDouble() ?? 0.0;
         if (cap <= 0.0) item['capacity'] = 100.0;
       }
@@ -1832,8 +1834,8 @@ class OrderProvider extends ChangeNotifier {
     if (index == -1) return false;
 
     final order = _orders[index];
-    if (order.orderStatus == OrderStatus.completed ||
-        order.orderStatus == OrderStatus.cancelled) {
+    // Customer can only cancel while order is Pending; once Confirmed by Admin, only Admin can cancel.
+    if (order.orderStatus != OrderStatus.pending) {
       return false;
     }
 

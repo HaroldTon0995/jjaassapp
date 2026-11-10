@@ -99,7 +99,41 @@ class ApiService {
       try {
         final client = Supabase.instance.client;
         final res = await client.from('profiles').select();
-        return (res as List).map((u) => UserModel.fromJson(u as Map<String, dynamic>)).toList();
+        final Map<String, String> orderCustomerNames = {};
+        try {
+          final ordersRes = await client
+              .from('orders')
+              .select('customer_id, customer_name');
+          for (final row in (ordersRes as List)) {
+            final cid = (row['customer_id'] ?? '').toString().trim();
+            final cname = (row['customer_name'] ?? '').toString().trim();
+            if (cid.isNotEmpty &&
+                cname.isNotEmpty &&
+                cname.toLowerCase() != 'new user') {
+              orderCustomerNames[cid] = cname;
+            }
+          }
+        } catch (_) {}
+
+        final List<UserModel> users = [];
+        for (final raw in (res as List)) {
+          final map = Map<String, dynamic>.from(raw as Map<String, dynamic>);
+          final id = (map['id'] ?? '').toString();
+          final rawName = (map['name'] ?? '').toString().trim();
+          if ((rawName.isEmpty || rawName.toLowerCase() == 'new user') &&
+              orderCustomerNames.containsKey(id)) {
+            final healedName = orderCustomerNames[id]!;
+            map['name'] = healedName;
+            try {
+              await client
+                  .from('profiles')
+                  .update({'name': healedName})
+                  .eq('id', id);
+            } catch (_) {}
+          }
+          users.add(UserModel.fromJson(map));
+        }
+        return users;
       } catch (e) {
         // Fallback silently if query fails
       }

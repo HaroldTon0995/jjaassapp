@@ -18,8 +18,11 @@ class ReportService {
     // Write CSV headers
     buffer.writeln('Order ID,Customer Name,Customer Phone,Delivery Address,Water Type,Quantity,Price per Unit,Total Amount,Payment Method,Payment Status,Order Status,Completed At,Created At');
     
-    // Write CSV data rows
-    for (final order in orders) {
+    // Write CSV data rows (excluding Gallon Collection jobs)
+    final filteredOrders = orders
+        .where((o) => !o.isCollectionJob && !o.waterType.toLowerCase().contains('gallon collection'))
+        .toList();
+    for (final order in filteredOrders) {
       final sanitizedCustomerName = order.customerName.replaceAll('"', '""');
       final sanitizedAddress = order.deliveryAddress.replaceAll('"', '""');
       final sanitizedPhone = order.customerPhone.replaceAll('"', '""');
@@ -60,20 +63,25 @@ class ReportService {
   }) async {
     final pdf = pw.Document();
 
+    final filteredOrders = orders
+        .where((o) => !o.isCollectionJob && !o.waterType.toLowerCase().contains('gallon collection'))
+        .toList();
+
     // Calculations
     double totalRevenue = 0;
     int purifiedJugQty = 0;
-    int alkalineJugQty = 0;
-    for (var o in orders) {
+    int setProductQty = 0;
+    for (var o in filteredOrders) {
       totalRevenue += o.totalAmount;
-      if (o.waterType.toLowerCase().contains('purified')) {
-        purifiedJugQty += o.quantity;
+      if (o.waterType.toLowerCase().contains('set a') ||
+          o.waterType.toLowerCase().contains('new container')) {
+        setProductQty += o.quantity;
       } else {
-        alkalineJugQty += o.quantity;
+        purifiedJugQty += o.quantity;
       }
     }
-    double averageOrderValue = orders.isEmpty ? 0 : totalRevenue / orders.length;
-    String popularType = (purifiedJugQty >= alkalineJugQty) ? '19L Purified' : '19L Alkaline';
+    double averageOrderValue = filteredOrders.isEmpty ? 0 : totalRevenue / filteredOrders.length;
+    String popularType = (purifiedJugQty >= setProductQty) ? 'Purified Water' : '19L + Container';
 
     pdf.addPage(
       pw.MultiPage(

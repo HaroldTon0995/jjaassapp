@@ -157,25 +157,19 @@ class _WaterDropletPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-/// Renders a 5-gallon blue plastic water jug on top of waves and leaves.
+/// Sticker illustration removed for a clean, professional layout.
 class WaterJugIllustration extends StatelessWidget {
   final double width;
   final double height;
-  const WaterJugIllustration({super.key, this.width = 120, this.height = 140});
+  const WaterJugIllustration({super.key, this.width = 0, this.height = 0});
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: width,
-      height: height,
-      child: CustomPaint(
-        painter: _WaterJugPainter(),
-      ),
-    );
+    return const SizedBox.shrink();
   }
 }
 
-class _WaterJugPainter extends CustomPainter {
+class WaterJugPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width;
@@ -911,7 +905,7 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget>
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'GPS Live Feed • Ligao City Grid',
+                    'GPS Live Feed • Albay 1st District',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -1328,7 +1322,7 @@ class _FleetLiveMapCanvasPainter extends CustomPainter {
         final driverLabel = o.driverName != null ? o.driverName!.split(' ').first : 'Rider';
         final driverPainter = TextPainter(
           text: TextSpan(
-            text: '🏍️ $driverLabel',
+            text: 'Rider: $driverLabel',
             style: const TextStyle(
               color: Colors.white,
               fontSize: 8,
@@ -1365,7 +1359,7 @@ class _FleetLiveMapCanvasPainter extends CustomPainter {
     // Hub Text Label
     final hubTextPainter = TextPainter(
       text: const TextSpan(
-        text: '💧 JJAASS Central Hub',
+        text: 'JJAASS Central Hub (Albay 1st District)',
         style: TextStyle(
           color: Color(0xFF0284C7),
           fontSize: 10,

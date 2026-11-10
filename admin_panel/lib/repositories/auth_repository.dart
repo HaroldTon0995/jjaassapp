@@ -171,9 +171,15 @@ class SupabaseAuthRepository implements AuthRepository {
     required String password,
     required UserRole role,
   }) async {
+    final cleanName = name.trim();
     final response = await _client.auth.signUp(
-      email: email,
+      email: email.trim(),
       password: password,
+      data: {
+        'name': cleanName,
+        'full_name': cleanName,
+        'role': role.name,
+      },
     );
 
     final user = response.user;
@@ -183,16 +189,21 @@ class SupabaseAuthRepository implements AuthRepository {
 
     final newUser = UserModel(
       id: user.id,
-      name: name,
-      email: email,
+      name: cleanName,
+      email: email.trim(),
       role: role,
     );
 
     try {
-      // Insert user profile into profiles table
-      await _client.from('profiles').insert(newUser.toJson());
+      // Upsert user profile into profiles table so DB triggers using 'New User' are overwritten
+      await _client.from('profiles').upsert(newUser.toJson());
+      await _client.from('profiles').update({
+        'name': cleanName,
+        'email': email.trim(),
+        'role': role.name,
+      }).eq('id', user.id);
     } catch (e) {
-      debugPrint('Profiles table insert skipped: $e');
+      debugPrint('Profiles table upsert skipped: $e');
     }
 
     return newUser;

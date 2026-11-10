@@ -36,7 +36,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   int _activeSidebarMenu = 0;
 
   // Order Water Form States
-  String _selectedWaterType = '19L Purified Water';
+  String _selectedWaterType = 'Purified Water';
   int _slimQuantity = 1;
   int _roundQuantity = 0;
 
@@ -44,6 +44,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   bool _isBorrowingContainers = false;
   int _borrowedSlimQty = 0;
   int _borrowedRoundQty = 0;
+  bool _isSelectProductMode = false;
 
   int get _totalOrderQuantity => _slimQuantity + _roundQuantity;
 
@@ -76,10 +77,12 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     }
     return '0 Jugs';
   }
-  String? _selectedProvince;
+  String? _selectedProvince = 'Albay';
   String? _selectedCityCode;
   String? _selectedBarangayCode;
-  List<PsgcPlace> _cities = [];
+  List<PsgcPlace> _cities = List<PsgcPlace>.from(
+    PsgcService.albayFirstDistrictMunicipalities,
+  );
   List<PsgcPlace> _barangays = [];
   bool _loadingCities = false;
   bool _loadingBarangays = false;
@@ -94,7 +97,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     {
       'sender': 'AquaBot',
       'message':
-          "Hello! I'm **AquaBot 💧**, your JJAASS Water Market virtual assistant.\n\nTap any inquiry topic in the **Quick Inquiry Guide** above or type your question below for instant detailed assistance!",
+          "Hello! I'm **AquaBot**, your JJAASS Water Market virtual assistant.\n\nTap any inquiry topic in the **Quick Inquiry Guide** above or type your question below for instant detailed assistance!",
     },
   ];
   final TextEditingController _chatInputController = TextEditingController();
@@ -330,28 +333,29 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
           : _deliveryNoteController.text.trim();
 
       if (houseOrLandmark.isNotEmpty) {
-        return '📍 Pinned GPS Delivery ($lat, $lng) — $houseOrLandmark';
+        return 'Pinned GPS Delivery ($lat, $lng) — $houseOrLandmark';
       }
-      return '📍 Pinned GPS Delivery ($lat, $lng)';
+      return 'Pinned GPS Delivery ($lat, $lng)';
     }
 
     return 'Pending Delivery Pin';
   }
 
   void _resetOrderForm(OrderProvider orderProvider) {
-    _selectedWaterType = orderProvider.waterProducts.isNotEmpty
-        ? orderProvider.waterProducts.first['name'] as String
-        : '19L Purified Water';
+    _isSelectProductMode = false;
+    _selectedWaterType = 'Purified Water';
     _slimQuantity = 1;
     _roundQuantity = 0;
     _isBorrowingContainers = false;
     _borrowedSlimQty = 0;
     _borrowedRoundQty = 0;
     _selectedAddonQuantities.clear();
-    _selectedProvince = null;
+    _selectedProvince = 'Albay';
     _selectedCityCode = null;
     _selectedBarangayCode = null;
-    _cities = [];
+    _cities = List<PsgcPlace>.from(
+      PsgcService.albayFirstDistrictMunicipalities,
+    );
     _barangays = [];
     _loadingCities = false;
     _loadingBarangays = false;
@@ -423,33 +427,10 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
 
       final match = orderProvider.waterProducts.firstWhere(
         (p) => p['name'] == _selectedWaterType,
-        orElse: () => <String, dynamic>{},
+        orElse: () => orderProvider.waterProducts.isNotEmpty
+            ? orderProvider.waterProducts.first
+            : <String, dynamic>{'name': 'Purified Water', 'price': 30.0},
       );
-      if (match.isEmpty) {
-        Helpers.showSnackBar(
-          context,
-          'Please select a valid water product.',
-          isError: true,
-        );
-        return;
-      }
-      final availableStock = (match['stock'] as num?)?.toDouble() ?? 0.0;
-      if (availableStock <= 0) {
-        Helpers.showSnackBar(
-          context,
-          'The selected product is currently out of stock. Please select another water product.',
-          isError: true,
-        );
-        return;
-      }
-      if (_totalOrderQuantity > availableStock) {
-        Helpers.showSnackBar(
-          context,
-          'Only ${availableStock.toInt()} units of ${match['name']} available in stock.',
-          isError: true,
-        );
-        return;
-      }
 
       if (_slimQuantity > 150 || _roundQuantity > 150) {
         Helpers.showSnackBar(
@@ -460,8 +441,8 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
         return;
       }
 
-      pricePerJug = (match['price'] as num).toDouble();
-      waterTypeName = match['name'] as String;
+      pricePerJug = (match['price'] as num?)?.toDouble() ?? 30.0;
+      waterTypeName = (match['name'] as String?) ?? 'Purified Water';
     }
 
     final submittedPaymentMethod = _selectedPaymentMethod;
@@ -899,15 +880,6 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
               titleSpacing: 8,
               title: Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(3),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const WaterDropletLogo(size: 28),
-                  ),
-                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1027,18 +999,20 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
               border: Border.all(color: const Color(0xFFCBD5E1)),
             ),
             child: TextField(
+              textAlignVertical: TextAlignVertical.center,
               style: const TextStyle(
                 color: AppTheme.navyColor,
                 fontSize: 13.5,
                 fontWeight: FontWeight.w600,
               ),
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
+                isDense: true,
                 hintText: 'Search orders, services...',
-                hintStyle: const TextStyle(
+                hintStyle: TextStyle(
                   color: Color(0xFF64748B),
                   fontSize: 13,
                 ),
-                prefixIcon: const Icon(
+                prefixIcon: Icon(
                   Icons.search_rounded,
                   color: AppTheme.primaryColor,
                   size: 19,
@@ -1046,7 +1020,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
-                contentPadding: const EdgeInsets.only(bottom: 8),
+                contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
               ),
             ),
           ),
@@ -1218,44 +1192,6 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
               },
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14.0),
-              decoration: BoxDecoration(
-                color: const Color(0xFFEFF6FF),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: AppTheme.secondaryColor.withValues(alpha: 0.35),
-                  width: 1,
-                ),
-              ),
-              child: const Column(
-                children: [
-                  WaterJugIllustration(width: 68, height: 76),
-                  SizedBox(height: 8),
-                  Text(
-                    'Fresh & Pure Water',
-                    style: TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w900,
-                      color: AppTheme.navyColor,
-                    ),
-                  ),
-                  SizedBox(height: 3),
-                  Text(
-                    'Stay hydrated, stay healthy.',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.mutedText,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
           _SidebarItemTile(
             icon: Icons.logout_rounded,
             title: 'Log Out',
@@ -1403,18 +1339,31 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
               ),
             ),
           ],
-          Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
-              child: _buildStatCard(
-                'Active Orders',
-                '$activeOrdersCount',
-                'Current deliveries',
-                Icons.local_drink_rounded,
-                isDark ? const Color(0xFF38BDF8) : AppTheme.primaryColor,
-                isDark,
+          Wrap(
+            spacing: 16,
+            runSpacing: 16,
+            children: [
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 380),
+                child: _buildStatCard(
+                  'Active Orders',
+                  '$activeOrdersCount',
+                  'Current deliveries',
+                  Icons.local_drink_rounded,
+                  isDark ? const Color(0xFF38BDF8) : AppTheme.primaryColor,
+                  isDark,
+                ),
               ),
-            ),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 460),
+                child: _buildBorrowedGallonsStatusCard(
+                  orderProvider,
+                  customerId,
+                  user?.name ?? _savedProfileName,
+                  isDark,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 20),
 
@@ -1469,6 +1418,132 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
       icon: icon,
       color: color,
       isDark: isDark,
+    );
+  }
+
+  Widget _buildBorrowedGallonsStatusCard(
+    OrderProvider orderProvider,
+    String customerId,
+    String customerName,
+    bool isDark,
+  ) {
+    final myBorrows = orderProvider.customerBorrows.where((b) {
+      final bId = (b['customerId'] ?? '').toString().trim();
+      final bName = (b['customerName'] ?? '').toString().trim().toLowerCase();
+      return (customerId.isNotEmpty && bId == customerId) ||
+          (customerName.isNotEmpty && bName == customerName.trim().toLowerCase());
+    }).toList();
+
+    int remainingSlim = 0;
+    int remainingRound = 0;
+    int returnedTotal = 0;
+
+    for (final b in myBorrows) {
+      final qty = (b['quantity'] as num?)?.toInt() ?? 0;
+      final isReturned = b['isReturned'] == true;
+      final gType = (b['gallonType'] ?? '').toString();
+      if (isReturned) {
+        returnedTotal += qty;
+      } else if (gType.toLowerCase().contains('round')) {
+        remainingRound += qty;
+      } else {
+        remainingSlim += qty;
+      }
+    }
+
+    final int remainingTotal = remainingSlim + remainingRound;
+    final bool hasHistory = myBorrows.isNotEmpty;
+    final Color statusColor = remainingTotal > 0
+        ? const Color(0xFF0284C7)
+        : const Color(0xFF10B981);
+
+    String statusSubtitle;
+    if (remainingTotal > 0) {
+      final parts = <String>[];
+      if (remainingSlim > 0) parts.add('$remainingSlim Slim');
+      if (remainingRound > 0) parts.add('$remainingRound Round');
+      statusSubtitle = '${parts.join(' • ')} remaining on loan (Admin/Driver records return)';
+    } else if (hasHistory && returnedTotal > 0) {
+      statusSubtitle = 'All $returnedTotal borrowed gallon(s) returned';
+    } else {
+      statusSubtitle = 'No borrowed gallons currently on loan';
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(18.0),
+      decoration: CustomerDecorations.card(isDark: isDark),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              remainingTotal > 0
+                  ? Icons.inventory_2_rounded
+                  : Icons.verified_rounded,
+              color: statusColor,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Borrowed Gallons',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        remainingTotal > 0 ? '$remainingTotal Remaining' : 'All Returned',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.bold,
+                          color: statusColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  remainingTotal > 0 ? '$remainingTotal Gallon(s) on You' : '0 Remaining',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    color: AppTheme.navyColor,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  statusSubtitle,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF475569),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1531,8 +1606,8 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                   itemBuilder: (context, index) {
                     final tx = myOrders[index];
                     final isCancelled = tx.orderStatus == OrderStatus.cancelled;
-                    final canCancel =
-                        tx.orderStatus != OrderStatus.completed && !isCancelled;
+                    // Customer can only cancel while Pending; once Confirmed by Admin, only Admin can cancel.
+                    final canCancel = tx.orderStatus == OrderStatus.pending;
                     final isCompleted =
                         tx.orderStatus == OrderStatus.completed ||
                         tx.paymentStatus == 'Paid';
@@ -1966,10 +2041,144 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Product / Order Type Selection (Refill vs Set A / Admin-added items)
+                // Order Type Mode Switcher: Purified Water Only vs Select Product
                 const Text(
-                  'Select Product / Order Type',
+                  'Order Type',
                   style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.navyColor,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () {
+                          setState(() {
+                            _isSelectProductMode = false;
+                            _selectedWaterType = 'Purified Water';
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+                          decoration: BoxDecoration(
+                            color: !_isSelectProductMode
+                                ? AppTheme.navyColor
+                                : const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: !_isSelectProductMode
+                                  ? AppTheme.navyColor
+                                  : const Color(0xFFCBD5E1),
+                              width: !_isSelectProductMode ? 1.8 : 1.2,
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              Text(
+                                'Purified Water Only',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: !_isSelectProductMode
+                                      ? Colors.white
+                                      : AppTheme.navyColor,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Water Refill (Own / Borrow Jugs)',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: !_isSelectProductMode
+                                      ? Colors.white70
+                                      : const Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () {
+                          setState(() {
+                            _isSelectProductMode = true;
+                            final setProd = orderProvider.waterProducts.firstWhere(
+                              (p) => (p['id']?.toString() == 'prod_set_a') ||
+                                  p['name'].toString().toLowerCase().contains('set a') ||
+                                  p['name'].toString().toLowerCase().contains('new container'),
+                              orElse: () => orderProvider.waterProducts.isNotEmpty
+                                  ? orderProvider.waterProducts.last
+                                  : <String, dynamic>{'name': '19L Water + New Container (Set A)'},
+                            );
+                            _selectedWaterType = setProd['name'] as String;
+                            _isBorrowingContainers = false;
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+                          decoration: BoxDecoration(
+                            color: _isSelectProductMode
+                                ? AppTheme.navyColor
+                                : const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: _isSelectProductMode
+                                  ? AppTheme.navyColor
+                                  : const Color(0xFFCBD5E1),
+                              width: _isSelectProductMode ? 1.8 : 1.2,
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              Text(
+                                'Select Product',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: _isSelectProductMode
+                                      ? Colors.white
+                                      : AppTheme.navyColor,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '19L + Water Set & Station Items',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: _isSelectProductMode
+                                      ? Colors.white70
+                                      : const Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Product / Order Option Details (No decorative logo, full multi-line description visible)
+                Text(
+                  _isSelectProductMode ? 'Selected Set Product' : 'Purified Water Refill',
+                  style: const TextStyle(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.navyColor,
@@ -2007,251 +2216,144 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                 else
                   Builder(
                     builder: (context) {
-                      final waterList = orderProvider.refillProducts.isNotEmpty
+                      final allWaterList = orderProvider.refillProducts.isNotEmpty
                           ? orderProvider.refillProducts
                           : orderProvider.waterProducts;
+                      final filteredList = allWaterList.where((prod) {
+                        final id = prod['id']?.toString() ?? '';
+                        final nameLower = (prod['name']?.toString() ?? '').toLowerCase();
+                        final isSetProduct = id == 'prod_set_a' ||
+                            nameLower.contains('set a') ||
+                            nameLower.contains('new container');
+                        return _isSelectProductMode ? isSetProduct : !isSetProduct;
+                      }).toList();
+                      final waterList = filteredList.isNotEmpty ? filteredList : allWaterList;
+
                       if (!waterList.any((p) => p['name'] == _selectedWaterType)) {
-                        final previousName = _selectedWaterType;
-                        final firstValid = waterList.firstWhere(
-                          (p) => ((p['stock'] as num?)?.toDouble() ?? 0.0) > 0,
-                          orElse: () => waterList.first,
-                        );
+                        final firstValid = waterList.first;
                         WidgetsBinding.instance.addPostFrameCallback((_) {
                           if (mounted && _selectedWaterType != firstValid['name']) {
                             setState(() {
                               _selectedWaterType = firstValid['name'] as String;
                             });
-                            if (previousName.isNotEmpty) {
-                              Helpers.showSnackBar(
-                                context,
-                                'The selected water product was updated as "$previousName" is no longer available.',
-                              );
-                            }
                           }
                         });
                       }
 
                       return Column(
                         children: waterList.map((prod) {
-                      final name = prod['name'] as String;
-                      final price = (prod['price'] as num).toDouble();
-                      final desc = (prod['description'] as String?) ?? '';
-                      final stock = (prod['stock'] as num?)?.toDouble() ?? 0.0;
-                      final isWater = (prod['category'] as String?) == 'water' || (prod['unit'] as String?)?.toLowerCase() == 'liters';
-                      final isOutOfStock = isWater ? stock < 19.0 : stock <= 0;
-                      final isSelected = _selectedWaterType == name && !isOutOfStock;
-                      final isSetA = name.toLowerCase().contains('set a');
-                      final Color prodColor =
-                          prod['color'] as Color? ?? (isSetA ? const Color(0xFF0284C7) : AppTheme.primaryColor);
-                      final IconData prodIcon =
-                          prod['icon'] as IconData? ?? (isSetA ? Icons.inventory_2_rounded : Icons.water_drop_rounded);
+                          final name = prod['name'] as String;
+                          final price = (prod['price'] as num).toDouble();
+                          final desc = (prod['description'] as String?) ?? '';
+                          final isSelected = _selectedWaterType == name;
 
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: InkWell(
-                          onTap: isOutOfStock
-                              ? null
-                              : () {
-                                  setState(() {
-                                    _selectedWaterType = name;
-                                  });
-                                },
-                          borderRadius: BorderRadius.circular(14),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 180),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 10,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isOutOfStock
-                                  ? const Color(0xFFF1F5F9).withValues(alpha: 0.7)
-                                  : (isSelected
-                                      ? AppTheme.primaryColor.withValues(alpha: 0.08)
-                                      : const Color(0xFFF8FAFC)),
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _selectedWaterType = name;
+                                });
+                              },
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: isOutOfStock
-                                    ? Colors.red.withValues(alpha: 0.25)
-                                    : (isSelected
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 12,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? AppTheme.primaryColor.withValues(alpha: 0.08)
+                                      : const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: isSelected
                                         ? AppTheme.navyColor
-                                        : const Color(0xFFCBD5E1)),
-                                width: isSelected ? 2.0 : 1.2,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(7),
-                                  decoration: BoxDecoration(
-                                    color: isOutOfStock
-                                        ? Colors.grey.withValues(alpha: 0.2)
-                                        : (isSelected
-                                            ? AppTheme.navyColor
-                                            : prodColor.withValues(alpha: 0.12)),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Icon(
-                                    prodIcon,
-                                    color: isOutOfStock
-                                        ? Colors.grey
-                                        : (isSelected ? Colors.white : prodColor),
-                                    size: 19,
+                                        : const Color(0xFFCBD5E1),
+                                    width: isSelected ? 2.0 : 1.2,
                                   ),
                                 ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Row(
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Expanded(
-                                            child: Text(
-                                              name,
-                                              style: TextStyle(
-                                                fontSize: 13.5,
-                                                fontWeight: FontWeight.w800,
-                                                color: isOutOfStock
-                                                    ? const Color(0xFF94A3B8)
-                                                    : AppTheme.navyColor,
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
+                                          Text(
+                                            name,
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w800,
+                                              color: AppTheme.navyColor,
                                             ),
                                           ),
-                                          if (isOutOfStock)
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 6,
-                                                vertical: 2,
+                                          if (desc.isNotEmpty) ...[
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              desc,
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w500,
+                                                color: Color(0xFF475569),
+                                                height: 1.35,
                                               ),
-                                              decoration: BoxDecoration(
-                                                color: Colors.red.withValues(alpha: 0.1),
-                                                borderRadius: BorderRadius.circular(4),
-                                                border: Border.all(
-                                                  color: Colors.red.withValues(alpha: 0.3),
-                                                  width: 0.8,
-                                                ),
-                                              ),
-                                              child: const Text(
-                                                'Out of Stock',
-                                                style: TextStyle(
-                                                  fontSize: 9.5,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.red,
-                                                ),
-                                              ),
-                                            )
-                                          else if (stock <= 5 && stock > 0 && !isWater)
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 6,
-                                                vertical: 2,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: Colors.orange.withValues(alpha: 0.1),
-                                                borderRadius: BorderRadius.circular(4),
-                                              ),
-                                              child: Text(
-                                                'Only ${stock.toInt()} left',
-                                                style: const TextStyle(
-                                                  fontSize: 9.5,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.orange,
-                                                ),
-                                              ),
-                                            )
-                                          else if (isWater && stock >= 19.0)
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 6,
-                                                vertical: 2,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: const Color(0xFF0284C7).withValues(alpha: 0.1),
-                                                borderRadius: BorderRadius.circular(4),
-                                              ),
-                                              child: Text(
-                                                '${(stock / 19.0).floor()} refills available',
-                                                style: const TextStyle(
-                                                  fontSize: 9.5,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Color(0xFF0369A1),
-                                                ),
-                                              ),
+                                              maxLines: 3,
+                                              overflow: TextOverflow.visible,
                                             ),
+                                          ],
                                         ],
                                       ),
-                                      if (desc.isNotEmpty) ...[
-                                        const SizedBox(height: 1),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
                                         Text(
-                                          desc,
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w500,
-                                            color: isOutOfStock
-                                                ? const Color(0xFF94A3B8)
-                                                : const Color(0xFF475569),
+                                          '₱${price.toStringAsFixed(2)}',
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w900,
+                                            color: AppTheme.navyColor,
                                           ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Icon(
+                                          isSelected
+                                              ? Icons.check_circle_rounded
+                                              : Icons.radio_button_unchecked_rounded,
+                                          color: isSelected
+                                              ? AppTheme.navyColor
+                                              : const Color(0xFF94A3B8),
+                                          size: 20,
                                         ),
                                       ],
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      '₱${price.toStringAsFixed(2)}',
-                                      style: TextStyle(
-                                        fontSize: 13.5,
-                                        fontWeight: FontWeight.w900,
-                                        color: isOutOfStock
-                                            ? const Color(0xFF94A3B8)
-                                            : AppTheme.navyColor,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Icon(
-                                      isOutOfStock
-                                          ? Icons.block_rounded
-                                          : (isSelected
-                                              ? Icons.check_circle_rounded
-                                              : Icons.radio_button_unchecked_rounded),
-                                      color: isOutOfStock
-                                          ? Colors.red.shade300
-                                          : (isSelected
-                                              ? AppTheme.navyColor
-                                              : const Color(0xFF94A3B8)),
-                                      size: 19,
                                     ),
                                   ],
                                 ),
-                              ],
+                              ),
                             ),
-                          ),
-                        ),
+                          );
+                        }).toList(),
                       );
-                    }).toList(),
-                  );
-                },
-              ),
+                    },
+                  ),
                 const SizedBox(height: 14),
 
-                // Jug Type Selection with Dedicated Quantities
+                // Jug Type Selection with Dedicated Quantities (Max 150 per item for all items)
                 Wrap(
                   alignment: WrapAlignment.spaceBetween,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   spacing: 8,
                   runSpacing: 4,
                   children: [
-                    const Text(
-                      'Select Jug Types & Quantity',
-                      style: TextStyle(
+                    Text(
+                      _isSelectProductMode
+                          ? 'Select Set Container Type & Quantity'
+                          : 'Select Jug Types & Quantity',
+                      style: const TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.navyColor,
@@ -2277,19 +2379,8 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                 const SizedBox(height: 10),
                 Builder(
                   builder: (context) {
-                    final slimItem = orderProvider.inventoryItems.firstWhere(
-                      (i) => i['id'] == 'item_slim_gallon' || i['name'].toString().toLowerCase().contains('slim'),
-                      orElse: () => {'stock': 150.0},
-                    );
-                    final slimStock = (slimItem['stock'] as num?)?.toInt() ?? 150;
-                    final maxSlim = min(150, slimStock > 0 ? slimStock : 150);
-
-                    final roundItem = orderProvider.inventoryItems.firstWhere(
-                      (i) => i['id'] == 'item_round_gallon' || i['name'].toString().toLowerCase().contains('round'),
-                      orElse: () => {'stock': 150.0},
-                    );
-                    final roundStock = (roundItem['stock'] as num?)?.toInt() ?? 150;
-                    final maxRound = min(150, roundStock > 0 ? roundStock : 150);
+                    const int maxSlim = 150;
+                    const int maxRound = 150;
 
                     return SizedBox(
                       height: 205,
@@ -2369,12 +2460,13 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                 ),
                 const SizedBox(height: 14),
 
-                if (_totalOrderQuantity > 0) ...[
+                if (!_isSelectProductMode && _totalOrderQuantity > 0) ...[
                   _buildContainerExchangeSection(isDark, isMobile),
                   const SizedBox(height: 14),
                 ],
 
-                // Station Products & Items added by Admin in Inventory
+                // Station Products & Items (shown in Select Product mode)
+                if (_isSelectProductMode)
                 Builder(
                   builder: (context) {
                     final stationItems = orderProvider.standaloneProducts;
@@ -2408,7 +2500,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                           runSpacing: 4,
                           children: [
                             const Text(
-                              'Station Products & Items',
+                              'JJAASS Station Products',
                               style: TextStyle(
                                 fontSize: 13.5,
                                 fontWeight: FontWeight.w800,
@@ -2416,7 +2508,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                               ),
                             ),
                             Text(
-                              '${stationItems.length} available to order',
+                              '${stationItems.length} available • Max 150 per item',
                               style: const TextStyle(
                                 fontSize: 10.5,
                                 fontWeight: FontWeight.w600,
@@ -2506,11 +2598,11 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                                         color: isOut ? const Color(0xFF94A3B8) : AppTheme.navyColor,
                                       ),
                                     ),
-                                    Text(
-                                      isOut ? 'Out of Stock' : '${stock.toInt()} in stock',
+                                    const Text(
+                                      'Max: 150 units',
                                       style: TextStyle(
                                         fontSize: 10,
-                                        color: isOut ? Colors.red : const Color(0xFF64748B),
+                                        color: Color(0xFF64748B),
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
@@ -2525,7 +2617,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                                     else
                                       Builder(
                                         builder: (context) {
-                                          final maxAddon = min(150, stock.toInt());
+                                          const int maxAddon = 150;
                                           return Row(
                                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                             children: [
@@ -2604,19 +2696,19 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                                                   height: 26,
                                                   decoration: BoxDecoration(
                                                     color: qty < maxAddon ? AppTheme.navyColor : Colors.grey.shade300,
-                                                    borderRadius: BorderRadius.circular(6),
-                                                  ),
-                                                  child: Icon(
-                                                    Icons.add_rounded,
-                                                    size: 14,
-                                                    color: qty < maxAddon ? Colors.white : Colors.grey.shade500,
-                                                  ),
+                                                  borderRadius: BorderRadius.circular(6),
+                                                ),
+                                                child: Icon(
+                                                  Icons.add_rounded,
+                                                  size: 14,
+                                                  color: qty < maxAddon ? Colors.white : Colors.grey.shade500,
                                                 ),
                                               ),
-                                            ],
-                                          );
-                                        },
-                                      ),
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    ),
                                   ],
                                 ),
                               );
@@ -2628,105 +2720,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                     );
                   },
                 ),
-
-                // Simple Total Badge
-                Builder(
-                  builder: (context) {
-                    final match = orderProvider.waterProducts.firstWhere(
-                      (p) => p['name'] == _selectedWaterType,
-                      orElse: () => orderProvider.waterProducts.isNotEmpty
-                          ? orderProvider.waterProducts.first
-                          : {'price': 35.0},
-                    );
-                    final pricePerJug = (match['price'] as num?)?.toDouble() ?? 35.0;
-                    final waterTotal = _totalOrderQuantity * pricePerJug;
-                    final addonsTotal = _calculateAddonsTotal(orderProvider);
-                    final grandTotal = waterTotal + addonsTotal;
-                    final totalStationItemsCount = _selectedAddonQuantities.values.fold<int>(0, (sum, count) => sum + count);
-                    final hasValidOrder = _totalOrderQuantity > 0 || totalStationItemsCount > 0;
-
-                    String summaryText;
-                    if (_totalOrderQuantity > 0 && totalStationItemsCount > 0) {
-                      summaryText = 'Total: $_totalOrderQuantity ${_totalOrderQuantity == 1 ? 'jug' : 'jugs'} ($_jugSelectionSummary) + $totalStationItemsCount ${totalStationItemsCount == 1 ? 'item' : 'items'} • ₱${grandTotal.toStringAsFixed(2)}';
-                    } else if (_totalOrderQuantity > 0) {
-                      summaryText = 'Total: $_totalOrderQuantity ${_totalOrderQuantity == 1 ? 'jug' : 'jugs'} ($_jugSelectionSummary) • ₱${grandTotal.toStringAsFixed(2)}';
-                    } else if (totalStationItemsCount > 0) {
-                      summaryText = 'Total: $totalStationItemsCount ${totalStationItemsCount == 1 ? 'item' : 'items'} • ₱${grandTotal.toStringAsFixed(2)}';
-                    } else {
-                      summaryText = 'Please select at least 1 jug or station item to order';
-                    }
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: hasValidOrder
-                                ? AppTheme.primaryColor.withValues(alpha: 0.08)
-                                : const Color(0xFFFEF2F2),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: hasValidOrder
-                                  ? AppTheme.primaryColor.withValues(alpha: 0.3)
-                                  : const Color(0xFFFCA5A5),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                hasValidOrder
-                                    ? Icons.shopping_bag_outlined
-                                    : Icons.warning_amber_rounded,
-                                size: 20,
-                                color: hasValidOrder
-                                    ? AppTheme.navyColor
-                                    : Colors.red.shade700,
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  summaryText,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: hasValidOrder
-                                        ? AppTheme.navyColor
-                                        : Colors.red.shade700,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (_totalOrderQuantity > 20) ...[
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEFF6FF),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xFFBFDBFE)),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.local_shipping_rounded, color: Color(0xFF1D4ED8), size: 18),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    '🚚 Bulk Order ($_totalOrderQuantity jugs): Multi-rider dispatch or batch delivery will be assigned automatically.',
-                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF1E40AF)),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ],
-                    );
-                  },
-                ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 6),
 
                 // Delivery Location Section
                 Wrap(
@@ -3204,7 +3198,126 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                     }
                   },
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
+
+                // Grand Total Summary Card placed directly above Confirm Order Delivery button
+                Builder(
+                  builder: (context) {
+                    final match = orderProvider.waterProducts.firstWhere(
+                      (p) => p['name'] == _selectedWaterType,
+                      orElse: () => orderProvider.waterProducts.isNotEmpty
+                          ? orderProvider.waterProducts.first
+                          : {'price': 30.0},
+                    );
+                    final pricePerJug = (match['price'] as num?)?.toDouble() ?? 30.0;
+                    final waterTotal = _totalOrderQuantity * pricePerJug;
+                    final addonsTotal = _calculateAddonsTotal(orderProvider);
+                    final grandTotal = waterTotal + addonsTotal;
+                    final totalStationItemsCount = _selectedAddonQuantities.values.fold<int>(0, (sum, count) => sum + count);
+                    final hasValidOrder = _totalOrderQuantity > 0 || totalStationItemsCount > 0;
+
+                    String breakdownText;
+                    if (_totalOrderQuantity > 0 && totalStationItemsCount > 0) {
+                      breakdownText = '$_totalOrderQuantity ${_totalOrderQuantity == 1 ? 'container' : 'containers'} ($_jugSelectionSummary) + $totalStationItemsCount ${totalStationItemsCount == 1 ? 'product' : 'products'}';
+                    } else if (_totalOrderQuantity > 0) {
+                      breakdownText = '$_totalOrderQuantity ${_totalOrderQuantity == 1 ? 'container' : 'containers'} ($_jugSelectionSummary) • $_selectedWaterType';
+                    } else if (totalStationItemsCount > 0) {
+                      breakdownText = '$totalStationItemsCount station ${totalStationItemsCount == 1 ? 'product' : 'products'} selected';
+                    } else {
+                      breakdownText = 'Please select at least 1 container or product to order';
+                    }
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: hasValidOrder
+                                ? const Color(0xFFF0F9FF)
+                                : const Color(0xFFFEF2F2),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: hasValidOrder
+                                  ? AppTheme.primaryColor.withValues(alpha: 0.35)
+                                  : const Color(0xFFFCA5A5),
+                              width: 1.4,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'GRAND TOTAL',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 0.6,
+                                        color: hasValidOrder
+                                            ? const Color(0xFF0369A1)
+                                            : Colors.red.shade700,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      breakdownText,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: hasValidOrder
+                                            ? const Color(0xFF334155)
+                                            : Colors.red.shade700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                '₱${grandTotal.toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                  color: hasValidOrder
+                                      ? AppTheme.navyColor
+                                      : Colors.red.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (_totalOrderQuantity > 20) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFBFDBFE)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.local_shipping_rounded, color: Color(0xFF1D4ED8), size: 18),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Bulk Order ($_totalOrderQuantity containers): Multi-rider dispatch or batch delivery will be assigned automatically.',
+                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF1E40AF)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 14),
 
                 // Submit Button
                 ElevatedButton(
@@ -3379,7 +3492,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Container / Gallon Exchange',
+                      'Container',
                       style: TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w800,
@@ -3387,7 +3500,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                       ),
                     ),
                     Text(
-                      'Do you have empty jugs ready to swap upon delivery?',
+                      'Select whether you will provide your own jugs or borrow from the station.',
                       style: TextStyle(
                         fontSize: 11,
                         color: isDark ? Colors.white70 : const Color(0xFF64748B),
@@ -3402,7 +3515,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
           const SizedBox(height: 12),
           Row(
             children: [
-              // Option 1: Exchange Own Empty Jugs
+              // Option 1: Own Jugs
               Expanded(
                 child: InkWell(
                   onTap: () {
@@ -3439,7 +3552,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                             ),
                             const SizedBox(width: 5),
                             Text(
-                              'Exchange Jugs',
+                              'Own Jugs',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
@@ -3452,7 +3565,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          'I have empty jugs to swap',
+                          'Use my own containers',
                           style: TextStyle(
                             fontSize: 10,
                             color: !_isBorrowingContainers
@@ -3939,7 +4052,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                       final isDone = order.orderStatus == OrderStatus.completed;
                       final isCancelled =
                           order.orderStatus == OrderStatus.cancelled;
-                      final canCancel = !isDone && !isCancelled;
+                      final canCancel = order.orderStatus == OrderStatus.pending;
 
                       return Container(
                         margin: const EdgeInsets.only(bottom: 16),

@@ -389,15 +389,6 @@ class _DriverDashboardState extends State<DriverDashboard> {
               titleSpacing: 8,
               title: Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(3),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const WaterDropletLogo(size: 28),
-                  ),
-                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -515,12 +506,14 @@ class _DriverDashboardState extends State<DriverDashboard> {
               border: Border.all(color: const Color(0xFFCBD5E1)),
             ),
             child: const TextField(
+              textAlignVertical: TextAlignVertical.center,
               style: TextStyle(
                 color: AppTheme.navyColor,
                 fontSize: 13.5,
                 fontWeight: FontWeight.w600,
               ),
               decoration: InputDecoration(
+                isDense: true,
                 hintText: 'Search routes, orders...',
                 hintStyle: TextStyle(color: Color(0xFF64748B), fontSize: 13),
                 prefixIcon: Icon(
@@ -531,7 +524,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
-                contentPadding: EdgeInsets.only(bottom: 8),
+                contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
               ),
             ),
           ),
@@ -546,8 +539,8 @@ class _DriverDashboardState extends State<DriverDashboard> {
           IconButton(
             onPressed: () {
               setState(() {
-                _selectedTab = 3;
-                _activeSidebarMenu = 3;
+                _selectedTab = 4;
+                _activeSidebarMenu = 4;
               });
             },
             icon: const Icon(
@@ -559,8 +552,8 @@ class _DriverDashboardState extends State<DriverDashboard> {
           InkWell(
             onTap: () {
               setState(() {
-                _selectedTab = 4;
-                _activeSidebarMenu = 4;
+                _selectedTab = 5;
+                _activeSidebarMenu = 5;
               });
             },
             borderRadius: BorderRadius.circular(20),
@@ -699,44 +692,6 @@ class _DriverDashboardState extends State<DriverDashboard> {
                   },
                 );
               },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14.0),
-              decoration: BoxDecoration(
-                color: const Color(0xFFEFF6FF),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: AppTheme.secondaryColor.withValues(alpha: 0.35),
-                  width: 1,
-                ),
-              ),
-              child: const Column(
-                children: [
-                  WaterJugIllustration(width: 68, height: 76),
-                  SizedBox(height: 8),
-                  Text(
-                    'Efficient Dispatch',
-                    style: TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w900,
-                      color: AppTheme.navyColor,
-                    ),
-                  ),
-                  SizedBox(height: 3),
-                  Text(
-                    'Pure water, delivered fast.',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.mutedText,
-                    ),
-                  ),
-                ],
-              ),
             ),
           ),
           _SidebarItemTile(
@@ -1289,28 +1244,34 @@ class _DriverDashboardState extends State<DriverDashboard> {
   Widget _buildQuickActionsCard(bool isDark) {
     final actions = [
       {
-        'title': 'Map View',
+        'title': 'Deliveries Map',
         'icon': Icons.map_rounded,
         'color': AppTheme.navyColor,
         'tab': 1,
       },
       {
+        'title': 'Gallon Collection',
+        'icon': Icons.assignment_return_rounded,
+        'color': const Color(0xFF0284C7),
+        'tab': 2,
+      },
+      {
         'title': 'Duty History',
         'icon': Icons.history_rounded,
         'color': AppTheme.primaryColor,
-        'tab': 2,
+        'tab': 3,
       },
       {
         'title': 'Driver Support',
         'icon': Icons.support_agent_rounded,
         'color': AppTheme.accentColor,
-        'tab': 3,
+        'tab': 4,
       },
       {
         'title': 'Settings',
         'icon': Icons.settings_rounded,
         'color': const Color(0xFF059669),
-        'tab': 4,
+        'tab': 5,
       },
     ];
 
@@ -1452,7 +1413,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
                       ),
                       SizedBox(height: 2),
                       Text(
-                        'Hello! I\'m AquaBot 💧 How can I help you today?',
+                        'Hello! I\'m AquaBot. How can I help you today?',
                         style: TextStyle(
                           fontSize: 12.5,
                           color: AppTheme.bodyText,
@@ -1480,11 +1441,12 @@ class _DriverDashboardState extends State<DriverDashboard> {
                   ),
                   child: TextField(
                     controller: _supportInputController,
+                    textAlignVertical: TextAlignVertical.center,
                     onSubmitted: (val) {
                       _sendSupportMessage(val);
                       setState(() {
-                        _selectedTab = 3; // Route to support tab
-                        _activeSidebarMenu = 3;
+                        _selectedTab = 4; // Route to support tab
+                        _activeSidebarMenu = 4;
                       });
                     },
                     style: const TextStyle(
@@ -1493,6 +1455,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
                       fontWeight: FontWeight.w600,
                     ),
                     decoration: const InputDecoration(
+                      isDense: true,
                       hintText: 'Type your message...',
                       hintStyle: TextStyle(
                         color: Color(0xFF64748B),
@@ -1501,7 +1464,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,
                       focusedBorder: InputBorder.none,
-                      contentPadding: EdgeInsets.only(bottom: 10),
+                      contentPadding: EdgeInsets.symmetric(vertical: 10),
                     ),
                   ),
                 ),
@@ -1518,8 +1481,8 @@ class _DriverDashboardState extends State<DriverDashboard> {
                   onPressed: () {
                     _sendSupportMessage(_supportInputController.text);
                     setState(() {
-                      _selectedTab = 3;
-                      _activeSidebarMenu = 3;
+                      _selectedTab = 4;
+                      _activeSidebarMenu = 4;
                     });
                   },
                   icon: const Icon(
