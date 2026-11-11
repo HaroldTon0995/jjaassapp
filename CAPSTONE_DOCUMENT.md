@@ -175,6 +175,7 @@ Authors’ Initial
 | 3 | Proposed System Flowchart | 32 |
 | 4 | Use Case Diagram | 33 |
 | 5 | Conceptual Design Diagram (Data Flow Diagram) | 34 |
+| 6 | Sequence Diagram | 35 |
 
 ---
 
@@ -670,6 +671,221 @@ flowchart TD
 ```
 
 The Data Flow Diagram (DFD) presented above illustrates the overall conceptual process of the Smart Ordering and Delivery Tracking Application with AI Chat Support for JJAASS Water Market. It defines how information moves between the system and its primary external entities, Customers, Admin, and Driver. Customers interact with the system by submitting registration details and order information, which are processed to generate confirmations and allow them to provide feedback. The Admin oversees the entire operation, managing customer information, registration records, and order details, while receiving invoices, sales reports, and inventory reports from the system for business monitoring and decision-making. Meanwhile, the Driver receives customer information and delivery details from the system to ensure accurate and efficient order fulfillment, sending back delivery status updates to confirm completed transactions. Overall, this DFD demonstrates a well-structured data exchange process that supports automated ordering, efficient inventory tracking, and streamlined delivery operations contributing to improved accuracy, transparency, and service efficiency for the water business.
+
+---
+
+### Figure 6. Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Customer
+    actor Driver
+    participant MobileApp as MobileApp
+    participant AdminPanel as AdminPanel
+    actor Admin
+    participant OrderProv as OrderProvider
+    participant AIService as AiSupportService
+    participant PayService as PaymentService
+    participant TrackService as TrackingService
+    participant DB as SupabaseDB
+
+    %% 1. Authentication & Role Guard
+    Customer->>+MobileApp: Submit login credentials
+    MobileApp->>+DB: Verify user credentials and role
+    DB-->>-MobileApp: Return authentication result
+
+    alt [credentials valid and role authorized]
+        MobileApp-->>Customer: Display role-specific dashboard
+    else [invalid credentials or unauthorized role]
+        MobileApp-->>-Customer: Display authentication error message
+        opt [new Customer self-registration]
+            Customer->>+MobileApp: Submit customer registration details
+            MobileApp->>+DB: Create new customer account record
+            DB-->>-MobileApp: Confirm account creation
+            MobileApp-->>-Customer: Display registration success and login
+        end
+    end
+
+    %% 2. AquaBot AI Chat Support
+    opt [user submits inquiry to AquaBot AI]
+        Customer->>+MobileApp: Send support or order inquiry message
+        MobileApp->>+AIService: Forward query with user role and session
+        AIService->>+OrderProv: Fetch live orders, pricing, and inventory context
+        OrderProv-->>-AIService: Return live application context
+
+        alt [Driver requests delivery route optimization]
+            AIService-->>MobileApp: Return optimized multi-stop delivery sequence
+        else [Gemini API key active and reachable]
+            AIService-->>MobileApp: Return contextual AI response from Google Gemini
+        else [API offline or local fallback mode]
+            AIService-->>-MobileApp: Return response from local conversational engine
+        end
+        MobileApp-->>-Customer: Display AquaBot AI response in chat
+    end
+
+    %% 3. Smart Ordering, Container Borrowing & Payment
+    loop [while adding products to cart]
+        Customer->>+MobileApp: Select water product, container type, and quantity
+        MobileApp->>+OrderProv: Update shopping cart items and subtotal
+        OrderProv-->>-MobileApp: Return updated cart summary
+        MobileApp-->>-Customer: Display updated cart
+    end
+
+    opt [customer borrows Slim or Round containers]
+        Customer->>+MobileApp: Specify borrowed Slim and Round gallon quantities
+        MobileApp->>+OrderProv: Flag container borrowing on order
+        OrderProv-->>-MobileApp: Confirm borrowed container count
+        MobileApp-->>-Customer: Display container borrowing summary
+    end
+
+    alt [order is for Delivery]
+        Customer->>+MobileApp: Pin delivery address and add delivery note
+        MobileApp->>+TrackService: Geocode address and calculate distance
+        TrackService-->>-MobileApp: Return coordinates and delivery fee
+        MobileApp-->>-Customer: Display delivery address and calculated fee
+    else [order is for Pickup]
+        Customer->>+MobileApp: Select station pickup option
+        MobileApp-->>-Customer: Set delivery fee to zero
+    end
+
+    alt [payment method is GCash via PayMongo]
+        Customer->>+MobileApp: Select GCash payment and proceed to checkout
+        MobileApp->>+PayService: Request GCash payment link and QR code
+        PayService-->>-MobileApp: Return PayMongo checkout URL and QR code
+        MobileApp-->>Customer: Display GCash payment modal
+        Customer->>MobileApp: Complete GCash payment authorization
+        MobileApp->>+PayService: Verify payment transaction status
+        PayService-->>-MobileApp: Confirm payment status is Paid
+        MobileApp-->>-Customer: Display payment verified confirmation
+    else [payment method is Cash on Delivery]
+        Customer->>+MobileApp: Select Cash on Delivery option
+        MobileApp-->>-Customer: Set payment status to Pending
+    end
+
+    Customer->>+MobileApp: Confirm and place order
+    MobileApp->>+OrderProv: Create new order record (Status = Pending)
+    OrderProv->>+DB: Insert order and borrowed container details
+    DB-->>-OrderProv: Confirm order saved
+    OrderProv->>AdminPanel: Broadcast new pending order notification
+    AdminPanel->>Admin: Alert Admin of new incoming order
+    OrderProv-->>-MobileApp: Return generated order ID and receipt
+    MobileApp-->>-Customer: Display order confirmation and Pending status
+
+    %% 4. Admin Order Management & Driver Dispatch
+    Admin->>+AdminPanel: Open pending order for review
+    AdminPanel->>+OrderProv: Retrieve order details and container stock levels
+    OrderProv-->>-AdminPanel: Return order and inventory details
+    AdminPanel-->>-Admin: Display order review modal
+
+    alt [order confirmed by Admin]
+        Admin->>+AdminPanel: Confirm order and assign delivery Driver
+        AdminPanel->>+OrderProv: Update order status to Assigned and deduct stock
+        OrderProv->>+DB: Update order record, driver assignment, and inventory
+        DB-->>-OrderProv: Confirm database update
+        OrderProv->>MobileApp: Broadcast order confirmation and driver assignment
+        MobileApp-->>Customer: Notify Customer that order is Assigned
+        MobileApp-->>Driver: Notify Driver of new delivery assignment
+        OrderProv-->>-AdminPanel: Return updated order and generated invoice
+        AdminPanel-->>-Admin: Display dispatch confirmation and invoice
+
+        %% 5. Real-Time GPS Tracking & OSRM Route Navigation
+        Driver->>+MobileApp: Accept delivery task and start transit
+        MobileApp->>+OrderProv: Update order status to On Delivery
+        OrderProv->>+DB: Save On Delivery status
+        DB-->>-OrderProv: Confirm status update
+        OrderProv->>MobileApp: Broadcast On Delivery status to Customer
+        MobileApp-->>Customer: Notify Customer that delivery is in transit
+        OrderProv-->>-MobileApp: Confirm transit started
+        MobileApp-->>-Driver: Open navigation map and route view
+
+        loop [while order status is On Delivery]
+            Driver->>+MobileApp: Broadcast live device GPS coordinates
+            MobileApp->>+TrackService: Publish driver latitude and longitude
+            TrackService->>+DB: Upsert live coordinates in driver_locations table
+            DB-->>-TrackService: Confirm location saved
+            DB-->>MobileApp: Stream live driver location to Customer map
+            MobileApp-->>Customer: Update live driver marker and OSRM route ETA
+            DB-->>AdminPanel: Stream live driver location to Admin map
+            AdminPanel-->>Admin: Update live fleet tracking monitor
+            TrackService-->>-MobileApp: Return road-snapped OSRM route polyline
+            MobileApp-->>-Driver: Update turn-by-turn route and ETA
+        end
+
+        %% 6. Delivery Fulfillment, Gallon Return & Issue Claims
+        alt [order delivered successfully]
+            Driver->>+MobileApp: Mark order as Completed and confirm payment
+            opt [customer returns borrowed Slim or Round gallons]
+                Driver->>MobileApp: Record returned Slim and Round gallon counts
+                MobileApp->>+OrderProv: Replenish container inventory and clear borrow debt
+                OrderProv->>+DB: Update inventory stock, restock logs, and return flags
+                DB-->>-OrderProv: Confirm container return recorded
+                OrderProv-->>-MobileApp: Return updated container balance
+            end
+            MobileApp->>+OrderProv: Complete order and award customer loyalty points
+            OrderProv->>+DB: Update order status to Completed with timestamp
+            DB-->>-OrderProv: Confirm order completion
+            OrderProv->>MobileApp: Broadcast completion notification
+            MobileApp-->>Customer: Notify Customer of completed delivery and loyalty points
+            OrderProv->>AdminPanel: Update live sales and completed order metrics
+            AdminPanel-->>Admin: Display updated sales and transaction log
+            OrderProv-->>-MobileApp: Confirm transaction closed
+            MobileApp-->>-Driver: Display delivery completion summary
+        else [delivery or container issue encountered]
+            Customer->>+MobileApp: Submit delivery issue claim with photo evidence
+            MobileApp->>+DB: Insert claim into delivery_issues table and broadcast
+            DB-->>-MobileApp: Return generated claim ID (Status = Pending)
+            DB->>AdminPanel: Broadcast new delivery issue claim alert
+            AdminPanel-->>Admin: Notify Admin of pending delivery issue claim
+            MobileApp-->>-Customer: Display claim submission confirmation
+
+            alt [Admin accepts issue claim]
+                Admin->>+AdminPanel: Approve issue claim and enter resolution feedback
+                AdminPanel->>+DB: Update claim status to Accepted
+                DB-->>-AdminPanel: Confirm claim update
+                DB->>MobileApp: Broadcast claim approval to Customer
+                MobileApp-->>Customer: Notify Customer of approved claim and replacement
+                AdminPanel-->>-Admin: Display resolved claim status
+            else [Admin rejects issue claim]
+                Admin->>+AdminPanel: Reject issue claim with explanation feedback
+                AdminPanel->>+DB: Update claim status to Rejected
+                DB-->>-AdminPanel: Confirm claim update
+                DB->>MobileApp: Broadcast claim rejection to Customer
+                MobileApp-->>Customer: Notify Customer of claim decision and feedback
+                AdminPanel-->>-Admin: Display closed claim status
+            end
+        end
+
+    else [order declined by Admin]
+        Admin->>+AdminPanel: Decline order request
+        AdminPanel->>+OrderProv: Update order status to Cancelled
+        OrderProv->>+DB: Save Cancelled order status
+        DB-->>-OrderProv: Confirm cancellation saved
+        OrderProv->>MobileApp: Broadcast order cancellation notice
+        MobileApp-->>Customer: Notify Customer that order was declined
+        OrderProv-->>-AdminPanel: Confirm order cancelled
+        AdminPanel-->>-Admin: Display cancelled order status
+    end
+
+    %% 7. Sales, Inventory & Analytics Reporting
+    opt [Admin generates sales and inventory report]
+        Admin->>+AdminPanel: Select date range and request sales and inventory report
+        AdminPanel->>+OrderProv: Aggregate completed orders, revenue, and stock logs
+        OrderProv->>+DB: Query historical transactions and inventory records
+        DB-->>-OrderProv: Return transaction and inventory dataset
+        OrderProv-->>-AdminPanel: Return computed sales totals and analytics
+        AdminPanel-->>-Admin: Render analytics charts and export PDF or CSV report
+    end
+```
+
+The UML Sequence Diagram above models the complete end-to-end interactions of the **Smart Ordering and Delivery Tracking Application with AI Chat Support for JJAASS Water Market** based directly on the system codebase. It adheres to UML 2.x rules using external stick-figure actors (**Customer**, **Driver**, **Admin**), architectural component lifelines (**:MobileApp**, **:AdminPanel**, **:OrderProvider**, **:AiSupportService**, **:PaymentService**, **:TrackingService**, **:SupabaseDB**), balanced execution specifications (activation bars), synchronous request-reply arrows (`->>` / `-->>`), asynchronous event notifications (`-)`), and guarded combined fragments (`alt`, `opt`, `loop`):
+1. **Authentication & Role Guard (`alt` & `opt`):** Validates credentials and enforces role restrictions (`Customer` and `Driver` on `:MobileApp`, `Admin` on `:AdminPanel`), with an optional (`opt`) flow for new customer registration.
+2. **AquaBot AI Chat Support (`opt` & `alt`):** Retrieves live order and inventory context from `:OrderProvider` and branches via `alt` between Driver multi-stop route optimization, live Google Gemini (`gemini-2.5-flash`) responses, and the local conversational fallback engine.
+3. **Smart Ordering, Container Borrowing & Payment (`loop`, `opt` & `alt`):** Models multi-item cart selection (`loop`), optional Slim/Round container borrowing (`opt`), Delivery geocoding versus Station Pickup (`alt`), and GCash checkout via PayMongo (`:PaymentService`) versus Cash on Delivery (`alt`).
+4. **Admin Order Management & Driver Dispatch (`alt`):** Evaluates `[order confirmed by Admin]` versus `[order declined by Admin]`. Confirming an order updates inventory reserves, assigns a driver, generates an invoice, and dispatches real-time notifications.
+5. **Real-Time GPS Tracking & OSRM Routing (`loop`):** Inside the confirmed branch, the Driver continuously publishes GPS coordinates to `:TrackingService` and `:SupabaseDB` (`driver_locations`), streaming live map updates and road-snapped OSRM ETAs to the Customer and Admin.
+6. **Delivery Fulfillment, Gallon Return & Issue Claims (`alt` & `opt`):** Covers order completion with optional borrowed container return (`collectDriverReturnedGallons`) and loyalty points, versus Customer delivery issue claim submission (`delivery_issues`) with Admin approval or rejection (`alt`).
+7. **Sales, Inventory & Analytics Reporting (`opt`):** Models on-demand sales aggregation and PDF/CSV report export by the Admin.
 
 ---
 
