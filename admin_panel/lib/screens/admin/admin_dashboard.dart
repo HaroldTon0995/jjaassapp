@@ -2195,6 +2195,21 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   );
                 }
 
+                final orderProvider =
+                    Provider.of<OrderProvider>(context, listen: false);
+                OrderModel? convoOrder;
+                if (selectedConvo != null && selectedConvo['orderId'] != null) {
+                  for (var o in orderProvider.orders) {
+                    if (o.id == selectedConvo['orderId']) {
+                      convoOrder = o;
+                      break;
+                    }
+                  }
+                }
+                final bool isTransactionLocked = convoOrder != null &&
+                    (convoOrder.orderStatus == OrderStatus.completed ||
+                        convoOrder.orderStatus == OrderStatus.cancelled);
+
                 return AlertDialog(
                   backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
                   shape: RoundedRectangleBorder(
@@ -2457,6 +2472,46 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                               ],
                                             ),
                                             const Divider(height: 16),
+                                            if (isTransactionLocked)
+                                              Container(
+                                                margin: const EdgeInsets.only(
+                                                    bottom: 8),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 10,
+                                                        vertical: 6),
+                                                decoration: BoxDecoration(
+                                                  color:
+                                                      const Color(0xFFFEF3C7),
+                                                  borderRadius:
+                                                      BorderRadius.circular(6),
+                                                  border: Border.all(
+                                                      color: const Color(
+                                                          0xFFFDE68A)),
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    const Icon(
+                                                        Icons.lock_rounded,
+                                                        size: 14,
+                                                        color:
+                                                            Color(0xFFB45309)),
+                                                    const SizedBox(width: 6),
+                                                    Expanded(
+                                                      child: Text(
+                                                        'Order ${convoOrder.id} is ${convoOrder.orderStatus.displayName} • Chat locked to Read-Only',
+                                                        style: const TextStyle(
+                                                          fontSize: 10.5,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          color:
+                                                              Color(0xFF92400E),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
 
                                             // Thread
                                             Expanded(
@@ -2566,9 +2621,39 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                               ),
                                             ),
 
-                                            // Reply Input
+                                            // Reply Input or Transaction Locked Notice
                                             const SizedBox(height: 8),
-                                            Row(
+                                            if (isTransactionLocked)
+                                              Container(
+                                                width: double.infinity,
+                                                padding: const EdgeInsets.symmetric(
+                                                    vertical: 10, horizontal: 12),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFFF1F5F9),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
+                                                child: Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: const [
+                                                    Icon(Icons.lock_outline_rounded,
+                                                        size: 14,
+                                                        color: Color(0xFF64748B)),
+                                                    SizedBox(width: 6),
+                                                    Text(
+                                                      'Transaction completed. Chat history is locked for audit records.',
+                                                      style: TextStyle(
+                                                        fontSize: 11,
+                                                        color: Color(0xFF64748B),
+                                                        fontWeight: FontWeight.w600,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              )
+                                            else
+                                              Row(
                                               children: [
                                                 Expanded(
                                                   child: TextField(

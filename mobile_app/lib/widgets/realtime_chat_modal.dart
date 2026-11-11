@@ -127,60 +127,80 @@ class _RealtimeChatModalState extends State<RealtimeChatModal> {
     final userId = user?.id ?? '';
 
     // Collect available channels for this user:
-    // 1. Station Admin Support channel (persistent)
-    // 2. Active Order Channels (auto-closing when completed/cancelled)
+    // 1. Station Admin Support channel (persistent general desk)
+    // 2. Order channels (Active or Completed for recordkeeping)
     final channels = <Map<String, dynamic>>[];
 
     // Support Desk Channel
     channels.add({
       'id': 'support_$userId',
-      'title': userRole == 'driver' ? 'Station Dispatch Desk' : 'Station Admin Support',
+      'title': userRole == 'driver'
+          ? 'Station Dispatch Desk'
+          : 'Station Admin Support',
       'partnerName': 'Station Admin',
       'partnerRole': 'admin',
       'orderId': null,
       'isOrder': false,
+      'isDone': false,
     });
 
     if (userRole == 'customer') {
-      final activeOrders = orderProvider.orders.where((o) {
-        return (o.customerId == userId || o.customerName == user?.name) &&
-            o.orderStatus != OrderStatus.completed &&
-            o.orderStatus != OrderStatus.cancelled;
+      final customerOrders = orderProvider.orders.where((o) {
+        return (o.customerId == userId || o.customerName == user?.name);
       }).toList();
 
-      for (var o in activeOrders) {
+      for (var o in customerOrders) {
         final driverLabel = o.driverName != null && o.driverName!.isNotEmpty
             ? o.driverName!
             : 'Assigned Driver';
+        final isDone = o.orderStatus == OrderStatus.completed ||
+            o.orderStatus == OrderStatus.cancelled;
         channels.add({
           'id': 'order_${o.id}',
-          'title': 'Delivery ${o.id}',
+          'title': '${o.id}${isDone ? " (Done)" : ""}',
           'partnerName': driverLabel,
           'partnerRole': 'driver',
           'orderId': o.id,
           'isOrder': true,
+          'isDone': isDone,
           'order': o,
         });
       }
     } else if (userRole == 'driver') {
       final assignedJobs = orderProvider.orders.where((o) {
-        return (o.driverId == userId || o.driverName == user?.name) &&
-            o.orderStatus != OrderStatus.completed &&
-            o.orderStatus != OrderStatus.cancelled;
+        return (o.driverId == userId || o.driverName == user?.name);
       }).toList();
 
       for (var o in assignedJobs) {
+        final isDone = o.orderStatus == OrderStatus.completed ||
+            o.orderStatus == OrderStatus.cancelled;
         channels.add({
           'id': 'order_${o.id}',
-          'title': 'Customer Order ${o.id}',
+          'title': '${o.id}${isDone ? " (Done)" : ""}',
           'partnerName': o.customerName,
           'partnerRole': 'customer',
           'orderId': o.id,
           'isOrder': true,
+          'isDone': isDone,
           'order': o,
         });
       }
     }
+
+    // Check if the current order channel is completed/cancelled (locked to read-only)
+    OrderModel? currentOrder;
+    if (_currentOrderId != null) {
+      for (var o in orderProvider.orders) {
+        if (o.id == _currentOrderId) {
+          currentOrder = o;
+          break;
+        }
+      }
+    }
+
+    final bool isTransactionLocked = currentOrder != null &&
+        (currentOrder.orderStatus == OrderStatus.completed ||
+            currentOrder.orderStatus == OrderStatus.cancelled);
 
     final isNarrow = MediaQuery.of(context).size.width < 600;
 
@@ -235,15 +255,19 @@ class _RealtimeChatModalState extends State<RealtimeChatModal> {
                             Container(
                               width: 7,
                               height: 7,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFF10B981),
+                              decoration: BoxDecoration(
+                                color: isTransactionLocked
+                                    ? Colors.amberAccent
+                                    : const Color(0xFF10B981),
                                 shape: BoxShape.circle,
                               ),
                             ),
                             const SizedBox(width: 5),
                             Text(
                               _currentOrderId != null
-                                  ? 'Active Delivery Chat • ${_currentOrderId!}'
+                                  ? (isTransactionLocked
+                                      ? 'Delivery Chat • ${_currentOrderId!} (Completed)'
+                                      : 'Active Delivery Chat • ${_currentOrderId!}')
                                   : 'Station Live Direct Channel',
                               style: const TextStyle(
                                 color: Color(0xFF93C5FD),
@@ -268,7 +292,8 @@ class _RealtimeChatModalState extends State<RealtimeChatModal> {
             if (channels.length > 1)
               Container(
                 height: 44,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: const BoxDecoration(
                   color: Color(0xFFF1F5F9),
                   border: Border(bottom: BorderSide(color: Color(0xFFCBD5E1))),
@@ -280,16 +305,21 @@ class _RealtimeChatModalState extends State<RealtimeChatModal> {
                   itemBuilder: (context, i) {
                     final ch = channels[i];
                     final isSelected = _currentConversationId == ch['id'];
+                    final isDone = ch['isDone'] == true;
+
                     return ChoiceChip(
                       label: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
                             ch['isOrder'] == true
-                                ? Icons.local_shipping_rounded
+                                ? (isDone
+                                    ? Icons.lock_clock_rounded
+                                    : Icons.local_shipping_rounded)
                                 : Icons.support_agent_rounded,
                             size: 14,
-                            color: isSelected ? Colors.white : AppTheme.navyColor,
+                            color:
+                                isSelected ? Colors.white : AppTheme.navyColor,
                           ),
                           const SizedBox(width: 5),
                           Text(ch['title'] as String),
@@ -298,7 +328,8 @@ class _RealtimeChatModalState extends State<RealtimeChatModal> {
                       selected: isSelected,
                       selectedColor: AppTheme.primaryColor,
                       labelStyle: TextStyle(
-                        color: isSelected ? Colors.white : const Color(0xFF1E293B),
+                        color:
+                            isSelected ? Colors.white : const Color(0xFF1E293B),
                         fontWeight: FontWeight.bold,
                         fontSize: 11.5,
                       ),
@@ -313,6 +344,54 @@ class _RealtimeChatModalState extends State<RealtimeChatModal> {
                       },
                     );
                   },
+                ),
+              ),
+
+            // Transaction Done & Read-Only Locking Banner
+            if (isTransactionLocked)
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFEF3C7),
+                  border: Border(
+                    bottom: BorderSide(color: Color(0xFFFDE68A)),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.lock_rounded,
+                        size: 15, color: Color(0xFFB45309)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Transaction ${currentOrder.orderStatus == OrderStatus.completed ? "Completed" : "Cancelled"} • Order chat is now locked to Read-Only for audit records.',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF92400E),
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: currentOrder.orderStatus.color
+                            .withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        currentOrder.orderStatus.displayName,
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.bold,
+                          color: currentOrder.orderStatus.color,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
 
@@ -366,8 +445,8 @@ class _RealtimeChatModalState extends State<RealtimeChatModal> {
                     itemBuilder: (context, i) {
                       final msg = messages[i];
                       final bool isMe = msg.senderId == userId ||
-                          msg.senderRole == userRole &&
-                              msg.senderName == (user?.name ?? '');
+                          (msg.senderRole == userRole &&
+                              msg.senderName == (user?.name ?? ''));
 
                       return _buildMessageBubble(msg, isMe);
                     },
@@ -376,62 +455,92 @@ class _RealtimeChatModalState extends State<RealtimeChatModal> {
               ),
             ),
 
-            // Bottom Typing Bar
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: const BoxDecoration(
-                color: Color(0xFFF8FAFC),
-                border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
-                borderRadius:
-                    BorderRadius.vertical(bottom: Radius.circular(16)),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: const Color(0xFFCBD5E1)),
+            // Bottom Typing Bar or Transaction Locked Notice
+            if (isTransactionLocked)
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF1F5F9),
+                  border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+                  borderRadius:
+                      BorderRadius.vertical(bottom: Radius.circular(16)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(Icons.lock_outline_rounded,
+                        size: 16, color: Color(0xFF64748B)),
+                    SizedBox(width: 8),
+                    Text(
+                      'This order transaction is finished. Chat is closed & retained for receipt history.',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: Color(0xFF64748B),
+                        fontWeight: FontWeight.w600,
                       ),
-                      child: TextField(
-                        controller: _textController,
-                        onSubmitted: (_) => _sendMessage(),
-                        style: const TextStyle(fontSize: 13),
-                        decoration: InputDecoration(
-                          hintText: 'Type your message to $_currentPartnerName...',
-                          hintStyle: const TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF94A3B8),
+                    ),
+                  ],
+                ),
+              )
+            else
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF8FAFC),
+                  border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+                  borderRadius:
+                      BorderRadius.vertical(bottom: Radius.circular(16)),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: const Color(0xFFCBD5E1)),
+                        ),
+                        child: TextField(
+                          controller: _textController,
+                          onSubmitted: (_) => _sendMessage(),
+                          style: const TextStyle(fontSize: 13),
+                          decoration: InputDecoration(
+                            hintText:
+                                'Type your message to $_currentPartnerName...',
+                            hintStyle: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF94A3B8),
+                            ),
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                            border: InputBorder.none,
                           ),
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 10,
-                          ),
-                          border: InputBorder.none,
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    decoration: const BoxDecoration(
-                      color: AppTheme.primaryColor,
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      onPressed: _sendMessage,
-                      icon: const Icon(
-                        Icons.send_rounded,
-                        size: 18,
-                        color: Colors.white,
+                    const SizedBox(width: 8),
+                    Container(
+                      decoration: const BoxDecoration(
+                        color: AppTheme.primaryColor,
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        onPressed: _sendMessage,
+                        icon: const Icon(
+                          Icons.send_rounded,
+                          size: 18,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       ),
@@ -453,8 +562,10 @@ class _RealtimeChatModalState extends State<RealtimeChatModal> {
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(14),
             topRight: const Radius.circular(14),
-            bottomLeft: isMe ? const Radius.circular(14) : const Radius.circular(2),
-            bottomRight: isMe ? const Radius.circular(2) : const Radius.circular(14),
+            bottomLeft:
+                isMe ? const Radius.circular(14) : const Radius.circular(2),
+            bottomRight:
+                isMe ? const Radius.circular(2) : const Radius.circular(14),
           ),
           border: isMe ? null : Border.all(color: const Color(0xFFCBD5E1)),
         ),

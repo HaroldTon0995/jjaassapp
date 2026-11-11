@@ -12,6 +12,7 @@ class ChatService extends ChangeNotifier {
   List<ChatMessageModel> get messages => List.unmodifiable(_messages);
 
   StreamSubscription? _streamSub;
+  RealtimeChannel? _broadcastChannel;
   Timer? _pollingTimer;
   bool _initialized = false;
 
@@ -26,11 +27,40 @@ class ChatService extends ChangeNotifier {
     _seedInitialMockMessages();
 
     if (isSupabaseConfigured) {
+      _initBroadcastChannel();
       _listenToRealtimeStream();
       _fetchDirectMessages();
       _pollingTimer = Timer.periodic(const Duration(seconds: 4), (_) {
         _fetchDirectMessages(silent: true);
       });
+    }
+  }
+
+  void _initBroadcastChannel() {
+    if (!isSupabaseConfigured) return;
+    try {
+      final client = Supabase.instance.client;
+      _broadcastChannel = client.channel('jjaass_chat_room');
+      _broadcastChannel!
+          .onBroadcast(
+            event: 'new_message',
+            callback: (payload) {
+              try {
+                final msg = ChatMessageModel.fromJson(
+                    Map<String, dynamic>.from(payload));
+                final exists = _messages.any((m) => m.id == msg.id);
+                if (!exists) {
+                  _messages.add(msg);
+                  notifyListeners();
+                }
+              } catch (e) {
+                debugPrint('Chat broadcast parse error: $e');
+              }
+            },
+          )
+          .subscribe();
+    } catch (e) {
+      debugPrint('Chat broadcast channel init error: $e');
     }
   }
 
@@ -93,9 +123,13 @@ class ChatService extends ChangeNotifier {
           .toList();
 
       if (fetched.isNotEmpty) {
-        bool changed = fetched.length != _messages.length;
-        _messages.clear();
-        _messages.addAll(fetched);
+        bool changed = false;
+        for (var m in fetched) {
+          if (!_messages.any((existing) => existing.id == m.id)) {
+            _messages.add(m);
+            changed = true;
+          }
+        }
         if (changed || !silent) {
           notifyListeners();
         }
@@ -118,9 +152,16 @@ class ChatService extends ChangeNotifier {
                 .map((m) => ChatMessageModel.fromJson(m))
                 .toList();
             if (fetched.isNotEmpty) {
-              _messages.clear();
-              _messages.addAll(fetched);
-              notifyListeners();
+              bool changed = false;
+              for (var m in fetched) {
+                if (!_messages.any((existing) => existing.id == m.id)) {
+                  _messages.add(m);
+                  changed = true;
+                }
+              }
+              if (changed) {
+                notifyListeners();
+              }
             }
           }, onError: (err) {
             debugPrint('Chat Realtime stream error: $err');
@@ -162,6 +203,17 @@ class ChatService extends ChangeNotifier {
     notifyListeners();
 
     if (isSupabaseConfigured) {
+      // 1. Instant peer-to-peer WebSocket broadcast
+      try {
+        _broadcastChannel?.sendBroadcastMessage(
+          event: 'new_message',
+          payload: newMsg.toJson(),
+        );
+      } catch (e) {
+        debugPrint('Supabase broadcast send failed: $e');
+      }
+
+      // 2. Persistent storage in Supabase DB
       try {
         final client = Supabase.instance.client;
         await client.from('chat_messages').insert(newMsg.toJson());
@@ -183,7 +235,8 @@ class ChatService extends ChangeNotifier {
       if (m.isRead) return false;
       if (m.senderRole == currentRole) return false;
       if (currentRole == 'admin') return true;
-      if (m.receiverId == currentUserId || m.conversationId.contains(currentUserId)) {
+      if (m.receiverId == currentUserId ||
+          m.conversationId.contains(currentUserId)) {
         return true;
       }
       return false;
@@ -232,6 +285,7 @@ class ChatService extends ChangeNotifier {
   @override
   void dispose() {
     _streamSub?.cancel();
+    _broadcastChannel?.unsubscribe();
     _pollingTimer?.cancel();
     super.dispose();
   }
