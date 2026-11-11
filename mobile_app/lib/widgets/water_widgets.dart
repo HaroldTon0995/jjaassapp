@@ -29,9 +29,7 @@ class WaterDropletLogo extends StatelessWidget {
         errorBuilder: (context, error, stackTrace) => SizedBox(
           width: size,
           height: size,
-          child: CustomPaint(
-            painter: _WaterDropletPainter(),
-          ),
+          child: CustomPaint(painter: _WaterDropletPainter()),
         ),
       ),
     );
@@ -97,10 +95,7 @@ class JjaassFullLogo extends StatelessWidget {
     );
 
     if (borderRadius != null) {
-      return ClipRRect(
-        borderRadius: borderRadius!,
-        child: image,
-      );
+      return ClipRRect(borderRadius: borderRadius!, child: image);
     }
     return image;
   }
@@ -122,15 +117,21 @@ class _WaterDropletPainter extends CustomPainter {
     path.moveTo(size.width / 2, size.height * 0.08);
     // Left shoulder / curve
     path.cubicTo(
-      size.width * 0.22, size.height * 0.45,
-      size.width * 0.08, size.height * 0.65,
-      size.width * 0.5, size.height * 0.95,
+      size.width * 0.22,
+      size.height * 0.45,
+      size.width * 0.08,
+      size.height * 0.65,
+      size.width * 0.5,
+      size.height * 0.95,
     );
     // Right shoulder / curve
     path.cubicTo(
-      size.width * 0.92, size.height * 0.65,
-      size.width * 0.78, size.height * 0.45,
-      size.width / 2, size.height * 0.08,
+      size.width * 0.92,
+      size.height * 0.65,
+      size.width * 0.78,
+      size.height * 0.45,
+      size.width / 2,
+      size.height * 0.08,
     );
     path.close();
 
@@ -143,12 +144,16 @@ class _WaterDropletPainter extends CustomPainter {
     final highlightPath = Path();
     highlightPath.moveTo(size.width * 0.46, size.height * 0.28);
     highlightPath.quadraticBezierTo(
-      size.width * 0.25, size.height * 0.48,
-      size.width * 0.32, size.height * 0.68,
+      size.width * 0.25,
+      size.height * 0.48,
+      size.width * 0.32,
+      size.height * 0.68,
     );
     highlightPath.quadraticBezierTo(
-      size.width * 0.36, size.height * 0.48,
-      size.width * 0.46, size.height * 0.28,
+      size.width * 0.36,
+      size.height * 0.48,
+      size.width * 0.46,
+      size.height * 0.28,
     );
     canvas.drawPath(highlightPath, highlightPaint);
   }
@@ -181,18 +186,28 @@ class WaterJugPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
 
-    canvas.drawOval(Rect.fromLTRB(w * 0.05, h * 0.76, w * 0.95, h * 0.94), ripplePaint);
-    canvas.drawOval(Rect.fromLTRB(w * 0.15, h * 0.81, w * 0.85, h * 0.91), ripplePaint);
+    canvas.drawOval(
+      Rect.fromLTRB(w * 0.05, h * 0.76, w * 0.95, h * 0.94),
+      ripplePaint,
+    );
+    canvas.drawOval(
+      Rect.fromLTRB(w * 0.15, h * 0.81, w * 0.85, h * 0.91),
+      ripplePaint,
+    );
 
     // Splash ripples filled
     final splashPaint = Paint()
       ..color = const Color(0xFF0284C7).withValues(alpha: 0.08)
       ..style = PaintingStyle.fill;
-    canvas.drawOval(Rect.fromLTRB(w * 0.25, h * 0.83, w * 0.75, h * 0.89), splashPaint);
+    canvas.drawOval(
+      Rect.fromLTRB(w * 0.25, h * 0.83, w * 0.75, h * 0.89),
+      splashPaint,
+    );
 
     // Draw leaves on the left/right
     final leafPaint = Paint()
-      ..color = const Color(0xFF10B981) // Emerald Green
+      ..color =
+          const Color(0xFF10B981) // Emerald Green
       ..style = PaintingStyle.fill;
 
     // Left leaf
@@ -257,7 +272,10 @@ class WaterJugPainter extends CustomPainter {
       ..color = const Color(0xFF0284C7)
       ..style = PaintingStyle.fill;
     canvas.drawRRect(
-      RRect.fromRectAndRadius(Rect.fromLTRB(w * 0.41, h * 0.18, w * 0.59, h * 0.24), const Radius.circular(4)),
+      RRect.fromRectAndRadius(
+        Rect.fromLTRB(w * 0.41, h * 0.18, w * 0.59, h * 0.24),
+        const Radius.circular(4),
+      ),
       capPaint,
     );
 
@@ -266,10 +284,26 @@ class WaterJugPainter extends CustomPainter {
       ..color = Colors.white.withValues(alpha: 0.3)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3;
-    canvas.drawLine(Offset(w * 0.31, h * 0.50), Offset(w * 0.69, h * 0.50), ribPaint);
-    canvas.drawLine(Offset(w * 0.30, h * 0.58), Offset(w * 0.70, h * 0.58), ribPaint);
-    canvas.drawLine(Offset(w * 0.30, h * 0.66), Offset(w * 0.70, h * 0.66), ribPaint);
-    canvas.drawLine(Offset(w * 0.31, h * 0.74), Offset(w * 0.69, h * 0.74), ribPaint);
+    canvas.drawLine(
+      Offset(w * 0.31, h * 0.50),
+      Offset(w * 0.69, h * 0.50),
+      ribPaint,
+    );
+    canvas.drawLine(
+      Offset(w * 0.30, h * 0.58),
+      Offset(w * 0.70, h * 0.58),
+      ribPaint,
+    );
+    canvas.drawLine(
+      Offset(w * 0.30, h * 0.66),
+      Offset(w * 0.70, h * 0.66),
+      ribPaint,
+    );
+    canvas.drawLine(
+      Offset(w * 0.31, h * 0.74),
+      Offset(w * 0.69, h * 0.74),
+      ribPaint,
+    );
 
     // Highlight sheen
     final reflectionPaint = Paint()
@@ -304,11 +338,7 @@ class WaveBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        Positioned.fill(
-          child: CustomPaint(
-            painter: WaveBackgroundPainter(),
-          ),
-        ),
+        Positioned.fill(child: CustomPaint(painter: WaveBackgroundPainter())),
         child,
       ],
     );
@@ -326,12 +356,16 @@ class WaveBackgroundPainter extends CustomPainter {
     final path1 = Path();
     path1.moveTo(0, size.height * 0.86);
     path1.quadraticBezierTo(
-      size.width * 0.25, size.height * 0.80,
-      size.width * 0.55, size.height * 0.89,
+      size.width * 0.25,
+      size.height * 0.80,
+      size.width * 0.55,
+      size.height * 0.89,
     );
     path1.quadraticBezierTo(
-      size.width * 0.8, size.height * 0.95,
-      size.width, size.height * 0.88,
+      size.width * 0.8,
+      size.height * 0.95,
+      size.width,
+      size.height * 0.88,
     );
     path1.lineTo(size.width, size.height);
     path1.lineTo(0, size.height);
@@ -346,12 +380,16 @@ class WaveBackgroundPainter extends CustomPainter {
     final path2 = Path();
     path2.moveTo(0, size.height * 0.92);
     path2.quadraticBezierTo(
-      size.width * 0.35, size.height * 0.97,
-      size.width * 0.65, size.height * 0.89,
+      size.width * 0.35,
+      size.height * 0.97,
+      size.width * 0.65,
+      size.height * 0.89,
     );
     path2.quadraticBezierTo(
-      size.width * 0.85, size.height * 0.84,
-      size.width, size.height * 0.92,
+      size.width * 0.85,
+      size.height * 0.84,
+      size.width,
+      size.height * 0.92,
     );
     path2.lineTo(size.width, size.height);
     path2.lineTo(0, size.height);
@@ -401,7 +439,9 @@ class _SalesOverviewLineChartState extends State<SalesOverviewLineChart> {
             final double stepX = widget.dataPoints.length > 1
                 ? width / (widget.dataPoints.length - 1)
                 : width;
-            final int tappedIndex = (details.localPosition.dx / stepX).round().clamp(0, widget.dataPoints.length - 1);
+            final int tappedIndex = (details.localPosition.dx / stepX)
+                .round()
+                .clamp(0, widget.dataPoints.length - 1);
             setState(() {
               _hoveredIndex = tappedIndex;
             });
@@ -465,13 +505,17 @@ class _SalesOverviewPainter extends CustomPainter {
     }
     final double valRange = maxVal - minVal;
 
-    final double stepX = data.length > 1 ? gridWidth / (data.length - 1) : gridWidth;
+    final double stepX = data.length > 1
+        ? gridWidth / (data.length - 1)
+        : gridWidth;
 
     double getX(int index) => index * stepX;
     double getY(double val) {
       final double normalized = (val - minVal) / valRange;
       // Keep within comfortable padding bounds
-      return gridHeight - (normalized * gridHeight * 0.60) - (gridHeight * 0.15);
+      return gridHeight -
+          (normalized * gridHeight * 0.60) -
+          (gridHeight * 0.15);
     }
 
     final path = Path();
@@ -562,7 +606,10 @@ class _SalesOverviewPainter extends CustomPainter {
         // Draw Dynamic Tooltip Box above the point
         final double boxWidth = 92;
         final double boxHeight = 38;
-        double boxLeft = (pt.dx - boxWidth / 2).clamp(4.0, gridWidth - boxWidth - 4.0);
+        double boxLeft = (pt.dx - boxWidth / 2).clamp(
+          4.0,
+          gridWidth - boxWidth - 4.0,
+        );
         double boxTop = pt.dy - boxHeight - 12;
         if (boxTop < 2) boxTop = pt.dy + 12;
 
@@ -575,13 +622,17 @@ class _SalesOverviewPainter extends CustomPainter {
           ..strokeWidth = 1
           ..style = PaintingStyle.stroke;
 
-        final RRect rrect = RRect.fromRectAndRadius(boxRect, const Radius.circular(8));
+        final RRect rrect = RRect.fromRectAndRadius(
+          boxRect,
+          const Radius.circular(8),
+        );
         canvas.drawRRect(rrect, boxPaint);
         canvas.drawRRect(rrect, borderPaint);
 
         // Day label and formatted Revenue
         final String dayText = i < labels.length ? labels[i] : 'Day ${i + 1}';
-        final String valText = '₱${data[i].toStringAsFixed(data[i] % 1 == 0 ? 0 : 2)}';
+        final String valText =
+            '₱${data[i].toStringAsFixed(data[i] % 1 == 0 ? 0 : 2)}';
 
         final textStyleDay = TextStyle(
           color: isDark ? Colors.white60 : Colors.grey.shade600,
@@ -642,7 +693,8 @@ class OrderStatusDonutChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final int total = completedCount + onDeliveryCount + pendingCount + cancelledCount;
+    final int total =
+        completedCount + onDeliveryCount + pendingCount + cancelledCount;
 
     final double pctCompleted = total > 0 ? completedCount / total : 0.0;
     final double pctOnDelivery = total > 0 ? onDeliveryCount / total : 0.0;
@@ -658,7 +710,12 @@ class OrderStatusDonutChart extends StatelessWidget {
             Positioned.fill(
               child: CustomPaint(
                 painter: _DonutChartPainter(
-                  percentages: [pctCompleted, pctOnDelivery, pctPending, pctCancelled],
+                  percentages: [
+                    pctCompleted,
+                    pctOnDelivery,
+                    pctPending,
+                    pctCancelled,
+                  ],
                   total: total,
                   isDark: isDark,
                 ),
@@ -787,7 +844,8 @@ class LiveFleetGpsMapWidget extends StatefulWidget {
 class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget>
     with SingleTickerProviderStateMixin {
   late AnimationController _animController;
-  final TransformationController _transformController = TransformationController();
+  final TransformationController _transformController =
+      TransformationController();
   double _currentScale = 1.0;
 
   @override
@@ -809,14 +867,22 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget>
   void _zoomIn() {
     setState(() {
       _currentScale = (_currentScale * 1.25).clamp(0.7, 3.0);
-      _transformController.value = Matrix4.diagonal3Values(_currentScale, _currentScale, 1.0);
+      _transformController.value = Matrix4.diagonal3Values(
+        _currentScale,
+        _currentScale,
+        1.0,
+      );
     });
   }
 
   void _zoomOut() {
     setState(() {
       _currentScale = (_currentScale / 1.25).clamp(0.7, 3.0);
-      _transformController.value = Matrix4.diagonal3Values(_currentScale, _currentScale, 1.0);
+      _transformController.value = Matrix4.diagonal3Values(
+        _currentScale,
+        _currentScale,
+        1.0,
+      );
     });
   }
 
@@ -881,9 +947,13 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF0F172A).withValues(alpha: 0.88) : Colors.white.withValues(alpha: 0.92),
+                color: isDark
+                    ? const Color(0xFF0F172A).withValues(alpha: 0.88)
+                    : Colors.white.withValues(alpha: 0.92),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+                border: Border.all(
+                  color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.08),
@@ -914,7 +984,10 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget>
                   ),
                   const SizedBox(width: 12),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: AppTheme.primaryColor.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(4),
@@ -972,7 +1045,9 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget>
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF0F172A).withValues(alpha: 0.94) : Colors.white.withValues(alpha: 0.96),
+                  color: isDark
+                      ? const Color(0xFF0F172A).withValues(alpha: 0.94)
+                      : Colors.white.withValues(alpha: 0.96),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: AppTheme.primaryColor.withValues(alpha: 0.4),
@@ -1013,14 +1088,20 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget>
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 13,
-                                  color: isDark ? Colors.white : const Color(0xFF1E293B),
+                                  color: isDark
+                                      ? Colors.white
+                                      : const Color(0xFF1E293B),
                                 ),
                               ),
                               const SizedBox(width: 8),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: widget.selectedOrder!.orderStatus.color.withValues(alpha: 0.15),
+                                  color: widget.selectedOrder!.orderStatus.color
+                                      .withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
@@ -1028,7 +1109,8 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget>
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
-                                    color: widget.selectedOrder!.orderStatus.color,
+                                    color:
+                                        widget.selectedOrder!.orderStatus.color,
                                   ),
                                 ),
                               ),
@@ -1041,7 +1123,9 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget>
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: 11,
-                              color: isDark ? Colors.white70 : Colors.grey.shade600,
+                              color: isDark
+                                  ? Colors.white70
+                                  : Colors.grey.shade600,
                             ),
                           ),
                         ],
@@ -1054,14 +1138,20 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget>
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.speed_rounded, size: 14, color: Colors.cyan),
+                            const Icon(
+                              Icons.speed_rounded,
+                              size: 14,
+                              color: Colors.cyan,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               '28 km/h',
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
-                                color: isDark ? Colors.white : const Color(0xFF1E293B),
+                                color: isDark
+                                    ? Colors.white
+                                    : const Color(0xFF1E293B),
                               ),
                             ),
                           ],
@@ -1095,7 +1185,9 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget>
     return Tooltip(
       message: tooltip,
       child: Material(
-        color: isDark ? const Color(0xFF1E293B).withValues(alpha: 0.9) : Colors.white.withValues(alpha: 0.95),
+        color: isDark
+            ? const Color(0xFF1E293B).withValues(alpha: 0.9)
+            : Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(8),
         elevation: 2,
         child: InkWell(
@@ -1150,8 +1242,12 @@ class _FleetLiveMapCanvasPainter extends CustomPainter {
     canvas.drawRect(Rect.fromLTWH(0, 0, width, height), landPaint);
 
     // 2. Draw Vector Roads & Avenues
-    final roadColor = isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0);
-    final mainRoadColor = isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1);
+    final roadColor = isDark
+        ? const Color(0xFF1E293B)
+        : const Color(0xFFE2E8F0);
+    final mainRoadColor = isDark
+        ? const Color(0xFF334155)
+        : const Color(0xFFCBD5E1);
 
     final roadPaint = Paint()
       ..color = roadColor
@@ -1179,16 +1275,34 @@ class _FleetLiveMapCanvasPainter extends CustomPainter {
 
     // Secondary Cross Avenues
     final List<Path> roads = [
-      Path()..moveTo(width * 0.22, 0)..lineTo(width * 0.22, height),
-      Path()..moveTo(width * 0.45, 0)..lineTo(width * 0.45, height),
-      Path()..moveTo(width * 0.70, 0)..lineTo(width * 0.70, height),
-      Path()..moveTo(width * 0.88, 0)..lineTo(width * 0.88, height),
-      Path()..moveTo(0, height * 0.24)..lineTo(width, height * 0.24),
-      Path()..moveTo(0, height * 0.78)..lineTo(width, height * 0.78),
+      Path()
+        ..moveTo(width * 0.22, 0)
+        ..lineTo(width * 0.22, height),
+      Path()
+        ..moveTo(width * 0.45, 0)
+        ..lineTo(width * 0.45, height),
+      Path()
+        ..moveTo(width * 0.70, 0)
+        ..lineTo(width * 0.70, height),
+      Path()
+        ..moveTo(width * 0.88, 0)
+        ..lineTo(width * 0.88, height),
+      Path()
+        ..moveTo(0, height * 0.24)
+        ..lineTo(width, height * 0.24),
+      Path()
+        ..moveTo(0, height * 0.78)
+        ..lineTo(width, height * 0.78),
       // Diagonal Connector
-      Path()..moveTo(width * 0.22, height * 0.52)..lineTo(width * 0.45, height * 0.24),
-      Path()..moveTo(width * 0.45, height * 0.52)..lineTo(width * 0.70, height * 0.78),
-      Path()..moveTo(width * 0.70, height * 0.52)..lineTo(width * 0.88, height * 0.24),
+      Path()
+        ..moveTo(width * 0.22, height * 0.52)
+        ..lineTo(width * 0.45, height * 0.24),
+      Path()
+        ..moveTo(width * 0.45, height * 0.52)
+        ..lineTo(width * 0.70, height * 0.78),
+      Path()
+        ..moveTo(width * 0.70, height * 0.52)
+        ..lineTo(width * 0.88, height * 0.24),
     ];
 
     for (var r in roads) {
@@ -1198,11 +1312,15 @@ class _FleetLiveMapCanvasPainter extends CustomPainter {
 
     // 3. Draw City Neighborhood Blocks & Landmarks
     final blockPaint = Paint()
-      ..color = isDark ? const Color(0xFF0F172A) : const Color(0xFFEDE9FE).withValues(alpha: 0.5)
+      ..color = isDark
+          ? const Color(0xFF0F172A)
+          : const Color(0xFFEDE9FE).withValues(alpha: 0.5)
       ..style = PaintingStyle.fill;
 
     final blockBorder = Paint()
-      ..color = isDark ? Colors.white10 : const Color(0xFFDDD6FE).withValues(alpha: 0.7)
+      ..color = isDark
+          ? Colors.white10
+          : const Color(0xFFDDD6FE).withValues(alpha: 0.7)
       ..strokeWidth = 1
       ..style = PaintingStyle.stroke;
 
@@ -1230,7 +1348,9 @@ class _FleetLiveMapCanvasPainter extends CustomPainter {
     for (int i = 0; i < displayOrders.length; i++) {
       final o = displayOrders[i];
       final isSelected = selectedOrder?.id == o.id;
-      final bool isActive = o.orderStatus == OrderStatus.onDelivery || o.orderStatus == OrderStatus.assigned;
+      final bool isActive =
+          o.orderStatus == OrderStatus.onDelivery ||
+          o.orderStatus == OrderStatus.assigned;
       final bool isCompleted = o.orderStatus == OrderStatus.completed;
 
       // Deterministic position on grid
@@ -1241,7 +1361,9 @@ class _FleetLiveMapCanvasPainter extends CustomPainter {
 
       // Interpolate driver vehicle location between Hub and Destination
       final double driverCycleProgress = (animProgress + (i * 0.25)) % 1.0;
-      final double transitProgress = isActive ? driverCycleProgress : (isCompleted ? 1.0 : 0.0);
+      final double transitProgress = isActive
+          ? driverCycleProgress
+          : (isCompleted ? 1.0 : 0.0);
 
       final Offset driverPos = Offset(
         hubCoord.dx + (destCoord.dx - hubCoord.dx) * transitProgress,
@@ -1251,7 +1373,9 @@ class _FleetLiveMapCanvasPainter extends CustomPainter {
       // Draw Glowing Route Polyline from Hub to Destination
       final routeColor = isSelected
           ? const Color(0xFF0284C7)
-          : (isActive ? const Color(0xFF38BDF8) : (isCompleted ? const Color(0xFF10B981) : Colors.amber));
+          : (isActive
+                ? const Color(0xFF38BDF8)
+                : (isCompleted ? const Color(0xFF10B981) : Colors.amber));
 
       final routePaint = Paint()
         ..color = routeColor.withValues(alpha: isSelected ? 0.9 : 0.6)
@@ -1269,14 +1393,18 @@ class _FleetLiveMapCanvasPainter extends CustomPainter {
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.round;
 
-        final double pulseX = hubCoord.dx + (destCoord.dx - hubCoord.dx) * driverCycleProgress;
-        final double pulseY = hubCoord.dy + (destCoord.dy - hubCoord.dy) * driverCycleProgress;
+        final double pulseX =
+            hubCoord.dx + (destCoord.dx - hubCoord.dx) * driverCycleProgress;
+        final double pulseY =
+            hubCoord.dy + (destCoord.dy - hubCoord.dy) * driverCycleProgress;
         canvas.drawCircle(Offset(pulseX, pulseY), 4, dashPaint);
       }
 
       // Draw Customer Delivery Destination Pin
       final pinPaint = Paint()
-        ..color = isSelected ? const Color(0xFFF43F5E) : (isCompleted ? const Color(0xFF10B981) : const Color(0xFF6366F1))
+        ..color = isSelected
+            ? const Color(0xFFF43F5E)
+            : (isCompleted ? const Color(0xFF10B981) : const Color(0xFF6366F1))
         ..style = PaintingStyle.fill;
 
       canvas.drawCircle(destCoord, isSelected ? 9 : 7, pinPaint);
@@ -1284,7 +1412,9 @@ class _FleetLiveMapCanvasPainter extends CustomPainter {
         destCoord,
         isSelected ? 14 : 11,
         Paint()
-          ..color = (isSelected ? const Color(0xFFF43F5E) : const Color(0xFF6366F1)).withValues(alpha: 0.25)
+          ..color =
+              (isSelected ? const Color(0xFFF43F5E) : const Color(0xFF6366F1))
+                  .withValues(alpha: 0.25)
           ..style = PaintingStyle.fill,
       );
 
@@ -1296,12 +1426,16 @@ class _FleetLiveMapCanvasPainter extends CustomPainter {
             color: isDark ? Colors.white : const Color(0xFF1E293B),
             fontSize: 9,
             fontWeight: FontWeight.bold,
-            backgroundColor: (isDark ? const Color(0xFF0F172A) : Colors.white).withValues(alpha: 0.8),
+            backgroundColor: (isDark ? const Color(0xFF0F172A) : Colors.white)
+                .withValues(alpha: 0.8),
           ),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
-      destPainter.paint(canvas, Offset(destCoord.dx - destPainter.width / 2, destCoord.dy + 12));
+      destPainter.paint(
+        canvas,
+        Offset(destCoord.dx - destPainter.width / 2, destCoord.dy + 12),
+      );
 
       // Draw Animated Moving Driver Vehicle Icon
       if (isActive) {
@@ -1319,7 +1453,9 @@ class _FleetLiveMapCanvasPainter extends CustomPainter {
         );
 
         // Driver Name Tag
-        final driverLabel = o.driverName != null ? o.driverName!.split(' ').first : 'Rider';
+        final driverLabel = o.driverName != null
+            ? o.driverName!.split(' ').first
+            : 'Rider';
         final driverPainter = TextPainter(
           text: TextSpan(
             text: 'Rider: $driverLabel',
@@ -1332,7 +1468,10 @@ class _FleetLiveMapCanvasPainter extends CustomPainter {
           ),
           textDirection: TextDirection.ltr,
         )..layout();
-        driverPainter.paint(canvas, Offset(driverPos.dx - driverPainter.width / 2, driverPos.dy - 16));
+        driverPainter.paint(
+          canvas,
+          Offset(driverPos.dx - driverPainter.width / 2, driverPos.dy - 16),
+        );
       }
     }
 
@@ -1340,7 +1479,9 @@ class _FleetLiveMapCanvasPainter extends CustomPainter {
     // Pulsing radar ripple circles
     final rippleRadius = 14 + (animProgress * 22);
     final ripplePaint = Paint()
-      ..color = AppTheme.primaryColor.withValues(alpha: (1.0 - animProgress).clamp(0.0, 1.0) * 0.5)
+      ..color = AppTheme.primaryColor.withValues(
+        alpha: (1.0 - animProgress).clamp(0.0, 1.0) * 0.5,
+      )
       ..strokeWidth = 2.0
       ..style = PaintingStyle.stroke;
     canvas.drawCircle(hubCoord, rippleRadius, ripplePaint);
@@ -1368,7 +1509,10 @@ class _FleetLiveMapCanvasPainter extends CustomPainter {
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    hubTextPainter.paint(canvas, Offset(hubCoord.dx - hubTextPainter.width / 2, hubCoord.dy + 18));
+    hubTextPainter.paint(
+      canvas,
+      Offset(hubCoord.dx - hubTextPainter.width / 2, hubCoord.dy + 18),
+    );
   }
 
   @override
