@@ -9,6 +9,8 @@ import '../../providers/order_provider.dart';
 import '../../services/api_service.dart';
 import '../../services/ai_support_service.dart';
 import '../../services/navigation_launcher.dart';
+import '../../services/chat_service.dart';
+import '../../widgets/realtime_chat_modal.dart';
 import '../../widgets/water_widgets.dart';
 import '../../widgets/google_map_widget.dart';
 import 'driver_styles.dart';
@@ -52,6 +54,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
   @override
   void initState() {
     super.initState();
+    ChatService.instance.init();
     _loadDashboardData();
   }
 
@@ -416,6 +419,54 @@ class _DriverDashboardState extends State<DriverDashboard> {
                   ),
                 ],
               ),
+              actions: [
+                ListenableBuilder(
+                  listenable: ChatService.instance,
+                  builder: (context, _) {
+                    final auth = Provider.of<AuthProvider>(context, listen: false);
+                    final userId = auth.currentUser?.id ?? '';
+                    final unread = ChatService.instance.getUnreadCount(userId, 'driver');
+                    return Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        IconButton(
+                          tooltip: 'Dispatch & Customer Live Chat',
+                          icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white),
+                          onPressed: () => RealtimeChatModal.show(context),
+                        ),
+                        if (unread > 0)
+                          Positioned(
+                            right: 6,
+                            top: 6,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.redAccent,
+                                shape: BoxShape.circle,
+                              ),
+                              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                              child: Center(
+                                child: Text(
+                                  '$unread',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+                IconButton(
+                  tooltip: 'Refresh',
+                  icon: const Icon(Icons.sync_rounded, color: Colors.white),
+                  onPressed: _loadDashboardData,
+                ),
+              ],
             ),
       body: Row(
         children: [
@@ -536,17 +587,48 @@ class _DriverDashboardState extends State<DriverDashboard> {
               color: AppTheme.navyColor,
             ),
           ),
-          IconButton(
-            onPressed: () {
-              setState(() {
-                _selectedTab = 4;
-                _activeSidebarMenu = 4;
-              });
+          ListenableBuilder(
+            listenable: ChatService.instance,
+            builder: (context, _) {
+              final userId = auth.currentUser?.id ?? '';
+              final unread = ChatService.instance.getUnreadCount(userId, 'driver');
+              return Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  IconButton(
+                    tooltip: 'Dispatch & Customer Live Chat',
+                    onPressed: () => RealtimeChatModal.show(context),
+                    icon: const Icon(
+                      Icons.chat_bubble_outline_rounded,
+                      color: AppTheme.navyColor,
+                    ),
+                  ),
+                  if (unread > 0)
+                    Positioned(
+                      right: 6,
+                      top: 6,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.redAccent,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                        child: Center(
+                          child: Text(
+                            '$unread',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 8,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
             },
-            icon: const Icon(
-              Icons.chat_bubble_outline_rounded,
-              color: AppTheme.navyColor,
-            ),
           ),
           const SizedBox(width: 12),
           InkWell(

@@ -18,6 +18,8 @@ import '../../widgets/water_widgets.dart';
 import '../../widgets/google_map_widget.dart';
 import '../../widgets/gcash_payment_modal.dart';
 import '../../widgets/location_picker_modal.dart';
+import '../../services/chat_service.dart';
+import '../../widgets/realtime_chat_modal.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'customer_styles.dart';
 
@@ -128,6 +130,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   @override
   void initState() {
     super.initState();
+    ChatService.instance.init();
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final initialName = auth.currentUser?.name.isNotEmpty == true
         ? auth.currentUser!.name
@@ -971,6 +974,47 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                 ],
               ),
               actions: [
+                ListenableBuilder(
+                  listenable: ChatService.instance,
+                  builder: (context, _) {
+                    final auth = Provider.of<AuthProvider>(context, listen: false);
+                    final userId = auth.currentUser?.id ?? '';
+                    final unread = ChatService.instance.getUnreadCount(userId, 'customer');
+                    return Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        IconButton(
+                          tooltip: 'Live Chat (Station & Driver)',
+                          icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white),
+                          onPressed: () => RealtimeChatModal.show(context),
+                        ),
+                        if (unread > 0)
+                          Positioned(
+                            right: 6,
+                            top: 6,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.redAccent,
+                                shape: BoxShape.circle,
+                              ),
+                              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                              child: Center(
+                                child: Text(
+                                  '$unread',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
                 IconButton(
                   tooltip: 'Refresh',
                   icon: const Icon(Icons.sync_rounded, color: Colors.white),
@@ -1095,17 +1139,48 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
               color: AppTheme.navyColor,
             ),
           ),
-          IconButton(
-            onPressed: () {
-              setState(() {
-                _selectedTab = 4;
-                _activeSidebarMenu = 4;
-              });
+          ListenableBuilder(
+            listenable: ChatService.instance,
+            builder: (context, _) {
+              final userId = auth.currentUser?.id ?? '';
+              final unread = ChatService.instance.getUnreadCount(userId, 'customer');
+              return Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  IconButton(
+                    tooltip: 'Live Chat Support & Driver',
+                    onPressed: () => RealtimeChatModal.show(context),
+                    icon: const Icon(
+                      Icons.chat_bubble_outline_rounded,
+                      color: AppTheme.navyColor,
+                    ),
+                  ),
+                  if (unread > 0)
+                    Positioned(
+                      right: 6,
+                      top: 6,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.redAccent,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                        child: Center(
+                          child: Text(
+                            '$unread',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 8,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
             },
-            icon: const Icon(
-              Icons.chat_bubble_outline_rounded,
-              color: AppTheme.navyColor,
-            ),
           ),
           const SizedBox(width: 12),
           InkWell(
@@ -4141,15 +4216,14 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                   ),
                 ),
                 const Spacer(),
-                // Inquire with Admin button
+                // Live Chat with Driver and Station Admin
                 InkWell(
                   onTap: () {
-                    setState(() {
-                      _selectedTab = 4;
-                      _supportSubTab = 1;
-                      _adminChatInputController.text =
-                          'Inquiring regarding Order ${order.id}: ';
-                    });
+                    RealtimeChatModal.show(
+                      context,
+                      initialConversationId: 'order_${order.id}',
+                      initialOrderId: order.id,
+                    );
                   },
                   borderRadius: BorderRadius.circular(6),
                   child: Container(
@@ -4166,7 +4240,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                             size: 12, color: AppTheme.navyColor),
                         SizedBox(width: 3),
                         Text(
-                          'Message Admin',
+                          'Live Chat',
                           style: TextStyle(
                             fontSize: 10.5,
                             fontWeight: FontWeight.bold,

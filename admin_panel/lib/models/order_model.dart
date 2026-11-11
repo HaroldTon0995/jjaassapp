@@ -142,11 +142,17 @@ class OrderModel {
   }
 
   static String _resolveOrderCustomerName(Map<String, dynamic> json) {
-    final raw = (json['customerName'] ?? json['customer_name'] ?? '').toString().trim();
-    if (raw.isNotEmpty && raw.toLowerCase() != 'new user' && raw.toLowerCase() != 'registered user') {
+    final raw = (json['customerName'] ?? json['customer_name'] ?? '')
+        .toString()
+        .trim();
+    if (raw.isNotEmpty &&
+        raw.toLowerCase() != 'new user' &&
+        raw.toLowerCase() != 'registered user') {
       return raw;
     }
-    final rawPhone = (json['customerPhone'] ?? json['customer_phone'] ?? '').toString().trim();
+    final rawPhone = (json['customerPhone'] ?? json['customer_phone'] ?? '')
+        .toString()
+        .trim();
     if (rawPhone.isNotEmpty && rawPhone != '+63 912 345 6789') {
       return 'Customer ($rawPhone)';
     }
@@ -186,35 +192,62 @@ class OrderModel {
           ? (json['longitude'] as num).toDouble()
           : null,
       deliveryNote: json['deliveryNote'] as String?,
-      isBorrowingContainers: (json['deliveryAddress']?.toString().contains('[GALLONS_RETURNED]') ?? false)
+      isBorrowingContainers:
+          (json['deliveryAddress']?.toString().contains('[GALLONS_RETURNED]') ??
+              false)
           ? false
           : (json['isBorrowingContainers'] == true ||
-              json['is_borrowing_containers'] == true ||
-              ((json['deliveryAddress']?.toString().contains('[BORROWED_') ?? false) &&
-                  !(json['deliveryAddress']?.toString().contains('[GALLONS_RETURNED]') ?? false))),
-      borrowedSlimCount: (json['borrowedSlimCount'] ?? json['borrowed_slim_count'] as num?)?.toInt() ??
+                json['is_borrowing_containers'] == true ||
+                ((json['deliveryAddress']?.toString().contains('[BORROWED_') ??
+                        false) &&
+                    !(json['deliveryAddress']?.toString().contains(
+                          '[GALLONS_RETURNED]',
+                        ) ??
+                        false))),
+      borrowedSlimCount:
+          (json['borrowedSlimCount'] ?? json['borrowed_slim_count'] as num?)
+              ?.toInt() ??
           (() {
             final addr = json['deliveryAddress']?.toString() ?? '';
             final match = RegExp(r'\[BORROWED_SLIM:(\d+)\]').firstMatch(addr);
             return match != null ? int.tryParse(match.group(1)!) : null;
           })(),
-      borrowedRoundCount: (json['borrowedRoundCount'] ?? json['borrowed_round_count'] as num?)?.toInt() ??
+      borrowedRoundCount:
+          (json['borrowedRoundCount'] ?? json['borrowed_round_count'] as num?)
+              ?.toInt() ??
           (() {
             final addr = json['deliveryAddress']?.toString() ?? '';
             final match = RegExp(r'\[BORROWED_ROUND:(\d+)\]').firstMatch(addr);
             return match != null ? int.tryParse(match.group(1)!) : null;
           })(),
-      isCollectionJob: json['isCollectionJob'] == true ||
+      isCollectionJob:
+          json['isCollectionJob'] == true ||
           json['is_collection_job'] == true ||
-          (json['waterType']?.toString().toLowerCase().contains('collection') ?? false) ||
-          (json['paymentMethod']?.toString().toLowerCase().contains('collection') ?? false) ||
-          (json['deliveryNote']?.toString().toLowerCase().contains('weekly empty gallon retrieval') ?? false) ||
-          (json['deliveryNote']?.toString().toLowerCase().contains('weekly full route collection') ?? false) ||
-          (json['deliveryNote']?.toString().toLowerCase().contains('weekly regular collection') ?? false),
-      isGallonReturned: json['isGallonReturned'] == true ||
+          (json['waterType']?.toString().toLowerCase().contains('collection') ??
+              false) ||
+          (json['paymentMethod']?.toString().toLowerCase().contains(
+                'collection',
+              ) ??
+              false) ||
+          (json['deliveryNote']?.toString().toLowerCase().contains(
+                'weekly empty gallon retrieval',
+              ) ??
+              false) ||
+          (json['deliveryNote']?.toString().toLowerCase().contains(
+                'weekly full route collection',
+              ) ??
+              false) ||
+          (json['deliveryNote']?.toString().toLowerCase().contains(
+                'weekly regular collection',
+              ) ??
+              false),
+      isGallonReturned:
+          json['isGallonReturned'] == true ||
           json['is_gallon_returned'] == true ||
-          (json['deliveryAddress']?.toString().contains('[GALLONS_RETURNED]') ?? false) ||
-          (json['deliveryNote']?.toString().contains('[GALLONS_RETURNED]') ?? false),
+          (json['deliveryAddress']?.toString().contains('[GALLONS_RETURNED]') ??
+              false) ||
+          (json['deliveryNote']?.toString().contains('[GALLONS_RETURNED]') ??
+              false),
     );
   }
 }
