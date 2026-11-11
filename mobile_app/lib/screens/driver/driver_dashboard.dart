@@ -2021,6 +2021,34 @@ class _DriverDashboardState extends State<DriverDashboard> {
                           ),
                         ),
                       ],
+                      if (job.deliveryNote?.contains('[SWAP_REPLACEMENT:') == true) ...[
+                        const SizedBox(height: 6),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF3E8FF),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFC084FC), width: 1.5),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.swap_horizontal_circle_rounded, color: Color(0xFF7E22CE), size: 18),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  '🔁 DEFECT SWAP: Bring replacement container & collect defective gallon from customer',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF6B21A8),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 10),
                       Wrap(
                         alignment: WrapAlignment.end,

@@ -20,6 +20,9 @@ import '../../widgets/gcash_payment_modal.dart';
 import '../../widgets/location_picker_modal.dart';
 import '../../services/chat_service.dart';
 import '../../widgets/realtime_chat_modal.dart';
+import '../../models/delivery_issue_model.dart';
+import '../../services/delivery_issue_service.dart';
+import '../../widgets/report_delivery_issue_modal.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'customer_styles.dart';
 
@@ -47,6 +50,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   int _borrowedSlimQty = 0;
   int _borrowedRoundQty = 0;
   bool _isSelectProductMode = false;
+  bool _applySwapCredit = false;
 
   int get _totalOrderQuantity => _slimQuantity + _roundQuantity;
 
@@ -131,6 +135,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   void initState() {
     super.initState();
     ChatService.instance.init();
+    DeliveryIssueService.instance.init();
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final initialName = auth.currentUser?.name.isNotEmpty == true
         ? auth.currentUser!.name
@@ -499,7 +504,27 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     }
 
     final addonsTotal = _calculateAddonsTotal(orderProvider);
-    final grandTotal = (_totalOrderQuantity * pricePerJug) + addonsTotal;
+    double grandTotal = (_totalOrderQuantity * pricePerJug) + addonsTotal;
+
+    String finalDeliveryNote = _deliveryNoteController.text.trim();
+    if (_applySwapCredit && _totalOrderQuantity > 0) {
+      final availableSwap = DeliveryIssueService.instance
+          .getCustomerApprovedSwapGallons(user?.id ?? '', user?.name ?? '');
+      if (availableSwap > 0) {
+        final swapCount = availableSwap > _totalOrderQuantity
+            ? _totalOrderQuantity
+            : availableSwap;
+        final discount = swapCount * pricePerJug;
+        grandTotal = (grandTotal - discount).clamp(0.0, double.infinity);
+        final swapTag =
+            '[SWAP_REPLACEMENT: $swapCount Gallons Free Replacement]';
+        finalDeliveryNote = finalDeliveryNote.isNotEmpty
+            ? '$finalDeliveryNote • $swapTag'
+            : swapTag;
+        DeliveryIssueService.instance.redeemSwap(user?.id ?? '', swapCount);
+        _applySwapCredit = false;
+      }
+    }
 
     final effectiveBorrowedSlim = _isBorrowingContainers
         ? (_borrowedSlimQty > 0 ? _borrowedSlimQty : _slimQuantity)
@@ -519,7 +544,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
       customTotalAmount: grandTotal,
       addonItems: Map.from(_selectedAddonQuantities),
       paymentMethod: submittedPaymentMethod,
-      deliveryNote: _deliveryNoteController.text.trim(),
+      deliveryNote: finalDeliveryNote,
       latitude: _pinnedLocation?.latitude,
       longitude: _pinnedLocation?.longitude,
       isBorrowingContainers: _isBorrowingContainers,
@@ -2173,6 +2198,90 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
             ),
           ),
           const SizedBox(height: 16),
+
+          // Approved Replacement Swap Available Credit Banner
+          ListenableBuilder(
+            listenable: DeliveryIssueService.instance,
+            builder: (context, _) {
+              final auth = Provider.of<AuthProvider>(context, listen: false);
+              final user = auth.currentUser;
+              final approvedSwapGallons = DeliveryIssueService.instance
+                  .getCustomerApprovedSwapGallons(user?.id ?? '', user?.name ?? '');
+
+              if (approvedSwapGallons <= 0) return const SizedBox.shrink();
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFA7F3D0), width: 1.2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.green.withValues(alpha: 0.08),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.swap_horizontal_circle_rounded,
+                          color: Color(0xFF059669), size: 24),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Approved Replacement Swap: $approvedSwapGallons Free Gallon${approvedSwapGallons > 1 ? "s" : ""}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13.5,
+                              color: Color(0xFF065F46),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _applySwapCredit
+                                ? '✓ Applied to this delivery! Price for $approvedSwapGallons gallon(s) is ₱0.'
+                                : 'Admin approved your delivery issue claim. Tap switch to redeem replacement now.',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: _applySwapCredit
+                                  ? const Color(0xFF059669)
+                                  : const Color(0xFF047857),
+                              fontWeight: _applySwapCredit
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: _applySwapCredit,
+                      activeThumbColor: const Color(0xFF059669),
+                      activeTrackColor: const Color(0xFF6EE7B7),
+                      onChanged: (val) {
+                        setState(() {
+                          _applySwapCredit = val;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
           Container(
             padding: EdgeInsets.all(cardPadding),
             decoration: CustomerDecorations.card(isDark: isDark),
@@ -4320,6 +4429,229 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                         ],
                       ),
                     ),
+                  ),
+                ],
+                // Delivery Issue / Gallon Swap Claim Button & Badge (For Completed Orders)
+                if (isDone) ...[
+                  const SizedBox(width: 6),
+                  ListenableBuilder(
+                    listenable: DeliveryIssueService.instance,
+                    builder: (context, _) {
+                      final DeliveryIssueModel? existingIssue =
+                          DeliveryIssueService.instance
+                              .getIssueByOrderId(order.id);
+
+                      if (existingIssue == null) {
+                        return InkWell(
+                          onTap: () =>
+                              ReportDeliveryIssueModal.show(context, order),
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF2F2),
+                              borderRadius: BorderRadius.circular(6),
+                              border:
+                                  Border.all(color: const Color(0xFFFCA5A5)),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.report_problem_rounded,
+                                    size: 11, color: Color(0xFFDC2626)),
+                                SizedBox(width: 3),
+                                Text(
+                                  'Report Issue',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFFDC2626),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+
+                      // Show current status of the claim
+                      final isApproved = existingIssue.isApproved;
+                      final isDeclined = existingIssue.isDeclined;
+                      final statusColor = isApproved
+                          ? const Color(0xFF059669)
+                          : (isDeclined
+                              ? const Color(0xFF6B7280)
+                              : const Color(0xFFD97706));
+                      final bgClr = isApproved
+                          ? const Color(0xFFECFDF5)
+                          : (isDeclined
+                              ? const Color(0xFFF3F4F6)
+                              : const Color(0xFFFEF3C7));
+                      final borderClr = isApproved
+                          ? const Color(0xFF6EE7B7)
+                          : (isDeclined
+                              ? const Color(0xFFD1D5DB)
+                              : const Color(0xFFFCD34D));
+
+                      return InkWell(
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16)),
+                              title: Row(
+                                children: [
+                                  Icon(
+                                    isApproved
+                                        ? Icons.swap_horizontal_circle_rounded
+                                        : (isDeclined
+                                            ? Icons.cancel_outlined
+                                            : Icons.hourglass_top_rounded),
+                                    color: statusColor,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      isApproved
+                                          ? 'Swap Approved'
+                                          : (isDeclined
+                                              ? 'Claim Declined'
+                                              : 'Claim Under Review'),
+                                      style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Issue: ${existingIssue.issueType}',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Defective Gallons: ${existingIssue.affectedGallons} gallon(s)',
+                                    style: const TextStyle(fontSize: 13),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Description: ${existingIssue.description.isNotEmpty ? existingIssue.description : "None"}',
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey.shade700),
+                                  ),
+                                  if (existingIssue.adminNotes != null &&
+                                      existingIssue
+                                          .adminNotes!.isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade100,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        'Admin note: ${existingIssue.adminNotes}',
+                                        style: TextStyle(
+                                            fontStyle: FontStyle.italic,
+                                            fontSize: 12,
+                                            color: Colors.grey.shade800),
+                                      ),
+                                    ),
+                                  ],
+                                  if (isApproved) ...[
+                                    const SizedBox(height: 10),
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFECFDF5),
+                                        borderRadius:
+                                            BorderRadius.circular(8),
+                                        border: Border.all(
+                                            color: const Color(0xFF6EE7B7)),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Icon(
+                                              Icons.check_circle_rounded,
+                                              size: 18,
+                                              color: Color(0xFF059669)),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              '${existingIssue.affectedGallons} replacement gallon(s) ready to swap on your next order at ₱0!',
+                                              style: const TextStyle(
+                                                  color: Color(0xFF047857),
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 12),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx),
+                                  child: const Text('Close'),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(6),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: bgClr,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: borderClr),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isApproved
+                                    ? Icons.swap_horizontal_circle_rounded
+                                    : (isDeclined
+                                        ? Icons.cancel_outlined
+                                        : Icons.schedule_rounded),
+                                size: 11,
+                                color: statusColor,
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                isApproved
+                                    ? 'Swap Approved (${existingIssue.affectedGallons}x)'
+                                    : (isDeclined
+                                        ? 'Swap Declined'
+                                        : 'Claim Pending (${existingIssue.affectedGallons}x)'),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: statusColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ],
