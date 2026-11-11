@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -14,6 +15,7 @@ import '../../services/payment_service.dart';
 import '../../services/psgc_service.dart';
 import '../../services/ai_support_service.dart';
 import '../../services/customer_location_storage.dart';
+import '../../services/compliance_permit_service.dart';
 import '../../widgets/water_widgets.dart';
 import '../../widgets/google_map_widget.dart';
 import '../../widgets/gcash_payment_modal.dart';
@@ -136,6 +138,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     super.initState();
     ChatService.instance.init();
     DeliveryIssueService.instance.init();
+    CompliancePermitService.instance.loadPermits();
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final initialName = auth.currentUser?.name.isNotEmpty == true
         ? auth.currentUser!.name
@@ -1546,6 +1549,8 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                       _buildQuickActionsCard(isDark),
                       const SizedBox(height: 16),
                       _buildMiniAiSupportCard(isDark),
+                      const SizedBox(height: 16),
+                      _buildStationComplianceCard(isDark),
                     ],
                   ),
                 ),
@@ -1559,6 +1564,8 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                 _buildQuickActionsCard(isDark),
                 const SizedBox(height: 16),
                 _buildMiniAiSupportCard(isDark),
+                const SizedBox(height: 16),
+                _buildStationComplianceCard(isDark),
               ],
             ),
         ],
@@ -2173,6 +2180,279 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildStationComplianceCard(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(18.0),
+      decoration: CustomerDecorations.card(isDark: isDark),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.verified_user_rounded,
+                  color: Color(0xFF10B981),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Water Safety & Quality Certifications',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.navyColor,
+                      ),
+                    ),
+                    Text(
+                      'Official government & DOH certified licenses',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF64748B),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ListenableBuilder(
+            listenable: CompliancePermitService.instance,
+            builder: (context, _) {
+              final permits = CompliancePermitService.instance.permits;
+              return Column(
+                children: permits.map((permit) {
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? const Color(0xFF0F172A)
+                          : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isDark
+                            ? const Color(0xFF334155)
+                            : const Color(0xFFE2E8F0),
+                      ),
+                    ),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 2),
+                      dense: true,
+                      leading: permit.imageData != null &&
+                              permit.imageData!.isNotEmpty
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: Image.memory(
+                                base64Decode(permit.imageData!.contains(',')
+                                    ? permit.imageData!.split(',')[1]
+                                    : permit.imageData!),
+                                width: 36,
+                                height: 36,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(Icons.verified_rounded,
+                                        color: Color(0xFF10B981), size: 24),
+                              ),
+                            )
+                          : const Icon(
+                              Icons.verified_rounded,
+                              color: Color(0xFF10B981),
+                              size: 24,
+                            ),
+                      title: Text(
+                        permit.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.navyColor,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'Expiry: ${permit.expiryDate} • PNSDW Standards',
+                        style: const TextStyle(
+                          fontSize: 10.5,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                      trailing: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color:
+                              const Color(0xFF10B981).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text(
+                          'Verified',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF10B981),
+                          ),
+                        ),
+                      ),
+                      onTap: () => _showCustomerPermitModal(permit, isDark),
+                    ),
+                  );
+                }).toList(),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCustomerPermitModal(CompliancePermitModel permit, bool isDark) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.verified_rounded,
+                    color: Color(0xFF10B981), size: 22),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      permit.title,
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.bold),
+                    ),
+                    const Text(
+                      'Official Station Certificate',
+                      style: TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF10B981),
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 480,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (permit.imageData != null &&
+                      permit.imageData!.isNotEmpty) ...[
+                    Container(
+                      width: double.infinity,
+                      constraints: const BoxConstraints(maxHeight: 320),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.memory(
+                          base64Decode(permit.imageData!.contains(',')
+                              ? permit.imageData!.split(',')[1]
+                              : permit.imageData!),
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(20),
+                              child:
+                                  Icon(Icons.description_rounded, size: 40),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                  ],
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? const Color(0xFF0F172A)
+                          : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Category: ${permit.category}',
+                            style: const TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 4),
+                        Text('Valid Until: ${permit.expiryDate}',
+                            style: const TextStyle(
+                                fontSize: 11, color: Color(0xFF64748B))),
+                        const SizedBox(height: 6),
+                        const Row(
+                          children: [
+                            Icon(Icons.check_circle_rounded,
+                                size: 14, color: Color(0xFF10B981)),
+                            SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                'Meets Philippine National Standards for Drinking Water (PNSDW)',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFF10B981),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              style:
+                  ElevatedButton.styleFrom(backgroundColor: AppTheme.navyColor),
+              child: const Text('Close',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
     );
   }
 

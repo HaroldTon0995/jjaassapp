@@ -20,6 +20,8 @@ import '../../services/report_service.dart';
 import '../../services/ai_support_service.dart';
 import '../../services/chat_service.dart';
 import '../../services/delivery_issue_service.dart';
+import '../../services/compliance_permit_service.dart';
+import '../../core/utils/laptop_file_picker.dart';
 import '../../widgets/water_widgets.dart';
 import '../../widgets/gcash_payment_modal.dart';
 
@@ -114,60 +116,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
       TextEditingController(text: 'admin@jjaasswater.com');
   final TextEditingController _adminPhoneController =
       TextEditingController(text: '+63 995 113 3652');
-
-  // Water Refilling Station Regulatory & Compliance Permits (Settings)
-  final List<Map<String, dynamic>> _compliancePermits = [
-    {
-      'id': 'permit_mayor',
-      'title': "Mayor's / Business Permit (LGU Albay)",
-      'category': 'LGU Local Governance & Operation License',
-      'fileName': 'Mayors_Permit_TabacoCity_2026.pdf',
-      'status': 'Valid & Uploaded',
-      'uploadedAt': '2026-01-15',
-      'expiryDate': '2026-12-31',
-      'isUploaded': true,
-    },
-    {
-      'id': 'permit_sanitary',
-      'title': 'DOH Sanitary Permit & Health Certificates',
-      'category': 'DOH & City Health Office Sanitation Clearance',
-      'fileName': 'DOH_Sanitary_Permit_Albay_2026.pdf',
-      'status': 'Valid & Uploaded',
-      'uploadedAt': '2026-01-20',
-      'expiryDate': '2026-12-31',
-      'isUploaded': true,
-    },
-    {
-      'id': 'permit_water_lab',
-      'title': 'Water Laboratory Test (Microbiological & Physical-Chemical)',
-      'category': 'PNSDW Standards Potability Certificate',
-      'fileName': 'Water_Lab_Report_PNSDW_Nov2026.pdf',
-      'status': 'Valid & Uploaded',
-      'uploadedAt': '2026-11-01',
-      'expiryDate': '2026-11-30',
-      'isUploaded': true,
-    },
-    {
-      'id': 'permit_dti',
-      'title': 'DTI / SEC Business Name Registration',
-      'category': 'Department of Trade & Industry Certificate',
-      'fileName': 'DTI_Registration_JJAASS_Water_Market.pdf',
-      'status': 'Valid & Uploaded',
-      'uploadedAt': '2024-06-10',
-      'expiryDate': '2029-06-10',
-      'isUploaded': true,
-    },
-    {
-      'id': 'permit_fsic',
-      'title': 'Fire Safety Inspection Certificate (FSIC)',
-      'category': 'Bureau of Fire Protection Safety Clearance',
-      'fileName': 'BFP_Fire_Safety_Inspection_2026.pdf',
-      'status': 'Valid & Uploaded',
-      'uploadedAt': '2026-02-05',
-      'expiryDate': '2027-02-05',
-      'isUploaded': true,
-    },
-  ];
 
   // Customer & Driver Direct Messages (Decoupled from order system notifications)
   final List<Map<String, dynamic>> _inboxMessages = [
@@ -526,6 +474,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     super.initState();
     ChatService.instance.init();
     DeliveryIssueService.instance.init();
+    CompliancePermitService.instance.loadPermits();
     _loadAllDashboardData();
     _listenToSupabaseProfiles();
   }
@@ -13884,152 +13833,312 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
   }
 
-  // Upload Permit Dialog with strict document validation
-  void _showUploadPermitDialog(Map<String, dynamic> permit, bool isDark) {
-    final TextEditingController fileNameController = TextEditingController(
-        text: permit['fileName']?.toString().isNotEmpty == true
-            ? permit['fileName']
-            : '${permit['id'].toString().replaceAll("permit_", "").toUpperCase()}_Document.pdf');
+  // Upload / Replace Permit Dialog with Laptop file picker & drag-and-drop
+  void _showUploadPermitDialog(CompliancePermitModel permit, bool isDark) {
+    LaptopPickedFile? pickedFile;
+    final TextEditingController expiryController =
+        TextEditingController(text: permit.expiryDate);
 
     showDialog(
       context: context,
       builder: (ctx) {
-        return AlertDialog(
-          backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.upload_file_rounded,
-                    color: AppTheme.primaryColor, size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Upload Compliance Document',
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold)),
-                    Text(permit['title'] as String,
-                        style: const TextStyle(
-                            fontSize: 12, color: AppTheme.primaryColor)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Please provide the official government-issued permit or certified water test result. Only valid PDF, PNG, or JPG documents are accepted.',
-                style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Document File Name / Path',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 6),
-              TextField(
-                controller: fileNameController,
-                style: const TextStyle(fontSize: 13),
-                decoration: InputDecoration(
-                  hintText: 'e.g. Sanitary_Permit_2026.pdf',
-                  isDense: true,
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                  prefixIcon: const Icon(Icons.description_rounded, size: 18),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFCBD5E1)),
-                ),
-                child: Row(
-                  children: const [
-                    Icon(Icons.verified_user_rounded,
-                        size: 16, color: Colors.blue),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Accepted official extensions: .pdf, .png, .jpg, .jpeg (PNSDW / LGU standards)',
-                        style: TextStyle(fontSize: 10.5, color: Color(0xFF334155)),
-                      ),
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return AlertDialog(
+              backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
                     ),
-                  ],
+                    child: const Icon(Icons.upload_file_rounded,
+                        color: AppTheme.primaryColor, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          permit.isUploaded
+                              ? 'Replace Permit from Laptop'
+                              : 'Upload Permit from Laptop',
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          permit.title,
+                          style: const TextStyle(
+                              fontSize: 12, color: AppTheme.primaryColor),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: 520,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Upload or replace the official certificate for ${permit.category}. Select an image file directly from your laptop.',
+                        style: const TextStyle(
+                            fontSize: 12, color: Color(0xFF64748B)),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Drag & Drop / File Picker Dropzone
+                      InkWell(
+                        onTap: () async {
+                          final file = await LaptopFilePicker.pickImage();
+                          if (file != null) {
+                            setModalState(() {
+                              pickedFile = file;
+                            });
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? const Color(0xFF0F172A)
+                                : const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: pickedFile != null
+                                  ? const Color(0xFF10B981)
+                                  : AppTheme.primaryColor
+                                      .withValues(alpha: 0.4),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: pickedFile != null
+                              ? Column(
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.memory(
+                                        pickedFile!.bytes,
+                                        height: 180,
+                                        fit: BoxFit.contain,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(Icons.check_circle_rounded,
+                                            size: 16,
+                                            color: Color(0xFF10B981)),
+                                        const SizedBox(width: 6),
+                                        Flexible(
+                                          child: Text(
+                                            '${pickedFile!.name} (${pickedFile!.formattedSize})',
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF10B981),
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    const Text(
+                                      'Click to choose another image',
+                                      style: TextStyle(
+                                          fontSize: 11,
+                                          color: Color(0xFF64748B)),
+                                    ),
+                                  ],
+                                )
+                              : (permit.imageData != null &&
+                                      permit.imageData!.isNotEmpty
+                                  ? Column(
+                                      children: [
+                                        ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          child: Image.memory(
+                                            base64Decode(permit.imageData!
+                                                    .contains(',')
+                                                ? permit.imageData!
+                                                    .split(',')[1]
+                                                : permit.imageData!),
+                                            height: 150,
+                                            fit: BoxFit.contain,
+                                            errorBuilder: (context, error, stackTrace) =>
+                                                const Icon(
+                                                    Icons.image_not_supported,
+                                                    size: 40),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Current Image: ${permit.fileName}',
+                                          style: const TextStyle(
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        const Text(
+                                          'Click here to select a new image from your laptop to replace it',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: AppTheme.primaryColor,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  : Column(
+                                      children: [
+                                        Icon(
+                                          Icons.cloud_upload_rounded,
+                                          size: 42,
+                                          color: AppTheme.primaryColor
+                                              .withValues(alpha: 0.8),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        const Text(
+                                          'Browse Image from Laptop',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppTheme.primaryColor,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        const Text(
+                                          'Supports PNG, JPG, JPEG, and WebP (up to 5MB)',
+                                          style: TextStyle(
+                                              fontSize: 11,
+                                              color: Color(0xFF64748B)),
+                                        ),
+                                      ],
+                                    )),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Expiry Date Field
+                      const Text(
+                        'Permit Expiry Date',
+                        style: TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: expiryController,
+                        readOnly: true,
+                        onTap: () async {
+                          final now = DateTime.now();
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: DateTime.tryParse(
+                                    expiryController.text) ??
+                                now.add(const Duration(days: 365)),
+                            firstDate: now.subtract(const Duration(days: 365)),
+                            lastDate: now.add(const Duration(days: 365 * 10)),
+                          );
+                          if (picked != null) {
+                            setModalState(() {
+                              expiryController.text =
+                                  picked.toIso8601String().split('T')[0];
+                            });
+                          }
+                        },
+                        style: const TextStyle(fontSize: 13),
+                        decoration: InputDecoration(
+                          hintText: 'YYYY-MM-DD',
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                          prefixIcon: const Icon(Icons.calendar_today_rounded,
+                              size: 16),
+                          suffixIcon: const Icon(Icons.arrow_drop_down_rounded),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ],
-          ),
-          actions: [
-            OutlinedButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton.icon(
-              onPressed: () {
-                final file = fileNameController.text.trim();
-                final lower = file.toLowerCase();
+              actions: [
+                OutlinedButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    if (pickedFile == null &&
+                        (permit.imageData == null ||
+                            permit.imageData!.isEmpty)) {
+                      Helpers.showSnackBar(
+                        context,
+                        'Please browse and select an image permit file from your laptop first.',
+                        isError: true,
+                      );
+                      return;
+                    }
 
-                // Document validation: only valid permit document formats accepted
-                final isValidFormat = lower.endsWith('.pdf') ||
-                    lower.endsWith('.png') ||
-                    lower.endsWith('.jpg') ||
-                    lower.endsWith('.jpeg');
+                    final fileName = pickedFile != null
+                        ? pickedFile!.name
+                        : permit.fileName;
+                    final imageData = pickedFile != null
+                        ? pickedFile!.dataUrl
+                        : permit.imageData!;
+                    final expiryDate = expiryController.text.trim().isNotEmpty
+                        ? expiryController.text.trim()
+                        : '2026-12-31';
 
-                if (file.isEmpty || !isValidFormat) {
-                  Helpers.showSnackBar(
-                    context,
-                    'Invalid document! Only official permits in PDF, PNG, or JPG format can be uploaded.',
-                    isError: true,
-                  );
-                  return;
-                }
+                    await CompliancePermitService.instance.replacePermit(
+                      id: permit.id,
+                      fileName: fileName,
+                      imageData: imageData,
+                      expiryDate: expiryDate,
+                    );
 
-                setState(() {
-                  permit['isUploaded'] = true;
-                  permit['fileName'] = file;
-                  permit['status'] = 'Valid & Uploaded';
-                  permit['uploadedAt'] =
-                      DateTime.now().toString().split(' ')[0];
-                });
-                Navigator.of(ctx).pop();
-                Helpers.showSnackBar(
-                  context,
-                  'Compliance document "${permit['title']}" saved and uploaded successfully!',
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
-                foregroundColor: Colors.white,
-              ),
-              icon: const Icon(Icons.check_circle_rounded, size: 16),
-              label: const Text('Save Document',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ],
+                    if (context.mounted) {
+                      Navigator.of(ctx).pop();
+                      Helpers.showSnackBar(
+                        context,
+                        '✓ "${permit.title}" updated and certified successfully!',
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                  ),
+                  icon: const Icon(Icons.check_circle_rounded, size: 16),
+                  label: const Text('Save & Certify Permit',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ],
+            );
+          },
         );
       },
     );
   }
 
-  // View Permit Certificate Preview Dialog
-  void _showViewPermitDialog(Map<String, dynamic> permit, bool isDark) {
+  // View Permit Certificate Preview Dialog with high-res image
+  void _showViewPermitDialog(CompliancePermitModel permit, bool isDark) {
     showDialog(
       context: context,
       builder: (ctx) {
@@ -14051,75 +14160,97 @@ class _AdminDashboardState extends State<AdminDashboard> {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  permit['title'] as String,
+                  permit.title,
                   style: const TextStyle(
                       fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.picture_as_pdf_rounded,
-                            color: Colors.redAccent, size: 28),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                permit['fileName'] ?? 'Official_Permit.pdf',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold, fontSize: 13),
-                              ),
-                              Text(
-                                'Category: ${permit['category']}',
-                                style: const TextStyle(
-                                    fontSize: 11, color: Color(0xFF64748B)),
-                              ),
-                            ],
+          content: SizedBox(
+            width: 580,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (permit.imageData != null &&
+                      permit.imageData!.isNotEmpty) ...[
+                    Container(
+                      width: double.infinity,
+                      constraints: const BoxConstraints(maxHeight: 380),
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF0F172A)
+                            : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                            color: Colors.green.withValues(alpha: 0.3)),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.memory(
+                          base64Decode(permit.imageData!.contains(',')
+                              ? permit.imageData!.split(',')[1]
+                              : permit.imageData!),
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) => const Center(
+                            child: Icon(Icons.image_not_supported, size: 40),
                           ),
                         ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                  ],
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? const Color(0xFF0F172A)
+                          : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                          color: isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSettingRow('Document File', permit.fileName),
+                        const SizedBox(height: 6),
+                        _buildSettingRow('Category', permit.category),
+                        const SizedBox(height: 6),
+                        _buildSettingRow('Upload Date', permit.uploadedAt),
+                        const SizedBox(height: 6),
+                        _buildSettingRow('Valid Until', permit.expiryDate),
+                        const SizedBox(height: 6),
+                        _buildSettingRow(
+                            'Status', 'CERTIFIED ACTIVE & COMPLIANT',
+                            isSuccess: true),
                       ],
                     ),
-                    const Divider(height: 20),
-                    _buildSettingRow('Jurisdiction', 'Albay 1st District'),
-                    const SizedBox(height: 6),
-                    _buildSettingRow(
-                        'Upload Date', permit['uploadedAt'] ?? '2026-01-15'),
-                    const SizedBox(height: 6),
-                    _buildSettingRow(
-                        'Valid Until', permit['expiryDate'] ?? '2026-12-31'),
-                    const SizedBox(height: 6),
-                    _buildSettingRow('Verification Status', 'CERTIFIED ACTIVE',
-                        isSuccess: true),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
           actions: [
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                _showUploadPermitDialog(permit, isDark);
+              },
+              icon: const Icon(Icons.edit_rounded, size: 15),
+              label: const Text('Replace Image'),
+            ),
             ElevatedButton(
               onPressed: () => Navigator.of(ctx).pop(),
               style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor),
               child: const Text('Close',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ],
         );
@@ -14129,7 +14260,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   // Confirmation warning dialog before permanently erasing a compliance document
   Future<void> _confirmDeletePermit(
-      Map<String, dynamic> permit, bool isDark) async {
+      CompliancePermitModel permit, bool isDark) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogCtx) {
@@ -14160,7 +14291,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Are you sure you want to permanently erase the document for "${permit['title']}"?',
+                'Are you sure you want to permanently erase the document for "${permit.title}"?',
                 style: TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w600,
@@ -14183,10 +14314,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Document: ${permit['fileName']}',
+                    Text('Document: ${permit.fileName}',
                         style: const TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
-                    Text('Category: ${permit['category']}',
+                    Text('Category: ${permit.category}',
                         style: const TextStyle(fontSize: 11)),
                   ],
                 ),
@@ -14225,16 +14356,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
     if (!mounted) return;
     if (confirmed == true) {
-      setState(() {
-        permit['isUploaded'] = false;
-        permit['fileName'] = '';
-        permit['status'] = 'Missing / Required';
-        permit['uploadedAt'] = '';
-      });
-      Helpers.showSnackBar(
-        context,
-        'Compliance document for "${permit['title']}" was erased.',
-      );
+      await CompliancePermitService.instance.erasePermit(permit.id);
+      if (mounted) {
+        Helpers.showSnackBar(
+          context,
+          'Compliance document for "${permit.title}" was erased.',
+        );
+      }
     }
   }
 
@@ -14459,148 +14587,175 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _compliancePermits.length,
-                  separatorBuilder: (context, index) =>
-                      const Divider(height: 24),
-                  itemBuilder: (context, index) {
-                    final permit = _compliancePermits[index];
-                    final bool isUploaded = permit['isUploaded'] == true;
+                ListenableBuilder(
+                  listenable: CompliancePermitService.instance,
+                  builder: (context, _) {
+                    final permits = CompliancePermitService.instance.permits;
+                    return ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: permits.length,
+                      separatorBuilder: (context, index) =>
+                          const Divider(height: 24),
+                      itemBuilder: (context, index) {
+                        final permit = permits[index];
+                        final bool isUploaded = permit.isUploaded;
 
-                    return Wrap(
-                      alignment: WrapAlignment.spaceBetween,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 12,
-                      runSpacing: 10,
-                      children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
+                        return Wrap(
+                          alignment: WrapAlignment.spaceBetween,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 12,
+                          runSpacing: 10,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: (isUploaded ? Colors.green : Colors.red)
-                                    .withValues(alpha: 0.1),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                isUploaded
-                                    ? Icons.verified_user_rounded
-                                    : Icons.warning_amber_rounded,
-                                color: isUploaded ? Colors.green : Colors.red,
-                                size: 20,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(
-                                  permit['title'] as String,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
+                                if (permit.imageData != null &&
+                                    permit.imageData!.isNotEmpty) ...[
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.memory(
+                                      base64Decode(permit.imageData!.contains(',')
+                                          ? permit.imageData!.split(',')[1]
+                                          : permit.imageData!),
+                                      width: 44,
+                                      height: 44,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) => Container(
+                                        width: 44,
+                                        height: 44,
+                                        color: Colors.grey.shade200,
+                                        child: const Icon(Icons.description, size: 22),
+                                      ),
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Category: ${permit['category']}',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: Color(0xFF64748B),
-                                  ),
-                                ),
-                                if (isUploaded) ...[
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    '📄 File: ${permit['fileName']} • Expiry: ${permit['expiryDate']}',
-                                    style: const TextStyle(
-                                      fontSize: 10.5,
-                                      color: Colors.green,
-                                      fontWeight: FontWeight.w600,
+                                ] else ...[
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: (isUploaded ? Colors.green : Colors.red)
+                                          .withValues(alpha: 0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      isUploaded
+                                          ? Icons.verified_user_rounded
+                                          : Icons.warning_amber_rounded,
+                                      color: isUploaded ? Colors.green : Colors.red,
+                                      size: 20,
                                     ),
                                   ),
                                 ],
+                                const SizedBox(width: 12),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      permit.title,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Category: ${permit.category}',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Color(0xFF64748B),
+                                      ),
+                                    ),
+                                    if (isUploaded) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '📄 File: ${permit.fileName} • Expiry: ${permit.expiryDate}',
+                                        style: const TextStyle(
+                                          fontSize: 10.5,
+                                          color: Colors.green,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ],
+                            ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: (isUploaded ? Colors.green : Colors.red)
+                                        .withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    permit.status,
+                                    style: TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.bold,
+                                      color:
+                                          isUploaded ? Colors.green : Colors.red,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                if (isUploaded) ...[
+                                  OutlinedButton.icon(
+                                    onPressed: () =>
+                                        _showViewPermitDialog(permit, isDark),
+                                    icon: const Icon(Icons.visibility_rounded,
+                                        size: 14),
+                                    label: const Text('View',
+                                        style: TextStyle(fontSize: 11)),
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 10, vertical: 6),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  OutlinedButton.icon(
+                                    onPressed: () =>
+                                        _confirmDeletePermit(permit, isDark),
+                                    icon: const Icon(Icons.delete_outline_rounded,
+                                        size: 14, color: Colors.redAccent),
+                                    label: const Text('Erase',
+                                        style: TextStyle(
+                                            fontSize: 11, color: Colors.redAccent)),
+                                    style: OutlinedButton.styleFrom(
+                                      side: const BorderSide(
+                                          color: Colors.redAccent),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 10, vertical: 6),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                ],
+                                ElevatedButton.icon(
+                                  onPressed: () =>
+                                      _showUploadPermitDialog(permit, isDark),
+                                  icon: const Icon(Icons.upload_file_rounded,
+                                      size: 14, color: Colors.white),
+                                  label: Text(
+                                    isUploaded ? 'Replace' : 'Upload',
+                                    style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.primaryColor,
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 8),
+                                  ),
+                                ),
                               ],
                             ),
                           ],
-                        ),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: (isUploaded ? Colors.green : Colors.red)
-                                    .withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                permit['status'] as String,
-                                style: TextStyle(
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.bold,
-                                  color:
-                                      isUploaded ? Colors.green : Colors.red,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            if (isUploaded) ...[
-                              OutlinedButton.icon(
-                                onPressed: () =>
-                                    _showViewPermitDialog(permit, isDark),
-                                icon: const Icon(Icons.visibility_rounded,
-                                    size: 14),
-                                label: const Text('View',
-                                    style: TextStyle(fontSize: 11)),
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 10, vertical: 6),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              OutlinedButton.icon(
-                                onPressed: () =>
-                                    _confirmDeletePermit(permit, isDark),
-                                icon: const Icon(Icons.delete_outline_rounded,
-                                    size: 14, color: Colors.redAccent),
-                                label: const Text('Erase',
-                                    style: TextStyle(
-                                        fontSize: 11, color: Colors.redAccent)),
-                                style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(
-                                      color: Colors.redAccent),
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 10, vertical: 6),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                            ],
-                            ElevatedButton.icon(
-                              onPressed: () =>
-                                  _showUploadPermitDialog(permit, isDark),
-                              icon: const Icon(Icons.upload_file_rounded,
-                                  size: 14, color: Colors.white),
-                              label: Text(
-                                isUploaded ? 'Replace' : 'Upload',
-                                style: const TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.primaryColor,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 8),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                        );
+                      },
                     );
                   },
                 ),
