@@ -244,6 +244,8 @@ class _RealtimeChatModalState extends State<RealtimeChatModal> {
                       children: [
                         Text(
                           _currentPartnerName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -263,15 +265,19 @@ class _RealtimeChatModalState extends State<RealtimeChatModal> {
                               ),
                             ),
                             const SizedBox(width: 5),
-                            Text(
-                              _currentOrderId != null
-                                  ? (isTransactionLocked
-                                      ? 'Delivery Chat • ${_currentOrderId!} (Completed)'
-                                      : 'Active Delivery Chat • ${_currentOrderId!}')
-                                  : 'Station Live Direct Channel',
-                              style: const TextStyle(
-                                color: Color(0xFF93C5FD),
-                                fontSize: 11,
+                            Expanded(
+                              child: Text(
+                                _currentOrderId != null
+                                    ? (isTransactionLocked
+                                        ? 'Delivery Chat • ${_currentOrderId!} (Completed)'
+                                        : 'Active Delivery Chat • ${_currentOrderId!}')
+                                    : 'Station Live Direct Channel',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Color(0xFF93C5FD),
+                                  fontSize: 11,
+                                ),
                               ),
                             ),
                           ],
@@ -473,12 +479,15 @@ class _RealtimeChatModalState extends State<RealtimeChatModal> {
                     Icon(Icons.lock_outline_rounded,
                         size: 16, color: Color(0xFF64748B)),
                     SizedBox(width: 8),
-                    Text(
-                      'This order transaction is finished. Chat is closed & retained for receipt history.',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        color: Color(0xFF64748B),
-                        fontWeight: FontWeight.w600,
+                    Expanded(
+                      child: Text(
+                        'This order transaction is finished. Chat is closed & retained for receipt history.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: Color(0xFF64748B),
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ],
