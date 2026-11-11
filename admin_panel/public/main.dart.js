@@ -54696,24 +54696,26 @@ s=r.c
 s.toString
 B.aX(s,'Searching database for "'+a+'"...',!1)}}},
 yx(a,b){return this.aok(a,!1)},
-aok(a,b){var s=0,r=B.y(t.H),q=this,p,o,n
+aok(a,b){var s=0,r=B.y(t.H),q,p=this,o,n,m,l
 var $async$yx=B.z(function(c,d){if(c===1)return B.v(d,r)
-for(;;)switch(s){case 0:n=q.c
-n.toString
-s=4
-return B.q(B.fG(null,null,!0,null,new B.aHz(q,!1,a),n,null,!0,t.y),$async$yx)
-case 4:s=d===!0?2:3
+for(;;)switch(s){case 0:l=p.c
+l.toString
+s=3
+return B.q(B.fG(null,null,!0,null,new B.aHz(p,!1,a),l,null,!0,t.y),$async$yx)
+case 3:o=d
+l=p.c
+if(l==null){s=1
+break}s=o===!0?4:5
 break
-case 2:n=q.c
-n.toString
-p=a.a
-s=5
-return B.q(B.df(n,!1,t.F).He(p),$async$yx)
-case 5:o=d
-n=q.c
-if(n!=null)if(o)B.aX(n,"Order "+p+" has been permanently deleted.",!1)
-else B.aX(n,"Failed to delete order. Please check connection.",!0)
-case 3:return B.w(null,r)}})
+case 4:n=a.a
+s=6
+return B.q(B.df(l,!1,t.F).He(n),$async$yx)
+case 6:m=d
+l=p.c
+if(l==null){s=1
+break}if(m)B.aX(l,"Order "+n+" has been permanently deleted.",!1)
+else B.aX(l,"Failed to delete order. Please check connection.",!0)
+case 5:case 1:return B.w(q,r)}})
 return B.x($async$yx,r)},
 EC(){var s=0,r=B.y(t.H),q,p=this,o,n
 var $async$EC=B.z(function(a,b){if(a===1)return B.v(b,r)
@@ -55483,16 +55485,18 @@ aCo(a,b){var s=null,r=this.c
 r.toString
 B.fG(s,s,!0,s,new B.aKM(this,!1,a),r,s,!0,t.z)},
 DZ(a,b){return this.aol(a,!1)},
-aol(a,b){var s=0,r=B.y(t.H),q=this,p
+aol(a,b){var s=0,r=B.y(t.H),q,p=this,o,n
 var $async$DZ=B.z(function(c,d){if(c===1)return B.v(d,r)
-for(;;)switch(s){case 0:p=q.c
-p.toString
-s=2
-return B.q(B.fG(null,null,!0,null,new B.aHC(!1,a),p,null,!0,t.y),$async$DZ)
-case 2:if(d===!0){q.K(new B.aHD(a))
-p=q.c
-p.toString
-B.aX(p,'Compliance document for "'+B.h(a.h(0,"title"))+'" was erased.',!1)}return B.w(null,r)}})
+for(;;)switch(s){case 0:n=p.c
+n.toString
+s=3
+return B.q(B.fG(null,null,!0,null,new B.aHC(!1,a),n,null,!0,t.y),$async$DZ)
+case 3:o=d
+if(p.c==null){s=1
+break}if(o===!0){p.K(new B.aHD(a))
+n=p.c
+n.toString
+B.aX(n,'Compliance document for "'+B.h(a.h(0,"title"))+'" was erased.',!1)}case 1:return B.w(q,r)}})
 return B.x($async$DZ,r)},
 amP(a){var s=this,r=null,q=B.E("Administrator Profile Information",r,r,r,B.a3(r,r,A.e7,r,r,r,r,r,r,r,r,15,r,r,A.N,r,r,!0,r,r,r,r,r,r,r,r),r,r,r),p=B.P(12),o=B.aS(A.at,1),n=B.a7(A.aTI,A.G,A.v,A.x,0,r),m=t.p,l=B.iK(A.dr,B.c([B.cn(B.am(B.c([A.bDr,A.bM,B.cs(r,A.aB,!1,r,!0,A.a_,r,B.cy(),s.R8,r,r,r,r,r,2,B.ed(r,new B.dR(4,B.P(8),A.e4),r,A.hV,r,r,r,r,!0,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,!0,r,r,r,!0,!0,!1,r,r,r,r,r,r,r,r,r,r,r,r,r,r),A.a4,!0,r,!0,r,!1,r,A.ay,r,r,r,r,r,r,r,r,1,r,r,!1,"\u2022",r,r,r,r,r,!1,r,r,!1,r,!0,r,A.ah,r,r,r,r,r,r,r,r,r,r,r,A.r_,!0,A.ai,r,A.aI,r,r,r,r)],m),A.W,A.v,A.x),r,280),B.cn(B.am(B.c([A.bCo,A.bM,B.cs(r,A.aB,!1,r,!0,A.a_,r,B.cy(),s.rx,r,r,r,r,r,2,B.ed(r,new B.dR(4,B.P(8),A.e4),r,A.hV,r,r,r,r,!0,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,!0,r,r,r,!0,!0,!1,r,r,r,r,r,r,r,r,r,r,r,r,r,r),A.a4,!0,r,!0,r,!1,r,A.ay,r,r,r,r,r,r,r,r,1,r,r,!1,"\u2022",r,r,r,r,r,!1,r,r,!1,r,!0,r,A.ah,r,r,r,r,r,r,r,r,r,r,r,A.r_,!0,A.ai,r,A.aI,r,r,r,r)],m),A.W,A.v,A.x),r,280),B.cn(B.am(B.c([A.bC0,A.bM,B.cs(r,A.aB,!1,r,!0,A.a_,r,B.cy(),s.RG,r,r,r,r,r,2,B.ed(r,new B.dR(4,B.P(8),A.e4),r,A.hV,r,r,r,r,!0,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,!0,r,r,r,!0,!0,!1,r,r,r,r,r,r,r,r,r,r,r,r,r,r),A.a4,!0,r,!0,r,!1,r,A.ay,r,r,r,r,r,r,r,r,1,r,r,!1,"\u2022",r,r,r,r,r,!1,r,r,!1,r,!0,r,A.ah,r,r,r,r,r,r,r,r,r,r,r,A.r_,!0,A.ai,r,A.aI,r,r,r,r)],m),A.W,A.v,A.x),r,280)],m),A.fr,16,16),k=A.S.X(0.06),j=B.P(8),i=B.aS(A.S.X(0.15),1)
 p=B.a0(r,B.am(B.c([n,A.b_,l,A.b_,B.a0(r,B.a7(A.aTX,A.G,A.v,A.x,0,r),A.B,r,r,new B.Z(k,r,i,j,r,r,A.K),r,r,r,A.dC,r,r,r),A.b_,new B.dg(A.iL,r,r,B.f4(A.aar,A.bDX,new B.aH2(s),B.d_(r,r,A.S,r,r,r,r,r,r,A.z,r,r,A.nB,r,new B.bb(B.P(8),A.Q),r,r,r,r,r)),r)],m),A.W,A.v,A.x),A.B,r,r,new B.Z(A.z,r,o,p,r,r,A.K),r,r,r,A.ah,r,r,r)
@@ -56692,17 +56696,18 @@ B.TQ(r,this.c,this.b,s.e,"admin")
 return null},
 $S:0}
 B.aFL.prototype={
-$0(){var s=0,r=B.y(t.H),q=this,p,o,n
+$0(){var s=0,r=B.y(t.H),q,p=this,o,n,m
 var $async$$0=B.z(function(a,b){if(a===1)return B.v(b,r)
-for(;;)switch(s){case 0:o=q.a
-n=o.c
-n.toString
-p=q.b.a
-s=2
-return B.q(B.df(n,!1,t.F).vS(p),$async$$0)
-case 2:o=o.c
-if(o.e!=null)B.aX(o,"Order "+p+" confirmed successfully!",!1)
-return B.w(null,r)}})
+for(;;)switch(s){case 0:n=p.a
+m=n.c
+m.toString
+o=p.b.a
+s=3
+return B.q(B.df(m,!1,t.F).vS(o),$async$$0)
+case 3:n=n.c
+if(n==null){s=1
+break}B.aX(n,"Order "+o+" confirmed successfully!",!1)
+case 1:return B.w(q,r)}})
 return B.x($async$$0,r)},
 $S:10}
 B.aFM.prototype={
@@ -56727,7 +56732,8 @@ m=m.a
 s=6
 return B.q(B.df(o,!1,t.F).xA(A.de,m),$async$$0)
 case 6:l=l.c
-if(l.e!=null)B.aX(l,"Order "+m+" completed successfully!",!1)
+if(l==null){s=1
+break}B.aX(l,"Order "+m+" completed successfully!",!1)
 case 4:case 1:return B.w(q,r)}})
 return B.x($async$$0,r)},
 $S:10}

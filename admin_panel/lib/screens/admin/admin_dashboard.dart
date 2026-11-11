@@ -1120,18 +1120,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
       },
     );
 
+    if (!mounted) return;
     if (confirmed == true) {
       final orderProvider = Provider.of<OrderProvider>(context, listen: false);
       final success = await orderProvider.deleteOrder(order.id);
-      if (mounted) {
-        if (success) {
-          Helpers.showSnackBar(
-              context, 'Order ${order.id} has been permanently deleted.');
-        } else {
-          Helpers.showSnackBar(
-              context, 'Failed to delete order. Please check connection.',
-              isError: true);
-        }
+      if (!mounted) return;
+      if (success) {
+        Helpers.showSnackBar(
+            context, 'Order ${order.id} has been permanently deleted.');
+      } else {
+        Helpers.showSnackBar(
+            context, 'Failed to delete order. Please check connection.',
+            isError: true);
       }
     }
   }
@@ -1910,7 +1910,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               thumbVisibility: true,
                               child: ListView.separated(
                                 itemCount: _notifications.length,
-                                separatorBuilder: (_, __) =>
+                                separatorBuilder: (_, _) =>
                                     const Divider(height: 1),
                                 itemBuilder: (context, i) {
                                   final n = _notifications[i];
@@ -2142,7 +2142,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                         style: TextStyle(color: Colors.grey)))
                                 : ListView.separated(
                                     itemCount: _inboxMessages.length,
-                                    separatorBuilder: (_, __) =>
+                                    separatorBuilder: (_, _) =>
                                         const Divider(height: 1),
                                     itemBuilder: (context, i) {
                                       final convo = _inboxMessages[i];
@@ -5095,12 +5095,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                         await orderProvider.confirmOrder(
                                           order.id,
                                         );
-                                        if (context.mounted) {
-                                          Helpers.showSnackBar(
-                                            context,
-                                            'Order ${order.id} confirmed successfully!',
-                                          );
-                                        }
+                                        if (!mounted) return;
+                                        Helpers.showSnackBar(
+                                          context,
+                                          'Order ${order.id} confirmed successfully!',
+                                        );
                                       },
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: AppTheme.primaryColor,
@@ -5154,12 +5153,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                             orderId: order.id,
                                             newStatus: OrderStatus.completed,
                                           );
-                                          if (context.mounted) {
-                                            Helpers.showSnackBar(
-                                              context,
-                                              'Order ${order.id} completed successfully!',
-                                            );
-                                          }
+                                          if (!mounted) return;
+                                          Helpers.showSnackBar(
+                                            context,
+                                            'Order ${order.id} completed successfully!',
+                                          );
                                         }
                                       },
                                       style: ElevatedButton.styleFrom(
@@ -12804,6 +12802,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       },
     );
 
+    if (!mounted) return;
     if (confirmed == true) {
       setState(() {
         permit['isUploaded'] = false;
