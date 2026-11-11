@@ -5105,7 +5105,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
         children: [
           _buildOrdersTopSubTabs(isDark, allOrders.length),
           if (_ordersSubTab == 1) ...[
-            _buildDeliveryIssueClaimsTab(isDark),
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.only(bottom: 24),
+                child: _buildDeliveryIssueClaimsTab(isDark),
+              ),
+            ),
           ] else ...[
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -5761,27 +5767,30 @@ class _AdminDashboardState extends State<AdminDashboard> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Delivery Defect & Replacement Claims',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Delivery Defect & Replacement Claims',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Review customer complaints, verify photo evidence, and authorize free replacement swaps on next delivery.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                      const SizedBox(height: 4),
+                      Text(
+                        'Review customer complaints, verify photo evidence, and authorize free replacement swaps on next delivery.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 12),
                 // Quick Summary Pill
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
