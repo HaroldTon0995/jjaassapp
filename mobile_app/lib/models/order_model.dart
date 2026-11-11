@@ -47,7 +47,7 @@ class OrderModel {
   final String id;
   final String txnId;
   final String customerId;
-  final String customerName;
+  String customerName;
   final String customerPhone;
   String deliveryAddress;
   final String waterType;
@@ -141,12 +141,28 @@ class OrderModel {
     };
   }
 
+  static String _resolveOrderCustomerName(Map<String, dynamic> json) {
+    final raw = (json['customerName'] ?? json['customer_name'] ?? '').toString().trim();
+    if (raw.isNotEmpty && raw.toLowerCase() != 'new user' && raw.toLowerCase() != 'registered user') {
+      return raw;
+    }
+    final rawPhone = (json['customerPhone'] ?? json['customer_phone'] ?? '').toString().trim();
+    if (rawPhone.isNotEmpty && rawPhone != '+63 912 345 6789') {
+      return 'Customer ($rawPhone)';
+    }
+    final rawId = (json['id'] ?? '').toString().trim();
+    if (rawId.isNotEmpty) {
+      return 'Customer (${rawId.replaceFirst('#', '')})';
+    }
+    return 'Customer';
+  }
+
   factory OrderModel.fromJson(Map<String, dynamic> json) {
     return OrderModel(
       id: json['id'] as String,
       txnId: json['txnId'] as String,
       customerId: json['customerId'] as String,
-      customerName: json['customerName'] as String,
+      customerName: _resolveOrderCustomerName(json),
       customerPhone: json['customerPhone'] as String? ?? '+63 912 345 6789',
       deliveryAddress: json['deliveryAddress'] as String,
       waterType: json['waterType'] as String,

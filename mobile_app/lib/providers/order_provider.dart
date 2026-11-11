@@ -1589,6 +1589,29 @@ class OrderProvider extends ChangeNotifier {
       // Sort newest first
       fetched.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
+      // Heal any 'New User' or missing customer names from Supabase profiles
+      final needsHealing = fetched.where((o) => o.customerName.trim().isEmpty || o.customerName.trim().toLowerCase() == 'new user').toList();
+      if (needsHealing.isNotEmpty) {
+        try {
+          final profilesRes = await client.from('profiles').select('id, name, email, phone');
+          final Map<String, String> profileNames = {};
+          for (final p in (profilesRes as List)) {
+            final pid = (p['id'] ?? '').toString();
+            final pname = (p['name'] ?? '').toString().trim();
+            if (pid.isNotEmpty && pname.isNotEmpty && pname.toLowerCase() != 'new user') {
+              profileNames[pid] = pname;
+            }
+          }
+          for (final o in needsHealing) {
+            if (profileNames.containsKey(o.customerId)) {
+              final healed = profileNames[o.customerId]!;
+              o.customerName = healed;
+              client.from('orders').update({'customerName': healed}).eq('id', o.id).catchError((_) {});
+            }
+          }
+        } catch (_) {}
+      }
+
       if (fetched.isNotEmpty) {
         // Detect if there are changes compared to current in-memory orders
         bool hasChanges = _orders.length != fetched.length;

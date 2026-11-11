@@ -487,6 +487,30 @@ class _AdminDashboardState extends State<AdminDashboard> {
     _applyFilters();
   }
 
+  String _resolveCustomerDisplayName(OrderModel order) {
+    final raw = order.customerName.trim();
+    if (raw.isNotEmpty &&
+        raw.toLowerCase() != 'new user' &&
+        raw.toLowerCase() != 'registered user') {
+      return raw;
+    }
+    if (order.customerId.isNotEmpty) {
+      for (final u in _allUsers) {
+        if (u.id == order.customerId &&
+            u.name.trim().isNotEmpty &&
+            u.name.trim().toLowerCase() != 'new user') {
+          return u.name.trim();
+        }
+      }
+    }
+    if (order.customerPhone.isNotEmpty &&
+        order.customerPhone != '+63 912 345 6789') {
+      return 'Customer (${order.customerPhone})';
+    }
+    final short = order.id.replaceFirst(RegExp(r'^[#A-Za-z\-]+'), '');
+    return short.isNotEmpty ? 'Customer #$short' : 'Customer';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -1050,7 +1074,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             fontSize: 13,
                             color: AppTheme.primaryColor)),
                     const SizedBox(height: 4),
-                    Text('Customer: ${order.customerName}',
+                    Text('Customer: ${_resolveCustomerDisplayName(order)}',
                         style: const TextStyle(fontSize: 12)),
                     const SizedBox(height: 4),
                     Text('Products: ${order.itemsSummary}',
@@ -4734,8 +4758,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     // Group orders by Customer Division
     final Map<String, List<OrderModel>> customerDivisions = {};
     for (var o in searchFiltered) {
-      final key =
-          o.customerName.trim().isEmpty ? 'Guest Customer' : o.customerName.trim();
+      final key = _resolveCustomerDisplayName(o);
       customerDivisions.putIfAbsent(key, () => []).add(o);
     }
 
@@ -4962,7 +4985,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 ),
                                 const SizedBox(height: 12),
                                 Text(
-                                  'Customer: ${order.customerName} (${order.customerPhone})',
+                                  'Customer: ${_resolveCustomerDisplayName(order)} (${order.customerPhone})',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -5717,7 +5740,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                       const SizedBox(width: 4),
                                       Expanded(
                                         child: Text(
-                                          '${o.customerName} • ${o.deliveryAddress}',
+                                          '${_resolveCustomerDisplayName(o)} • ${o.deliveryAddress}',
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           style: TextStyle(
@@ -9703,8 +9726,22 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 separatorBuilder: (_, _) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
                   final borrow = filteredBorrows[index];
-                  final String custName = borrow['customerName'] as String? ?? 'Customer';
                   final String phone = borrow['customerPhone'] as String? ?? 'No phone';
+                  String custName = borrow['customerName'] as String? ?? 'Customer';
+                  if (custName.trim().isEmpty || custName.trim().toLowerCase() == 'new user') {
+                    final cid = (borrow['customerId'] ?? '').toString();
+                    final match = _allUsers.cast<UserModel?>().firstWhere(
+                      (u) => u != null && u.id == cid && u.name.trim().isNotEmpty && u.name.trim().toLowerCase() != 'new user',
+                      orElse: () => null,
+                    );
+                    if (match != null) {
+                      custName = match.name.trim();
+                    } else if (phone.isNotEmpty && phone != 'No phone' && phone != '+63 912 345 6789') {
+                      custName = 'Customer ($phone)';
+                    } else {
+                      custName = 'Customer';
+                    }
+                  }
                   final String address = borrow['deliveryAddress'] as String? ?? 'No address';
                   final String displayAddress = address
                       .replaceAll(RegExp(r'\[BORROWED_[A-Z]+:\d+\]'), '')
@@ -11238,9 +11275,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               builder: (context) {
                                 final Map<String, List<OrderModel>> reportDivisions = {};
                                 for (var o in reportOrders) {
-                                  final key = o.customerName.trim().isEmpty
-                                      ? 'Guest Customer'
-                                      : o.customerName.trim();
+                                  final key = _resolveCustomerDisplayName(o);
                                   reportDivisions.putIfAbsent(key, () => []).add(o);
                                 }
 
@@ -11303,7 +11338,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                             ),
                                           ),
                                           title: Text(
-                                            '${o.id} • ${o.customerName}',
+                                            '${o.id} • ${_resolveCustomerDisplayName(o)}',
                                             style: const TextStyle(
                                               fontWeight: FontWeight.bold,
                                               fontSize: 12,
@@ -11810,18 +11845,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    ClipOval(
-                                      child: Image.asset(
-                                        'assets/images/logo_icon.jpg',
-                                        width: 16,
-                                        height: 16,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (ctx, error, stackTrace) => const Icon(
-                                          Icons.water_drop_rounded,
-                                          size: 16,
-                                          color: AppTheme.primaryColor,
-                                        ),
-                                      ),
+                                    const Icon(
+                                      Icons.smart_toy_rounded,
+                                      size: 14,
+                                      color: AppTheme.primaryColor,
                                     ),
                                     const SizedBox(width: 6),
                                     const Text(

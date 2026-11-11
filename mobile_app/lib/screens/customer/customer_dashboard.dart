@@ -2353,20 +2353,20 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                                               color: AppTheme.navyColor,
                                             ),
                                           ),
-                                          if (desc.isNotEmpty) ...[
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              desc,
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w500,
-                                                color: Color(0xFF475569),
-                                                height: 1.35,
-                                              ),
-                                              maxLines: 3,
-                                              overflow: TextOverflow.visible,
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            desc.isNotEmpty
+                                                ? desc
+                                                : (name.toLowerCase().contains('set a') || name.toLowerCase().contains('new container')
+                                                    ? 'Brand new 5-gallon container filled with pure purified water. Ready to use, no exchange container needed.'
+                                                    : 'Pure, safe, and refreshing purified drinking water refill.'),
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500,
+                                              color: Color(0xFF475569),
+                                              height: 1.35,
                                             ),
-                                          ],
+                                          ),
                                         ],
                                       ),
                                     ),
@@ -5042,18 +5042,10 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    ClipOval(
-                                      child: Image.asset(
-                                        'assets/images/logo_icon.jpg',
-                                        width: 14,
-                                        height: 14,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (ctx, error, stackTrace) => const Icon(
-                                          Icons.water_drop_rounded,
-                                          size: 14,
-                                          color: AppTheme.primaryColor,
-                                        ),
-                                      ),
+                                    const Icon(
+                                      Icons.smart_toy_rounded,
+                                      size: 13,
+                                      color: AppTheme.primaryColor,
                                     ),
                                     const SizedBox(width: 5),
                                     const Text(

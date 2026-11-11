@@ -323,14 +323,15 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
                 width: 256,
                 height: 256,
                 child: Image.network(
-                  'https://tile.openstreetmap.org/$_zoom/$tx/$ty.png',
+                  'https://${['a', 'b', 'c', 'd'][((tx + ty) % 4).abs()]}.basemaps.cartocdn.com/rastertiles/voyager/$_zoom/$tx/$ty.png',
                   fit: BoxFit.cover,
-                  headers: const {
-                    'User-Agent': 'JJAASSWaterMarketApp/1.0',
-                  },
                   errorBuilder: (context, error, stackTrace) {
-                    return CustomPaint(
-                      painter: _FallbackTrackTilePainter(tx: tx, ty: ty),
+                    return Image.network(
+                      'https://tile.openstreetmap.org/$_zoom/$tx/$ty.png',
+                      fit: BoxFit.cover,
+                      errorBuilder: (c, e, s) => CustomPaint(
+                        painter: _FallbackTrackTilePainter(tx: tx, ty: ty),
+                      ),
                     );
                   },
                 ),

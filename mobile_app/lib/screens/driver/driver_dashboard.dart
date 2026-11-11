@@ -3134,18 +3134,10 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    ClipOval(
-                                      child: Image.asset(
-                                        'assets/images/logo_icon.jpg',
-                                        width: 14,
-                                        height: 14,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (ctx, error, stackTrace) => const Icon(
-                                          Icons.water_drop_rounded,
-                                          size: 14,
-                                          color: AppTheme.primaryColor,
-                                        ),
-                                      ),
+                                    const Icon(
+                                      Icons.smart_toy_rounded,
+                                      size: 13,
+                                      color: AppTheme.primaryColor,
                                     ),
                                     const SizedBox(width: 5),
                                     const Text(
