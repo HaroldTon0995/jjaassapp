@@ -8,15 +8,32 @@ import '../services/delivery_issue_service.dart';
 
 class ReportDeliveryIssueModal extends StatefulWidget {
   final OrderModel order;
+  final bool isBottomSheet;
 
-  const ReportDeliveryIssueModal({super.key, required this.order});
+  const ReportDeliveryIssueModal({
+    super.key,
+    required this.order,
+    this.isBottomSheet = false,
+  });
 
   static void show(BuildContext context, OrderModel order) {
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (ctx) => ReportDeliveryIssueModal(order: order),
-    );
+    final isNarrow = MediaQuery.of(context).size.width < 600;
+    if (isNarrow) {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) =>
+            ReportDeliveryIssueModal(order: order, isBottomSheet: true),
+      );
+    } else {
+      showDialog(
+        context: context,
+        barrierDismissible: true,
+        builder: (ctx) =>
+            ReportDeliveryIssueModal(order: order, isBottomSheet: false),
+      );
+    }
   }
 
   @override
@@ -26,37 +43,54 @@ class ReportDeliveryIssueModal extends StatefulWidget {
 
 class _ReportDeliveryIssueModalState extends State<ReportDeliveryIssueModal> {
   final TextEditingController _descController = TextEditingController();
-  String _selectedIssueType = 'Seal Torn / Damaged';
+  final TextEditingController _customTypeController = TextEditingController();
+
+  String _selectedIssueType = 'Seal Damaged';
   int _affectedCount = 1;
   String? _photoUrl;
   bool _isSubmitting = false;
 
   final List<String> _issueTypes = [
-    'Seal Torn / Damaged',
-    'Water Quality / Not Clean',
-    'Container Leaking',
-    'Wrong Product / Cap Broken',
-    'Other Issue',
+    'Seal Damaged',
+    'Murky / Unclean Water',
+    'Container Leak',
+    'Broken / Missing Cap',
+    'Other (Specify)',
   ];
 
   @override
   void initState() {
     super.initState();
-    _affectedCount = widget.order.quantity > 0 ? 1 : 1;
+    _affectedCount = 1;
   }
 
   @override
   void dispose() {
     _descController.dispose();
+    _customTypeController.dispose();
     super.dispose();
   }
 
   Future<void> _submitReport() async {
+    String finalType = _selectedIssueType;
+    if (_selectedIssueType == 'Other (Specify)') {
+      final custom = _customTypeController.text.trim();
+      if (custom.isEmpty) {
+        Helpers.showSnackBar(
+          context,
+          'Please specify the issue type in the field provided.',
+          isError: true,
+        );
+        return;
+      }
+      finalType = custom;
+    }
+
     final desc = _descController.text.trim();
     if (desc.isEmpty) {
       Helpers.showSnackBar(
         context,
-        'Please describe the issue with the delivered gallon(s).',
+        'Please provide a short description of the problem.',
         isError: true,
       );
       return;
@@ -77,7 +111,7 @@ class _ReportDeliveryIssueModalState extends State<ReportDeliveryIssueModal> {
       customerId: customerId,
       customerName: customerName,
       customerPhone: customerPhone,
-      issueType: _selectedIssueType,
+      issueType: finalType,
       affectedGallonsCount: _affectedCount,
       photoUrl: _photoUrl,
       description: desc,
@@ -89,7 +123,7 @@ class _ReportDeliveryIssueModalState extends State<ReportDeliveryIssueModal> {
 
     Helpers.showSnackBar(
       context,
-      'Issue claim for $_affectedCount gallon(s) submitted! Station Admin will review for your next swap delivery.',
+      'Issue reported for $_affectedCount gallon(s). Station Admin will review for swap replacement.',
     );
   }
 
@@ -97,349 +131,438 @@ class _ReportDeliveryIssueModalState extends State<ReportDeliveryIssueModal> {
   Widget build(BuildContext context) {
     final maxGallons =
         widget.order.quantity > 0 ? widget.order.quantity : 10;
-    final isNarrow = MediaQuery.of(context).size.width < 600;
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      insetPadding: EdgeInsets.symmetric(
-        horizontal: isNarrow ? 12 : 28,
-        vertical: 24,
-      ),
-      child: Container(
-        width: 580,
-        constraints: const BoxConstraints(maxHeight: 650),
-        child: Column(
-          children: [
-            // Header
+    final content = SingleChildScrollView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: EdgeInsets.fromLTRB(20, 12, 20, 20 + bottomInset),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 1. Issue Type Selector
+          const Text(
+            'Issue Type',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF0F172A),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: _issueTypes.map((type) {
+              final isSel = _selectedIssueType == type;
+              return ChoiceChip(
+                label: Text(type),
+                selected: isSel,
+                showCheckmark: false,
+                selectedColor: const Color(0xFF0F172A),
+                backgroundColor: const Color(0xFFF1F5F9),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(
+                    color: isSel
+                        ? Colors.transparent
+                        : const Color(0xFFE2E8F0),
+                  ),
+                ),
+                labelStyle: TextStyle(
+                  color: isSel ? Colors.white : const Color(0xFF334155),
+                  fontWeight: isSel ? FontWeight.w600 : FontWeight.normal,
+                  fontSize: 12,
+                ),
+                onSelected: (val) {
+                  if (val) setState(() => _selectedIssueType = type);
+                },
+              );
+            }).toList(),
+          ),
+
+          // Custom Issue Type Input (when "Other" is selected)
+          if (_selectedIssueType == 'Other (Specify)') ...[
+            const SizedBox(height: 10),
+            TextField(
+              controller: _customTypeController,
+              autofocus: true,
+              style: const TextStyle(fontSize: 13),
+              decoration: InputDecoration(
+                hintText: 'Specify issue (e.g. Broken valve, algae on handle)',
+                hintStyle: const TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF94A3B8),
+                ),
+                filled: true,
+                fillColor: const Color(0xFFF8FAFC),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(
+                    color: AppTheme.primaryColor,
+                    width: 1.5,
+                  ),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 16),
+
+          // 2. Affected Quantity Stepper
+          const Text(
+            'Defective Gallons',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF0F172A),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              children: [
+                IconButton(
+                  onPressed: _affectedCount > 1
+                      ? () => setState(() => _affectedCount--)
+                      : null,
+                  icon: const Icon(Icons.remove, size: 18),
+                  padding: EdgeInsets.zero,
+                  constraints:
+                      const BoxConstraints(minWidth: 32, minHeight: 32),
+                  splashRadius: 18,
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0xFFCBD5E1)),
+                  ),
+                  child: Text(
+                    '$_affectedCount',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: _affectedCount < maxGallons
+                      ? () => setState(() => _affectedCount++)
+                      : null,
+                  icon: const Icon(Icons.add, size: 18),
+                  padding: EdgeInsets.zero,
+                  constraints:
+                      const BoxConstraints(minWidth: 32, minHeight: 32),
+                  splashRadius: 18,
+                ),
+                const Spacer(),
+                Text(
+                  'out of $maxGallons delivered',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // 3. Photo Evidence
+          const Text(
+            'Photo Evidence (Optional)',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF0F172A),
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (_photoUrl != null)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              decoration: const BoxDecoration(
-                color: Color(0xFFDC2626),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFCBD5E1)),
               ),
               child: Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.report_problem_rounded,
-                        color: Colors.white, size: 20),
-                  ),
-                  const SizedBox(width: 10),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Report Delivery Issue & Claim Swap',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          'Order ${widget.order.id} • ${widget.order.itemsSummary}',
-                          style: const TextStyle(
-                            color: Color(0xFFFEE2E2),
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      _photoUrl!,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF059669),
+                        fontWeight: FontWeight.w500,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close_rounded, color: Colors.white),
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: () => setState(() => _photoUrl = null),
+                    child: const Padding(
+                      padding: EdgeInsets.all(4),
+                      child: Text(
+                        'Remove',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFFDC2626),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
-            ),
-
-            // Form Body
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 1. Issue Category
-                    const Text(
-                      'What is the issue with this delivery?',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E293B),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: _issueTypes.map((type) {
-                        final isSel = _selectedIssueType == type;
-                        return ChoiceChip(
-                          label: Text(type),
-                          selected: isSel,
-                          selectedColor: const Color(0xFFDC2626),
-                          labelStyle: TextStyle(
-                            color: isSel ? Colors.white : const Color(0xFF334155),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11.5,
-                          ),
-                          onSelected: (val) {
-                            if (val) setState(() => _selectedIssueType = type);
-                          },
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 18),
-
-                    // 2. Affected Gallon Count Stepper
-                    const Text(
-                      'How many gallon(s) have this issue?',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E293B),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFFCBD5E1)),
-                          ),
-                          child: Row(
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.remove_rounded, size: 18),
-                                onPressed: _affectedCount > 1
-                                    ? () => setState(() => _affectedCount--)
-                                    : null,
-                              ),
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 12),
-                                child: Text(
-                                  '$_affectedCount',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppTheme.navyColor,
-                                  ),
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.add_rounded, size: 18),
-                                onPressed: _affectedCount < maxGallons
-                                    ? () => setState(() => _affectedCount++)
-                                    : null,
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Text(
-                          'out of $maxGallons gallon(s) delivered',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF64748B),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 18),
-
-                    // 3. Photo Evidence Section
-                    Row(
-                      children: const [
-                        Icon(Icons.photo_camera_rounded,
-                            size: 16, color: Color(0xFFDC2626)),
-                        SizedBox(width: 6),
-                        Text(
-                          'Photo Evidence of Defect',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1E293B),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'Attach a clear photo of the damaged seal, cloudy water, or leaking valve to accelerate admin approval.',
-                      style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                    ),
-                    const SizedBox(height: 10),
-
-                    if (_photoUrl != null)
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.green.shade300),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.verified_rounded,
-                                color: Colors.green, size: 22),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                'Photo Evidence Attached: $_photoUrl',
-                                style: const TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.green,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline_rounded,
-                                  color: Colors.redAccent, size: 18),
-                              onPressed: () =>
-                                  setState(() => _photoUrl = null),
-                            ),
-                          ],
-                        ),
-                      )
-                    else
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          OutlinedButton.icon(
-                            onPressed: () {
-                              setState(() {
-                                _photoUrl =
-                                    'evidence_broken_seal_${DateTime.now().millisecondsSinceEpoch}.jpg';
-                              });
-                            },
-                            icon: const Icon(Icons.add_a_photo_rounded,
-                                size: 14),
-                            label: const Text('Torn Seal Evidence Photo',
-                                style: TextStyle(fontSize: 11)),
-                          ),
-                          OutlinedButton.icon(
-                            onPressed: () {
-                              setState(() {
-                                _photoUrl =
-                                    'evidence_water_quality_${DateTime.now().millisecondsSinceEpoch}.jpg';
-                              });
-                            },
-                            icon: const Icon(Icons.water_drop_rounded,
-                                size: 14),
-                            label: const Text('Water Quality Photo',
-                                style: TextStyle(fontSize: 11)),
-                          ),
-                          OutlinedButton.icon(
-                            onPressed: () {
-                              setState(() {
-                                _photoUrl =
-                                    'evidence_container_leak_${DateTime.now().millisecondsSinceEpoch}.jpg';
-                              });
-                            },
-                            icon: const Icon(Icons.upload_file_rounded,
-                                size: 14),
-                            label: const Text('Container Leak Photo',
-                                style: TextStyle(fontSize: 11)),
-                          ),
-                        ],
-                      ),
-                    const SizedBox(height: 18),
-
-                    // 4. Description Note
-                    const Text(
-                      'Detailed Description',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E293B),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    TextField(
-                      controller: _descController,
-                      maxLines: 3,
-                      style: const TextStyle(fontSize: 12.5),
-                      decoration: InputDecoration(
-                        hintText:
-                            'e.g. 1 Slim gallon had a broken blue shrink seal upon opening; water has odd particles...',
-                        hintStyle: const TextStyle(
-                            fontSize: 11.5, color: Color(0xFF94A3B8)),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide:
-                              const BorderSide(color: Color(0xFFCBD5E1)),
-                        ),
-                        contentPadding: const EdgeInsets.all(12),
-                      ),
-                    ),
-                  ],
+            )
+          else
+            InkWell(
+              onTap: () {
+                setState(() {
+                  _photoUrl =
+                      'evidence_${DateTime.now().millisecondsSinceEpoch}.jpg';
+                });
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: const Color(0xFFCBD5E1),
+                    style: BorderStyle.solid,
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: const Text(
+                  '+ Attach Defect Photo',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.primaryColor,
+                  ),
                 ),
               ),
             ),
 
-            // Footer Actions
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: const BoxDecoration(
-                color: Color(0xFFF8FAFC),
-                border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
-                borderRadius:
-                    BorderRadius.vertical(bottom: Radius.circular(16)),
+          const SizedBox(height: 16),
+
+          // 4. Description Field
+          const Text(
+            'Description',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF0F172A),
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _descController,
+            maxLines: 3,
+            style: const TextStyle(fontSize: 12.5),
+            decoration: InputDecoration(
+              hintText:
+                  'Briefly explain the condition upon delivery (e.g. broken seal, leakage, murky water)...',
+              hintStyle: const TextStyle(
+                fontSize: 12,
+                color: Color(0xFF94A3B8),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  OutlinedButton(
-                    onPressed: _isSubmitting
-                        ? null
-                        : () => Navigator.of(context).pop(),
-                    child: const Text('Cancel'),
+              filled: true,
+              fillColor: const Color(0xFFF8FAFC),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(
+                  color: AppTheme.primaryColor,
+                  width: 1.5,
+                ),
+              ),
+              contentPadding: const EdgeInsets.all(12),
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // 5. Submit Button (Full Width, Zero Horizontal Overflow)
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: ElevatedButton(
+              onPressed: _isSubmitting ? null : _submitReport,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFDC2626),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                elevation: 0,
+              ),
+              child: _isSubmitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Text(
+                      'Submit Claim ($_affectedCount Gallon${_affectedCount > 1 ? "s" : ""})',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    // Bottom Sheet on mobile
+    if (widget.isBottomSheet) {
+      return Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Drag Handle
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 8, bottom: 4),
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE2E8F0),
+                    borderRadius: BorderRadius.circular(2),
                   ),
-                  const SizedBox(width: 10),
-                  ElevatedButton.icon(
-                    onPressed: _isSubmitting ? null : _submitReport,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFDC2626),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 10),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+              // Clean Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 6, 12, 6),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Report a Problem',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                        Text(
+                          'Order ${widget.order.id}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
                     ),
-                    icon: _isSubmitting
-                        ? const SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Icon(Icons.send_rounded, size: 16),
-                    label: Text(
-                      _isSubmitting
-                          ? 'Submitting...'
-                          : 'Submit Claim for $_affectedCount Gallon${_affectedCount > 1 ? "s" : ""}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20),
+                      onPressed: () => Navigator.of(context).pop(),
                     ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1, color: Color(0xFFF1F5F9)),
+              Flexible(child: content),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Centered Dialog on desktop / tablet
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: Container(
+        width: 500,
+        constraints: const BoxConstraints(maxHeight: 620),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 12, 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Report a Problem',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                      Text(
+                        'Order ${widget.order.id}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 20),
+                    onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
             ),
+            const Divider(height: 1, color: Color(0xFFF1F5F9)),
+            Flexible(child: content),
           ],
         ),
       ),

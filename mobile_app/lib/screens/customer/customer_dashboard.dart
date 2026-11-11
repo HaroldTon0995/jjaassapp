@@ -4314,8 +4314,9 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                 ],
               ),
             ],
-            const Divider(height: 20, color: Color(0xFFF1F5F9)),
+            const Divider(height: 18, color: Color(0xFFF1F5F9)),
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   'Placed: ${order.createdAt.toString().split(' ')[0]}',
@@ -4324,7 +4325,15 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                     color: Color(0xFF64748B),
                   ),
                 ),
-                const Spacer(),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              alignment: WrapAlignment.end,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 6,
+              runSpacing: 6,
+              children: [
                 // Live Chat with Driver and Station Admin
                 InkWell(
                   onTap: () {
@@ -4363,7 +4372,6 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                 if (order.paymentStatus == 'Pending' &&
                     order.paymentMethod == 'GCash' &&
                     !isCancelled) ...[
-                  const SizedBox(width: 6),
                   InkWell(
                     onTap: () => _showGcashPaymentDialog(order, isDark),
                     borderRadius: BorderRadius.circular(6),
@@ -4398,7 +4406,6 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                   ),
                 ],
                 if (canCancel) ...[
-                  const SizedBox(width: 6),
                   InkWell(
                     onTap: () => _showCancelOrderDialog(order),
                     borderRadius: BorderRadius.circular(6),
@@ -4433,7 +4440,6 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                 ],
                 // Delivery Issue / Gallon Swap Claim Button & Badge (For Completed Orders)
                 if (isDone) ...[
-                  const SizedBox(width: 6),
                   ListenableBuilder(
                     listenable: DeliveryIssueService.instance,
                     builder: (context, _) {
