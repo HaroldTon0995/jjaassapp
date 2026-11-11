@@ -151,23 +151,23 @@ class _DriverDashboardState extends State<DriverDashboard> {
     final driverId = user?.id ?? '';
     final driverName = user?.name ?? '';
     final driverEmail = user?.email ?? '';
-    final assignedJobs = orderProvider.getAssignedDriverJobs(
+    final availableJobs = orderProvider.getAvailableDriverJobs(
       driverId,
       driverName: driverName,
       driverEmail: driverEmail,
     );
 
-    if (assignedJobs.isEmpty) {
+    if (availableJobs.isEmpty) {
       Helpers.showSnackBar(
         context,
-        'No pending assigned orders to accept.',
+        'No available job invitations to accept.',
       );
       return;
     }
 
-    final totalPayout = assignedJobs.fold<double>(
+    final totalOrderAmount = availableJobs.fold<double>(
       0.0,
-      (sum, job) => sum + (job.totalAmount * 0.5),
+      (sum, job) => sum + job.totalAmount,
     );
 
     final shouldAccept = await showDialog<bool>(
@@ -178,7 +178,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
           children: const [
             Icon(Icons.playlist_add_check_circle_rounded, color: AppTheme.primaryColor),
             SizedBox(width: 8),
-            Text('Accept All Assigned', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            Text('Accept All Jobs', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           ],
         ),
         content: Column(
@@ -186,7 +186,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Accept all ${assignedJobs.length} delivery order${assignedJobs.length > 1 ? 's' : ''} assigned to you?',
+              'Accept all ${availableJobs.length} available delivery job invitation${availableJobs.length > 1 ? 's' : ''}?',
               style: const TextStyle(fontSize: 14),
             ),
             const SizedBox(height: 14),
@@ -201,17 +201,17 @@ class _DriverDashboardState extends State<DriverDashboard> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Total Orders:', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
-                      Text('${assignedJobs.length}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      const Text('Total Deliveries:', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                      Text('${availableJobs.length}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                     ],
                   ),
                   const SizedBox(height: 6),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Total Estimated Payout:', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                      const Text('Total Transaction Value:', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
                       Text(
-                        '₱${totalPayout.toStringAsFixed(2)}',
+                        '₱${totalOrderAmount.toStringAsFixed(2)}',
                         style: const TextStyle(
                           color: Color(0xFF10B981),
                           fontWeight: FontWeight.bold,
@@ -246,6 +246,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
       final count = await orderProvider.acceptAllAssignedJobs(
         driverId: driverId,
         driverName: user?.name ?? 'Driver',
+        driverEmail: driverEmail,
       );
 
       if (mounted) {
@@ -254,12 +255,10 @@ class _DriverDashboardState extends State<DriverDashboard> {
           if (activeJobs.isNotEmpty) {
             _selectedActiveOrderId = activeJobs.first.id;
           }
-          _selectedTab = 1; // Go to Deliveries Map
-          _activeSidebarMenu = 1;
         });
         Helpers.showSnackBar(
           context,
-          'Successfully accepted $count assigned order${count > 1 ? 's' : ''}! View routes on map.',
+          'Successfully accepted $count delivery job${count > 1 ? 's' : ''}!',
         );
       }
     }
@@ -277,7 +276,6 @@ class _DriverDashboardState extends State<DriverDashboard> {
     );
 
     if (success && mounted) {
-      final payoutVal = activeOrder.totalAmount * 0.5;
       final remainingActive = orderProvider.getActiveDriverJobs(driverId);
       setState(() {
         if (remainingActive.isEmpty) {
@@ -290,7 +288,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
       });
       Helpers.showSnackBar(
         context,
-        'Delivery ${activeOrder.id} completed! +₱${payoutVal.toStringAsFixed(2)} earned (${remainingActive.length} remaining).',
+        'Delivery #${activeOrder.id} marked as Delivered! (${remainingActive.length} remaining)',
       );
     }
   }
@@ -815,23 +813,55 @@ class _DriverDashboardState extends State<DriverDashboard> {
     final orderProvider = Provider.of<OrderProvider>(context);
     final user = auth.currentUser;
     final driverId = user?.id ?? '';
-    final todaysEarnings = orderProvider.getDriverEarnings(driverId);
+    final driverName = user?.name ?? '';
+    final driverEmail = user?.email ?? '';
+
+    final activeJobs = orderProvider.getActiveDriverJobs(
+      driverId,
+      driverName: driverName,
+      driverEmail: driverEmail,
+    );
+    final availableJobs = orderProvider.getAvailableDriverJobs(
+      driverId,
+      driverName: driverName,
+      driverEmail: driverEmail,
+    );
+    final completedJobs = orderProvider.getDriverCompletedJobs(driverId);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Stat Cards
+          // Operational Stat Cards (Zero overflow on mobile)
           Row(
             children: [
               Expanded(
-                child: _buildStatCard(
-                  "Today's Income",
-                  '₱${todaysEarnings.toStringAsFixed(2)}',
-                  'Earning details',
-                  Icons.payments_rounded,
-                  const Color(0xFF10B981),
+                child: _buildCompactStatCard(
+                  'Active',
+                  '${activeJobs.length}',
+                  Icons.directions_bike_rounded,
+                  const Color(0xFF2563EB),
+                  isDark,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildCompactStatCard(
+                  'Invitations',
+                  '${availableJobs.length}',
+                  Icons.notifications_active_rounded,
+                  const Color(0xFFD97706),
+                  isDark,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildCompactStatCard(
+                  'Completed',
+                  '${completedJobs.length}',
+                  Icons.check_circle_rounded,
+                  const Color(0xFF059669),
                   isDark,
                 ),
               ),
@@ -875,21 +905,66 @@ class _DriverDashboardState extends State<DriverDashboard> {
     );
   }
 
-  Widget _buildStatCard(
+  Widget _buildCompactStatCard(
     String title,
     String value,
-    String subtitle,
     IconData icon,
     Color color,
     bool isDark,
   ) {
-    return DriverStatCard(
-      title: title,
-      value: value,
-      subtitle: subtitle,
-      icon: icon,
-      color: color,
-      isDark: isDark,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 15),
+              ),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.grey.shade400 : const Color(0xFF64748B),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -902,11 +977,6 @@ class _DriverDashboardState extends State<DriverDashboard> {
     final driverEmail = user?.email ?? '';
 
     final availableJobs = orderProvider.getAvailableDriverJobs(
-      driverId,
-      driverName: driverName,
-      driverEmail: driverEmail,
-    );
-    final assignedJobs = orderProvider.getAssignedDriverJobs(
       driverId,
       driverName: driverName,
       driverEmail: driverEmail,
@@ -936,12 +1006,12 @@ class _DriverDashboardState extends State<DriverDashboard> {
                   ),
                 ),
               ),
-              if (assignedJobs.isNotEmpty)
+              if (availableJobs.isNotEmpty)
                 ElevatedButton.icon(
                   onPressed: _confirmAndAcceptAllAssignedJobs,
                   icon: const Icon(Icons.playlist_add_check_rounded, size: 18),
                   label: Text(
-                    'Accept All (${assignedJobs.length})',
+                    'Accept All (${availableJobs.length})',
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                   ),
                   style: ElevatedButton.styleFrom(
@@ -1041,7 +1111,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
               itemCount: availableJobs.length,
               itemBuilder: (context, index) {
                 final job = availableJobs[index];
-                final payoutVal = job.totalAmount * 0.5;
+                final orderTotal = job.totalAmount;
 
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -1068,7 +1138,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Top Header: Icon + Customer Name & Ref + Payout/Collection Badge
+                        // Top Header: Icon + Customer Name & Ref + Price Badge
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
@@ -1113,24 +1183,36 @@ class _DriverDashboardState extends State<DriverDashboard> {
                             ),
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 color: job.isCollectionJob
                                     ? const Color(0xFF10B981).withValues(alpha: 0.12)
-                                    : const Color(0xFF3B82F6).withValues(alpha: 0.12),
+                                    : (job.paymentMethod == 'GCash'
+                                        ? const Color(0xFFEFF6FF)
+                                        : const Color(0xFFFEF3C7)),
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
                                   color: job.isCollectionJob
                                       ? const Color(0xFF10B981).withValues(alpha: 0.3)
-                                      : const Color(0xFF3B82F6).withValues(alpha: 0.3),
+                                      : (job.paymentMethod == 'GCash'
+                                          ? const Color(0xFF93C5FD)
+                                          : const Color(0xFFFCD34D)),
                                 ),
                               ),
                               child: Text(
-                                job.isCollectionJob ? 'Collection' : '₱${payoutVal.toStringAsFixed(2)}',
+                                job.isCollectionJob
+                                    ? 'Collection'
+                                    : (job.paymentMethod == 'GCash'
+                                        ? '₱${orderTotal.toStringAsFixed(2)} • Paid'
+                                        : '₱${orderTotal.toStringAsFixed(2)} • COD'),
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                  color: job.isCollectionJob ? const Color(0xFF047857) : const Color(0xFF1D4ED8),
+                                  fontSize: 11.5,
+                                  color: job.isCollectionJob
+                                      ? const Color(0xFF047857)
+                                      : (job.paymentMethod == 'GCash'
+                                          ? const Color(0xFF1D4ED8)
+                                          : const Color(0xFFB45309)),
                                 ),
                               ),
                             ),
@@ -1901,39 +1983,72 @@ class _DriverDashboardState extends State<DriverDashboard> {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Row(
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Expanded(
-                            child: Container(
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: (job.isCollectionJob ? const Color(0xFF10B981) : AppTheme.secondaryColor)
+                                  .withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              job.isCollectionJob
+                                  ? 'Task: ${job.itemsSummary} • Dist: ${job.distance}'
+                                  : 'Items: ${job.itemsSummary} • Dist: ${job.distance}',
+                              style: TextStyle(
+                                color: job.isCollectionJob ? const Color(0xFF047857) : AppTheme.secondaryColor,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          if (!job.isCollectionJob)
+                            Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: (job.isCollectionJob ? const Color(0xFF10B981) : AppTheme.secondaryColor)
-                                    .withValues(alpha: 0.1),
+                                color: job.paymentMethod == 'GCash'
+                                    ? const Color(0xFFEFF6FF)
+                                    : const Color(0xFFFEF3C7),
                                 borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: job.paymentMethod == 'GCash'
+                                      ? const Color(0xFF93C5FD)
+                                      : const Color(0xFFFCD34D),
+                                ),
                               ),
                               child: Text(
-                                job.isCollectionJob
-                                    ? 'Task: ${job.itemsSummary} • Dist: ${job.distance}'
-                                    : 'Items: ${job.itemsSummary} • Dist: ${job.distance}',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                                job.paymentMethod == 'GCash'
+                                    ? '₱${job.totalAmount.toStringAsFixed(2)} • Paid GCash'
+                                    : '₱${job.totalAmount.toStringAsFixed(2)} • Collect COD',
                                 style: TextStyle(
-                                  color: job.isCollectionJob ? const Color(0xFF047857) : AppTheme.secondaryColor,
-                                  fontSize: 11,
+                                  color: job.paymentMethod == 'GCash'
+                                      ? const Color(0xFF1D4ED8)
+                                      : const Color(0xFFB45309),
                                   fontWeight: FontWeight.bold,
+                                  fontSize: 11.5,
+                                ),
+                              ),
+                            )
+                          else
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text(
+                                'Collection Service',
+                                style: TextStyle(
+                                  color: Color(0xFF047857),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 11.5,
                                 ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            job.isCollectionJob ? 'Collection Service' : 'Earn: ₱${(job.totalAmount * 0.5).toStringAsFixed(2)}',
-                            style: TextStyle(
-                              color: job.isCollectionJob ? const Color(0xFF059669) : const Color(0xFF10B981),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
                         ],
                       ),
                       const SizedBox(height: 6),
@@ -2922,7 +3037,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
                     itemCount: completedJobs.length,
                     itemBuilder: (context, index) {
                       final job = completedJobs[index];
-                      final payoutVal = job.totalAmount * 0.5;
+                      final orderTotal = job.totalAmount;
 
                       return Card(
                         margin: const EdgeInsets.only(bottom: 10),
@@ -2939,14 +3054,14 @@ class _DriverDashboardState extends State<DriverDashboard> {
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           subtitle: Text(
-                            'Dest: ${job.deliveryAddress} • Items: ${job.itemsSummary}',
+                            'Dest: ${job.deliveryAddress} • Items: ${job.itemsSummary} • ${job.paymentMethod}',
                           ),
                           trailing: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                '₱${payoutVal.toStringAsFixed(2)}',
+                                '₱${orderTotal.toStringAsFixed(2)}',
                                 style: const TextStyle(
                                   color: Color(0xFF10B981),
                                   fontWeight: FontWeight.w900,

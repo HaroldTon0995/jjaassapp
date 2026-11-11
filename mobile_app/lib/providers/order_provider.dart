@@ -1961,20 +1961,21 @@ class OrderProvider extends ChangeNotifier {
   Future<int> acceptAllAssignedJobs({
     required String driverId,
     required String driverName,
+    String? driverEmail,
   }) async {
     if (driverId.isEmpty) return 0;
-    final assignedOrders = _orders
-        .where(
-          (o) =>
-              o.orderStatus == OrderStatus.assigned && o.driverId == driverId,
-        )
-        .toList();
+    final availableOrders = getAvailableDriverJobs(
+      driverId,
+      driverName: driverName,
+      driverEmail: driverEmail,
+    );
 
-    if (assignedOrders.isEmpty) return 0;
+    if (availableOrders.isEmpty) return 0;
 
     final acceptedIds = <String>[];
-    for (var o in assignedOrders) {
+    for (var o in availableOrders) {
       o.orderStatus = OrderStatus.onDelivery;
+      o.driverId = driverId;
       o.driverName = driverName;
       acceptedIds.add(o.id);
     }
@@ -1992,6 +1993,7 @@ class OrderProvider extends ChangeNotifier {
         await client
             .from('orders')
             .update({
+              'driverId': driverId,
               'driverName': driverName,
               'orderStatus': OrderStatus.onDelivery.name,
             })
