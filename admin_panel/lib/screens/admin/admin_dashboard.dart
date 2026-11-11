@@ -1701,12 +1701,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 prefixIcon: Icon(
                   Icons.search_rounded,
                   color: AppTheme.primaryColor,
-                  size: 19,
+                  size: 18,
                 ),
+                prefixIconConstraints: BoxConstraints(minWidth: 36, minHeight: 36),
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                contentPadding: EdgeInsets.symmetric(horizontal: 8),
               ),
             ),
           ),
@@ -4820,14 +4821,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   child: TextField(
                     controller: _orderSearchController,
                     onChanged: (_) => setState(() {}),
+                    textAlignVertical: TextAlignVertical.center,
                     style: const TextStyle(fontSize: 12),
                     decoration: InputDecoration(
+                      isDense: true,
                       hintText:
                           'Search orders by ID (#COL, #ORD), customer name, address...',
                       hintStyle: const TextStyle(
                           fontSize: 11, color: Color(0xFF64748B)),
                       prefixIcon: const Icon(Icons.search_rounded,
                           size: 16, color: AppTheme.primaryColor),
+                      prefixIconConstraints:
+                          const BoxConstraints(minWidth: 34, minHeight: 34),
                       suffixIcon: _orderSearchController.text.isNotEmpty
                           ? IconButton(
                               icon: const Icon(Icons.close_rounded, size: 14),
@@ -4836,8 +4841,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             )
                           : null,
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                          vertical: 9, horizontal: 10),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                     ),
                   ),
                 ),
@@ -9638,8 +9642,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   // Search Input
                   TextField(
                     controller: _borrowSearchController,
+                    textAlignVertical: TextAlignVertical.center,
                     onChanged: (_) => setState(() {}),
                     decoration: InputDecoration(
+                      isDense: true,
                       hintText: 'Search borrowers by customer name, phone, address, or order ID...',
                       prefixIcon: const Icon(Icons.search_rounded),
                       suffixIcon: _borrowSearchController.text.isNotEmpty
