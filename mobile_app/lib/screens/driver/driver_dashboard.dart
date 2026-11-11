@@ -29,6 +29,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
   int _activeSidebarMenu = 0;
 
   // AI Chat States
+  int _supportSubTab = 0; // 0 = AquaBot AI Guide, 1 = Station Admin Desk
   final List<Map<String, dynamic>> _supportMessages = [
     {
       'sender': 'AquaBot',
@@ -40,6 +41,10 @@ class _DriverDashboardState extends State<DriverDashboard> {
   final ScrollController _chatScrollController = ScrollController();
   final ScrollController _faqScrollController = ScrollController();
   bool _isChatLoading = false;
+
+  // Station Admin Direct Chat States
+  final TextEditingController _adminChatInputController = TextEditingController();
+  final ScrollController _adminChatScrollController = ScrollController();
 
   // Settings controller
   final TextEditingController _plateNoController = TextEditingController(
@@ -63,6 +68,8 @@ class _DriverDashboardState extends State<DriverDashboard> {
     _supportInputController.dispose();
     _chatScrollController.dispose();
     _faqScrollController.dispose();
+    _adminChatInputController.dispose();
+    _adminChatScrollController.dispose();
     _plateNoController.dispose();
     _gallonSearchController.dispose();
     super.dispose();
@@ -354,6 +361,42 @@ class _DriverDashboardState extends State<DriverDashboard> {
         _chatScrollController.animateTo(
           _chatScrollController.position.maxScrollExtent,
           duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  void _sendAdminChatMessage([String? manualText]) async {
+    final text = (manualText ?? _adminChatInputController.text).trim();
+    if (text.isEmpty) return;
+    _adminChatInputController.clear();
+
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final user = auth.currentUser;
+    final driverId = user?.id ?? 'driver';
+    final driverName = user?.name ?? 'Driver';
+
+    await ChatService.instance.sendMessage(
+      conversationId: 'support_$driverId',
+      senderId: driverId,
+      senderName: driverName,
+      senderRole: 'driver',
+      receiverId: 'admin',
+      receiverName: 'Station Admin',
+      receiverRole: 'admin',
+      text: text,
+    );
+
+    _scrollAdminChatToBottom();
+  }
+
+  void _scrollAdminChatToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_adminChatScrollController.hasClients) {
+        _adminChatScrollController.animateTo(
+          _adminChatScrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 250),
           curve: Curves.easeOut,
         );
       }
@@ -665,7 +708,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
       case 3:
         return 'Trip Duty History';
       case 4:
-        return 'AI Support Dispatch';
+        return _supportSubTab == 1 ? 'Station Admin Desk' : 'AI Support Dispatch';
       case 5:
         return 'Vehicle & Profile Settings';
       default:
@@ -674,13 +717,18 @@ class _DriverDashboardState extends State<DriverDashboard> {
   }
 
   Widget _buildSidebar(bool isDark, {bool isDrawer = false}) {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final user = auth.currentUser;
+    final driverId = user?.id ?? '';
+
     final menuItems = [
-      {'title': 'Dashboard', 'icon': Icons.home_rounded},
-      {'title': 'Deliveries Map', 'icon': Icons.map_rounded},
-      {'title': 'Gallon Collection', 'icon': Icons.assignment_return_rounded},
-      {'title': 'Duty History', 'icon': Icons.history_rounded},
-      {'title': 'AI Chat Support', 'icon': Icons.chat_rounded},
-      {'title': 'Settings', 'icon': Icons.settings_rounded},
+      {'title': 'Dashboard', 'icon': Icons.home_rounded, 'tab': 0},
+      {'title': 'Deliveries Map', 'icon': Icons.map_rounded, 'tab': 1},
+      {'title': 'Gallon Collection', 'icon': Icons.assignment_return_rounded, 'tab': 2},
+      {'title': 'Duty History', 'icon': Icons.history_rounded, 'tab': 3},
+      {'title': 'Station Admin Desk', 'icon': Icons.support_agent_rounded, 'tab': 4, 'subTab': 1},
+      {'title': 'AI Chat Support', 'icon': Icons.smart_toy_rounded, 'tab': 4, 'subTab': 0},
+      {'title': 'Settings', 'icon': Icons.settings_rounded, 'tab': 5},
     ];
 
     return Container(
@@ -752,23 +800,50 @@ class _DriverDashboardState extends State<DriverDashboard> {
           ),
           const SizedBox(height: 12),
           Expanded(
-            child: ListView.builder(
-              itemCount: menuItems.length,
-              itemBuilder: (context, index) {
-                final item = menuItems[index];
-                final bool isSelected = _activeSidebarMenu == index;
-                return _SidebarItemTile(
-                  icon: item['icon'] as IconData,
-                  title: item['title'] as String,
-                  isSelected: isSelected,
-                  onTap: () {
-                    setState(() {
-                      _activeSidebarMenu = index;
-                      _selectedTab = index;
-                    });
-                    if (isDrawer) {
-                      Navigator.of(context).pop();
-                    }
+            child: AnimatedBuilder(
+              animation: ChatService.instance,
+              builder: (context, _) {
+                final unreadDesk = driverId.isNotEmpty
+                    ? ChatService.instance
+                        .getConversationMessages('support_$driverId')
+                        .where((m) => !m.isRead && m.senderRole != 'driver')
+                        .length
+                    : 0;
+
+                return ListView.builder(
+                  itemCount: menuItems.length,
+                  itemBuilder: (context, index) {
+                    final item = menuItems[index];
+                    final targetTab = item['tab'] as int;
+                    final targetSubTab = item['subTab'] as int?;
+                    final bool isSelected = _activeSidebarMenu == index ||
+                        (_selectedTab == targetTab &&
+                            (targetSubTab == null || _supportSubTab == targetSubTab));
+
+                    final badge = item['title'] == 'Station Admin Desk' ? unreadDesk : null;
+
+                    return _SidebarItemTile(
+                      icon: item['icon'] as IconData,
+                      title: item['title'] as String,
+                      isSelected: isSelected,
+                      badgeCount: badge,
+                      onTap: () {
+                        setState(() {
+                          _activeSidebarMenu = index;
+                          _selectedTab = targetTab;
+                          if (targetSubTab != null) {
+                            _supportSubTab = targetSubTab;
+                          }
+                        });
+                        if (targetSubTab == 1 && driverId.isNotEmpty) {
+                          ChatService.instance.markConversationAsRead('support_$driverId', 'driver');
+                          _scrollAdminChatToBottom();
+                        }
+                        if (isDrawer) {
+                          Navigator.of(context).pop();
+                        }
+                      },
+                    );
                   },
                 );
               },
@@ -1406,6 +1481,10 @@ class _DriverDashboardState extends State<DriverDashboard> {
   }
 
   Widget _buildQuickActionsCard(bool isDark) {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final user = auth.currentUser;
+    final driverId = user?.id ?? '';
+
     final actions = [
       {
         'title': 'Deliveries Map',
@@ -1427,15 +1506,17 @@ class _DriverDashboardState extends State<DriverDashboard> {
       },
       {
         'title': 'Driver Support',
-        'icon': Icons.support_agent_rounded,
+        'icon': Icons.smart_toy_rounded,
         'color': AppTheme.accentColor,
         'tab': 4,
+        'subTab': 0,
       },
       {
         'title': 'Message Admin',
-        'icon': Icons.chat_bubble_outline_rounded,
+        'icon': Icons.support_agent_rounded,
         'color': const Color(0xFFD97706),
         'tab': 4,
+        'subTab': 1,
       },
       {
         'title': 'Settings',
@@ -1473,12 +1554,29 @@ class _DriverDashboardState extends State<DriverDashboard> {
             itemBuilder: (context, index) {
               final act = actions[index];
               final color = act['color'] as Color;
+              final isMessageAdmin = act['title'] == 'Message Admin';
+
               return InkWell(
                 onTap: () {
                   setState(() {
                     _selectedTab = act['tab'] as int;
-                    _activeSidebarMenu = act['tab'] as int;
+                    if (act['title'] == 'Message Admin') {
+                      _activeSidebarMenu = 4;
+                    } else if (act['title'] == 'Driver Support') {
+                      _activeSidebarMenu = 5;
+                    } else if (act['title'] == 'Settings') {
+                      _activeSidebarMenu = 6;
+                    } else {
+                      _activeSidebarMenu = act['tab'] as int;
+                    }
+                    if (act.containsKey('subTab')) {
+                      _supportSubTab = act['subTab'] as int;
+                    }
                   });
+                  if (act['subTab'] == 1 && driverId.isNotEmpty) {
+                    ChatService.instance.markConversationAsRead('support_$driverId', 'driver');
+                    _scrollAdminChatToBottom();
+                  }
                 },
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
@@ -1494,17 +1592,54 @@ class _DriverDashboardState extends State<DriverDashboard> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
-                        act['icon'] as IconData,
-                        color: color,
-                        size: 24,
+                      Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Icon(
+                            act['icon'] as IconData,
+                            color: color,
+                            size: 24,
+                          ),
+                          if (isMessageAdmin && driverId.isNotEmpty)
+                            AnimatedBuilder(
+                              animation: ChatService.instance,
+                              builder: (context, _) {
+                                final unread = ChatService.instance
+                                    .getConversationMessages('support_$driverId')
+                                    .where((m) => !m.isRead && m.senderRole != 'driver')
+                                    .length;
+                                if (unread == 0) return const SizedBox.shrink();
+                                return Positioned(
+                                  top: -4,
+                                  right: -10,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEF4444),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      '$unread',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                        ],
                       ),
                       const SizedBox(height: 6),
                       Text(
                         act['title'] as String,
                         textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 13,
+                          fontSize: 12.5,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.navyColor,
                         ),
@@ -1616,7 +1751,8 @@ class _DriverDashboardState extends State<DriverDashboard> {
                       _sendSupportMessage(val);
                       setState(() {
                         _selectedTab = 4; // Route to support tab
-                        _activeSidebarMenu = 4;
+                        _supportSubTab = 0; // AquaBot AI tab
+                        _activeSidebarMenu = 5;
                       });
                     },
                     style: const TextStyle(
@@ -1652,7 +1788,8 @@ class _DriverDashboardState extends State<DriverDashboard> {
                     _sendSupportMessage(_supportInputController.text);
                     setState(() {
                       _selectedTab = 4;
-                      _activeSidebarMenu = 4;
+                      _supportSubTab = 0;
+                      _activeSidebarMenu = 5;
                     });
                   },
                   icon: const Icon(
@@ -3117,12 +3254,14 @@ class _DriverDashboardState extends State<DriverDashboard> {
             clipBehavior: Clip.antiAlias,
             child: Column(
               children: [
-            // AquaBot Gradient Header
+            // Dynamic Gradient Header (AquaBot vs Station Admin Desk)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [AppTheme.navyColor, AppTheme.primaryColor],
+                  colors: _supportSubTab == 1
+                      ? [const Color(0xFF1E293B), const Color(0xFFD97706)]
+                      : [AppTheme.navyColor, AppTheme.primaryColor],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -3145,15 +3284,21 @@ class _DriverDashboardState extends State<DriverDashboard> {
                     ),
                     padding: const EdgeInsets.all(2),
                     child: ClipOval(
-                      child: Image.asset(
-                        'assets/images/logo_icon.jpg',
-                        fit: BoxFit.cover,
-                        errorBuilder: (ctx, err, stack) => const Icon(
-                          Icons.water_drop_rounded,
-                          color: AppTheme.primaryColor,
-                          size: 20,
-                        ),
-                      ),
+                      child: _supportSubTab == 1
+                          ? const Icon(
+                              Icons.support_agent_rounded,
+                              color: Color(0xFFD97706),
+                              size: 24,
+                            )
+                          : Image.asset(
+                              'assets/images/logo_icon.jpg',
+                              fit: BoxFit.cover,
+                              errorBuilder: (ctx, err, stack) => const Icon(
+                                Icons.water_drop_rounded,
+                                color: AppTheme.primaryColor,
+                                size: 20,
+                              ),
+                            ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -3161,10 +3306,12 @@ class _DriverDashboardState extends State<DriverDashboard> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'AquaBot AI Assistant',
+                        Text(
+                          _supportSubTab == 1
+                              ? 'Station Admin Dispatch Desk'
+                              : 'AquaBot AI Assistant',
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontWeight: FontWeight.w900,
                             fontSize: 15,
                             color: Colors.white,
@@ -3182,11 +3329,13 @@ class _DriverDashboardState extends State<DriverDashboard> {
                               child: SizedBox(width: 7, height: 7),
                             ),
                             const SizedBox(width: 5),
-                            const Expanded(
+                            Expanded(
                               child: Text(
-                                'JJAASS Water Market • Online',
+                                _supportSubTab == 1
+                                    ? 'Direct Station Administrator Link • Live'
+                                    : 'JJAASS Water Market • Online',
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 11,
                                   color: Color(0xFFBAE6FD),
                                   fontWeight: FontWeight.w600,
@@ -3199,22 +3348,172 @@ class _DriverDashboardState extends State<DriverDashboard> {
                     ),
                   ),
                   IconButton(
-                    tooltip: 'Reset Chat',
-                    icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 20),
+                    tooltip: _supportSubTab == 1 ? 'Scroll to Latest' : 'Reset Chat',
+                    icon: Icon(
+                      _supportSubTab == 1 ? Icons.arrow_downward_rounded : Icons.refresh_rounded,
+                      color: Colors.white70,
+                      size: 20,
+                    ),
                     onPressed: () {
-                      setState(() {
-                        _supportMessages.clear();
-                        _supportMessages.add({
-                          'sender': 'AquaBot',
-                          'message':
-                              "Hello! I'm **AquaBot 💧**, your JJAASS Water Market driver dispatch assistant.\n\nTap any topic in the **Quick Inquiry Guide** above, or type your question below for instant delivery, route, or gallon collection guidance!",
+                      if (_supportSubTab == 1) {
+                        _scrollAdminChatToBottom();
+                      } else {
+                        setState(() {
+                          _supportMessages.clear();
+                          _supportMessages.add({
+                            'sender': 'AquaBot',
+                            'message':
+                                "Hello! I'm **AquaBot 💧**, your JJAASS Water Market driver dispatch assistant.\n\nTap any topic in the **Quick Inquiry Guide** above, or type your question below for instant delivery, route, or gallon collection guidance!",
+                          });
                         });
-                      });
+                      }
                     },
                   ),
                 ],
               ),
             ),
+
+            // Sub-Tab Switcher: [ AquaBot AI Guide ] vs [ Station Admin Desk ]
+            Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFFF8FAFC),
+                border: Border(
+                  bottom: BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => setState(() => _supportSubTab = 0),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: _supportSubTab == 0
+                              ? Colors.white
+                              : Colors.transparent,
+                          border: Border(
+                            bottom: BorderSide(
+                              color: _supportSubTab == 0
+                                  ? AppTheme.primaryColor
+                                  : Colors.transparent,
+                              width: 2.5,
+                            ),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.smart_toy_rounded,
+                              size: 16,
+                              color: _supportSubTab == 0
+                                  ? AppTheme.primaryColor
+                                  : const Color(0xFF64748B),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'AquaBot AI Guide',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.bold,
+                                color: _supportSubTab == 0
+                                    ? AppTheme.primaryColor
+                                    : const Color(0xFF64748B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        setState(() => _supportSubTab = 1);
+                        final auth = Provider.of<AuthProvider>(context, listen: false);
+                        final driverId = auth.currentUser?.id ?? '';
+                        if (driverId.isNotEmpty) {
+                          ChatService.instance.markConversationAsRead('support_$driverId', 'driver');
+                          _scrollAdminChatToBottom();
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: _supportSubTab == 1
+                              ? Colors.white
+                              : Colors.transparent,
+                          border: Border(
+                            bottom: BorderSide(
+                              color: _supportSubTab == 1
+                                  ? const Color(0xFFD97706)
+                                  : Colors.transparent,
+                              width: 2.5,
+                            ),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.support_agent_rounded,
+                              size: 16,
+                              color: _supportSubTab == 1
+                                  ? const Color(0xFFD97706)
+                                  : const Color(0xFF64748B),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Station Admin Desk',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.bold,
+                                color: _supportSubTab == 1
+                                    ? const Color(0xFFD97706)
+                                    : const Color(0xFF64748B),
+                              ),
+                            ),
+                            AnimatedBuilder(
+                              animation: ChatService.instance,
+                              builder: (context, _) {
+                                final auth = Provider.of<AuthProvider>(context, listen: false);
+                                final driverId = auth.currentUser?.id ?? '';
+                                final unread = driverId.isNotEmpty
+                                    ? ChatService.instance
+                                        .getConversationMessages('support_$driverId')
+                                        .where((m) => !m.isRead && m.senderRole != 'driver')
+                                        .length
+                                    : 0;
+                                if (unread == 0) return const SizedBox.shrink();
+                                return Container(
+                                  margin: const EdgeInsets.only(left: 6),
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEF4444),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    '$unread',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            if (_supportSubTab == 0) ...[
 
             // Collapsible Quick Inquiry FAQ Accordion
             Container(
@@ -3492,11 +3791,278 @@ class _DriverDashboardState extends State<DriverDashboard> {
                 ],
               ),
             ),
+          ] else ...[
+            Expanded(
+              child: _buildStationAdminChatSection(isDark),
+            ),
           ],
-        ),
+        ],
       ),
-    );
+    ),
+  );
       },
+    );
+  }
+
+  Widget _buildStationAdminChatSection(bool isDark) {
+    final auth = Provider.of<AuthProvider>(context);
+    final user = auth.currentUser;
+    final driverId = user?.id ?? '';
+    final conversationId = 'support_$driverId';
+
+    return Column(
+      children: [
+        // Desk Sub-Header with Admin Status & Full Modal Shortcut
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+          color: const Color(0xFFF1F5F9),
+          child: Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF10B981),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Live Dispatch Direct Channel • Station Administrator',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: Color(0xFF334155),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () => RealtimeChatModal.show(
+                  context,
+                  initialConversationId: conversationId,
+                ),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                icon: const Icon(Icons.open_in_new_rounded, size: 14, color: AppTheme.primaryColor),
+                label: const Text(
+                  'Full Modal',
+                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Live Messages from ChatService
+        Expanded(
+          child: AnimatedBuilder(
+            animation: ChatService.instance,
+            builder: (context, _) {
+              final messages = ChatService.instance.getConversationMessages(conversationId);
+
+              if (messages.isEmpty) {
+                return Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFFEF3C7),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.support_agent_rounded,
+                            size: 36,
+                            color: Color(0xFFD97706),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        const Text(
+                          'Station Admin Desk',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.navyColor,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Direct two-way channel with station dispatchers.\nSend an urgent message below for route assistance, customer updates, or gallon inventory questions.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: Color(0xFF64748B),
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          alignment: WrapAlignment.center,
+                          children: [
+                            ActionChip(
+                              label: const Text('🚨 Traffic Delay Alert', style: TextStyle(fontSize: 11.5)),
+                              onPressed: () => _sendAdminChatMessage('Station Admin: Heavy traffic along delivery route, completing stops shortly.'),
+                            ),
+                            ActionChip(
+                              label: const Text('📍 Clarify Address', style: TextStyle(fontSize: 11.5)),
+                              onPressed: () => _sendAdminChatMessage('Station Admin: Need assistance clarifying customer landmark/pinned location.'),
+                            ),
+                            ActionChip(
+                              label: const Text('💧 Need Refill Stock', style: TextStyle(fontSize: 11.5)),
+                              onPressed: () => _sendAdminChatMessage('Station Admin: Heading back to refilling station to reload gallon inventory.'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              return ListView.builder(
+                controller: _adminChatScrollController,
+                padding: const EdgeInsets.all(14.0),
+                itemCount: messages.length,
+                itemBuilder: (context, index) {
+                  final msg = messages[index];
+                  final isMe = msg.senderRole == 'driver';
+
+                  return Align(
+                    alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width * 0.78,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isMe ? AppTheme.navyColor : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.only(
+                          topLeft: const Radius.circular(14),
+                          topRight: const Radius.circular(14),
+                          bottomLeft: Radius.circular(isMe ? 14 : 2),
+                          bottomRight: Radius.circular(isMe ? 2 : 14),
+                        ),
+                        border: Border.all(
+                          color: isMe ? AppTheme.navyColor : const Color(0xFFCBD5E1),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                isMe ? 'You (Driver)' : (msg.senderName.isNotEmpty ? msg.senderName : 'Station Admin'),
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: isMe ? const Color(0xFF93C5FD) : const Color(0xFF0F766E),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                '${msg.createdAt.hour.toString().padLeft(2, '0')}:${msg.createdAt.minute.toString().padLeft(2, '0')}',
+                                style: TextStyle(
+                                  fontSize: 9.5,
+                                  color: isMe ? Colors.white60 : const Color(0xFF94A3B8),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            msg.message,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isMe ? Colors.white : const Color(0xFF0F172A),
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+
+        // Bottom Input Bar for Station Admin
+        Container(
+          padding: const EdgeInsets.all(12.0),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _adminChatInputController,
+                  onSubmitted: (_) => _sendAdminChatMessage(),
+                  style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A)),
+                  decoration: InputDecoration(
+                    hintText: 'Type message to Station Admin...',
+                    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+                    prefixIcon: const Icon(
+                      Icons.chat_bubble_outline_rounded,
+                      size: 18,
+                      color: Color(0xFFD97706),
+                    ),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Color(0xFFD97706), width: 1.5),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: () => _sendAdminChatMessage(),
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.all(11),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD97706),
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFD97706).withValues(alpha: 0.25),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.send_rounded,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -3674,6 +4240,7 @@ class _SidebarItemTile extends StatefulWidget {
   final bool isSelected;
   final VoidCallback onTap;
   final Color? textColor;
+  final int? badgeCount;
 
   const _SidebarItemTile({
     required this.icon,
@@ -3681,6 +4248,7 @@ class _SidebarItemTile extends StatefulWidget {
     required this.isSelected,
     required this.onTap,
     this.textColor,
+    this.badgeCount,
   });
 
   @override
@@ -3732,6 +4300,23 @@ class _SidebarItemTileState extends State<_SidebarItemTile> {
               color: contentColor,
             ),
           ),
+          trailing: widget.badgeCount != null && widget.badgeCount! > 0
+              ? Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '${widget.badgeCount}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                )
+              : null,
         ),
       ),
     );
