@@ -323,11 +323,14 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
                 width: 256,
                 height: 256,
                 child: Image.network(
-                  'https://${['a', 'b', 'c', 'd'][((tx + ty) % 4).abs()]}.basemaps.cartocdn.com/rastertiles/voyager/$_zoom/$tx/$ty.png',
+                  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/$_zoom/$ty/$tx',
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) {
                     return Image.network(
                       'https://tile.openstreetmap.org/$_zoom/$tx/$ty.png',
+                      headers: const {
+                        'User-Agent': 'JJAASSWaterMarket/1.0 (water delivery app)'
+                      },
                       fit: BoxFit.cover,
                       errorBuilder: (c, e, s) => CustomPaint(
                         painter: _FallbackTrackTilePainter(tx: tx, ty: ty),
