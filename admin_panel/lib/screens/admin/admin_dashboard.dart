@@ -5542,7 +5542,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       listenable: DeliveryIssueService.instance,
       builder: (context, _) {
         final pendingCount = DeliveryIssueService.instance.pendingCount;
-        final totalIssues = DeliveryIssueService.instance.issues.length;
+        final activeCount = DeliveryIssueService.instance.activeCount;
 
         return Container(
           margin: const EdgeInsets.only(bottom: 18),
@@ -5632,12 +5632,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           Icons.swap_horizontal_circle_rounded,
                           size: 16,
                           color: _ordersSubTab == 1
-                              ? const Color(0xFFDC2626)
+                              ? (pendingCount > 0 ? const Color(0xFFDC2626) : const Color(0xFF059669))
                               : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Delivery Defect & Swap Claims ($totalIssues)',
+                          'Delivery Defect & Swap Claims ($activeCount)',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: _ordersSubTab == 1 ? FontWeight.bold : FontWeight.w500,
@@ -5684,14 +5684,29 @@ class _AdminDashboardState extends State<AdminDashboard> {
         final allIssues = DeliveryIssueService.instance.issues;
         final pendingCount = DeliveryIssueService.instance.pendingCount;
 
+        // Auto-complete claims whose order transaction is finished
+        final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+        for (var i in allIssues) {
+          if (!i.isDone && (i.isApproved || i.isDeclined)) {
+            final o = orderProvider.orders.cast<OrderModel?>().firstWhere(
+                  (ord) => ord?.id == i.orderId || '#${ord?.id}' == i.orderId || ord?.id == i.orderId.replaceAll('#', ''),
+                  orElse: () => null,
+                );
+            if (o != null && (o.orderStatus == OrderStatus.completed || o.orderStatus == OrderStatus.cancelled)) {
+              DeliveryIssueService.instance.completeTransaction(i.id);
+            }
+          }
+        }
+
         // Filter by category chip
-        final filteredByStatus = _claimFilter == 'All'
-            ? allIssues
+        final filteredByStatus = (_claimFilter == 'All' || _claimFilter == 'Active')
+            ? allIssues.where((i) => !i.isDone).toList()
             : allIssues.where((i) {
-                if (_claimFilter == 'Pending') return i.isPending;
-                if (_claimFilter == 'Approved') return i.isApproved;
+                if (_claimFilter == 'Pending') return i.isPending && !i.isDone;
+                if (_claimFilter == 'Approved') return i.isApproved && !i.isDone;
                 if (_claimFilter == 'Declined') return i.isDeclined;
-                return true;
+                if (_claimFilter == 'Done & History') return i.isDone || i.isDeclined;
+                return !i.isDone;
               }).toList();
 
         // Filter by search query
@@ -5814,14 +5829,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                // Status Filter Chips
-                ...['All', 'Pending', 'Approved', 'Declined'].map((filter) {
-                  final isSelected = _claimFilter == filter;
+                // Status Filter Chips: Active (Default), Pending, Approved, Done & History
+                ...['Active', 'Pending', 'Approved', 'Done & History'].map((filter) {
+                  final isSelected = (_claimFilter == filter) ||
+                      (_claimFilter == 'All' && filter == 'Active');
                   int count = 0;
-                  if (filter == 'All') count = allIssues.length;
-                  if (filter == 'Pending') count = allIssues.where((i) => i.isPending).length;
-                  if (filter == 'Approved') count = allIssues.where((i) => i.isApproved).length;
-                  if (filter == 'Declined') count = allIssues.where((i) => i.isDeclined).length;
+                  if (filter == 'Active') count = allIssues.where((i) => !i.isDone).length;
+                  if (filter == 'Pending') count = allIssues.where((i) => i.isPending && !i.isDone).length;
+                  if (filter == 'Approved') count = allIssues.where((i) => i.isApproved && !i.isDone).length;
+                  if (filter == 'Done & History') count = allIssues.where((i) => i.isDone || i.isDeclined).length;
 
                   return Padding(
                     padding: const EdgeInsets.only(left: 6),
@@ -5840,7 +5856,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           ? const Color(0xFFF59E0B)
                           : (filter == 'Approved'
                               ? const Color(0xFF10B981)
-                              : (filter == 'Declined' ? const Color(0xFFEF4444) : AppTheme.primaryColor)),
+                              : (filter == 'Done & History' ? const Color(0xFF64748B) : AppTheme.primaryColor)),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                         side: BorderSide(
@@ -5869,13 +5885,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      Icons.check_circle_outline_rounded,
+                      Icons.task_alt_rounded,
                       size: 52,
-                      color: Colors.green.shade400,
+                      color: Colors.green.shade500,
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'No Delivery Defect Claims Found',
+                      _claimFilter == 'Done & History'
+                          ? 'No Completed Claims in History'
+                          : 'All Defect Claims & Swap Transactions Resolved',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
@@ -5884,7 +5902,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'There are no customer defect claims matching the "$_claimFilter" filter.',
+                      _claimFilter == 'Done & History'
+                          ? 'Past resolved customer claims will appear here for audit history.'
+                          : 'There are no active claims awaiting action. When claims are accepted or rejected and the transaction is done, they are cleared from the active queue.',
+                      textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 12,
                         color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
@@ -5917,20 +5938,29 @@ class _AdminDashboardState extends State<AdminDashboard> {
     Color cardBgColor,
     Color borderColor,
   ) {
-    final isApproved = claim.isApproved;
+    final isDone = claim.isDone;
+    final isApproved = claim.isApproved && !isDone;
     final isDeclined = claim.isDeclined;
-    final isPending = claim.isPending;
+    final isPending = claim.isPending && !isDone;
 
-    final Color statusColor = isApproved
-        ? const Color(0xFF059669)
-        : (isDeclined ? const Color(0xFFDC2626) : const Color(0xFFD97706));
-    final Color statusBg = isApproved
-        ? const Color(0xFFECFDF5)
-        : (isDeclined ? const Color(0xFFFEF2F2) : const Color(0xFFFEF3C7));
+    final Color statusColor = isDone
+        ? const Color(0xFF64748B)
+        : (isApproved
+            ? const Color(0xFF059669)
+            : (isDeclined ? const Color(0xFFDC2626) : const Color(0xFFD97706)));
+    final Color statusBg = isDone
+        ? const Color(0xFFF1F5F9)
+        : (isApproved
+            ? const Color(0xFFECFDF5)
+            : (isDeclined ? const Color(0xFFFEF2F2) : const Color(0xFFFEF3C7)));
 
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
     final relatedOrder = orderProvider.orders.cast<OrderModel?>().firstWhere(
-          (o) => o?.id == claim.orderId,
+          (o) =>
+              o?.id == claim.orderId ||
+              '#${o?.id}' == claim.orderId ||
+              '##${o?.id}' == claim.orderId ||
+              o?.id == claim.orderId.replaceAll('#', ''),
           orElse: () => null,
         );
 
@@ -6001,17 +6031,21 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      isApproved
-                          ? Icons.check_circle_rounded
-                          : (isDeclined ? Icons.cancel_rounded : Icons.hourglass_top_rounded),
+                      isDone
+                          ? Icons.check_circle_outline_rounded
+                          : (isApproved
+                              ? Icons.check_circle_rounded
+                              : (isDeclined ? Icons.cancel_rounded : Icons.hourglass_top_rounded)),
                       size: 13,
                       color: statusColor,
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      isApproved
-                          ? 'Swap Approved (${claim.affectedGallons} Gallons)'
-                          : (isDeclined ? 'Claim Declined' : 'Pending Review'),
+                      isDone
+                          ? (isDeclined ? 'Declined & Closed' : 'Transaction Completed (Done)')
+                          : (isApproved
+                              ? 'Swap Approved (${claim.affectedGallons} Gallons)'
+                              : (isDeclined ? 'Claim Declined' : 'Pending Review')),
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
@@ -6225,7 +6259,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ],
           ),
 
-          // Row 3: Action Buttons (Accept Swap vs Decline)
+          // Row 3: Action Buttons (Accept Swap vs Decline, or Complete Transaction)
           if (isPending) ...[
             const SizedBox(height: 16),
             const Divider(height: 1),
@@ -6251,7 +6285,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
-                            '✓ Claim #${claim.id} Approved! Customer ${claim.customerName} will receive ${claim.affectedGallons} replacement gallon(s) on next order.',
+                            '✓ Claim #${claim.id} Approved! Customer ${claim.customerName} will receive ${claim.affectedGallons} replacement gallon(s).',
                           ),
                           backgroundColor: const Color(0xFF059669),
                         ),
@@ -6270,6 +6304,60 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ),
                 ),
               ],
+            ),
+          ] else if (claim.isApproved && !claim.isDone) ...[
+            const SizedBox(height: 16),
+            const Divider(height: 1),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    await DeliveryIssueService.instance.completeTransaction(claim.id);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            '✓ Transaction for Claim #${claim.id} completed. Removed from active queue.',
+                          ),
+                          backgroundColor: const Color(0xFF059669),
+                        ),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.check_circle_outline_rounded, size: 14, color: Colors.white),
+                  label: const Text(
+                    'Complete Transaction & Dismiss',
+                    style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF059669),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ],
+            ),
+          ] else if (claim.isDone) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check_circle_outline, size: 14, color: isDark ? Colors.grey.shade400 : const Color(0xFF64748B)),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Transaction Completed & Closed',
+                    style: TextStyle(fontSize: 11, color: isDark ? Colors.grey.shade400 : const Color(0xFF64748B), fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
             ),
           ],
         ],
@@ -6496,6 +6584,23 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 'Accept Swap (${issue.affectedGallons} Gallons)',
                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
               ),
+            ),
+          ] else if (issue.isApproved && !issue.isDone) ...[
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                await DeliveryIssueService.instance.completeTransaction(issue.id);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('✓ Transaction for Claim #${issue.id} completed. Removed from active queue.'),
+                      backgroundColor: const Color(0xFF059669),
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669)),
+              child: const Text('Complete Transaction', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ],
         ],

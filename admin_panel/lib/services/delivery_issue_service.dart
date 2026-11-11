@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:web/web.dart' as web;
 import '../core/constants/app_constants.dart';
 import '../models/delivery_issue_model.dart';
 
@@ -8,13 +10,16 @@ class DeliveryIssueService extends ChangeNotifier {
   static final DeliveryIssueService instance = DeliveryIssueService._();
   DeliveryIssueService._();
 
+  static const String _cacheKey = 'jjaass_delivery_issues_cache';
   final List<DeliveryIssueModel> _issues = [];
   List<DeliveryIssueModel> get issues => List.unmodifiable(_issues);
 
   RealtimeChannel? _broadcastChannel;
+  RealtimeChannel? _postgresChannel;
   StreamSubscription? _streamSub;
   Timer? _pollingTimer;
   bool _initialized = false;
+  bool _hasLoadedFromCacheOrServer = false;
 
   bool get isSupabaseConfigured =>
       AppConstants.supabaseUrl != 'YOUR_SUPABASE_PROJECT_URL' &&
@@ -24,20 +29,52 @@ class DeliveryIssueService extends ChangeNotifier {
     if (_initialized) return;
     _initialized = true;
 
-    _seedInitialMockIssues();
+    _loadFromCache();
 
     if (isSupabaseConfigured) {
       _initBroadcast();
       _listenToRealtimeStream();
       _fetchDirectIssues();
-      _pollingTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      _pollingTimer = Timer.periodic(const Duration(seconds: 4), (_) {
         _fetchDirectIssues(silent: true);
       });
+    } else {
+      if (_issues.isEmpty) {
+        _seedInitialMockIssues();
+      }
+    }
+  }
+
+  void _loadFromCache() {
+    if (!kIsWeb) return;
+    try {
+      final cached = web.window.localStorage.getItem(_cacheKey);
+      if (cached != null && cached.isNotEmpty) {
+        final List<dynamic> list = jsonDecode(cached);
+        _issues.clear();
+        _issues.addAll(
+          list.map((m) => DeliveryIssueModel.fromJson(m as Map<String, dynamic>)),
+        );
+        _hasLoadedFromCacheOrServer = true;
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('DeliveryIssue cache read error: $e');
+    }
+  }
+
+  void _saveToCache() {
+    if (!kIsWeb) return;
+    try {
+      final list = _issues.map((i) => i.toJson()).toList();
+      web.window.localStorage.setItem(_cacheKey, jsonEncode(list));
+    } catch (e) {
+      debugPrint('DeliveryIssue cache write error: $e');
     }
   }
 
   void _seedInitialMockIssues() {
-    if (_issues.isNotEmpty) return;
+    if (_issues.isNotEmpty || _hasLoadedFromCacheOrServer) return;
     final now = DateTime.now();
     _issues.addAll([
       DeliveryIssueModel(
@@ -52,6 +89,7 @@ class DeliveryIssueService extends ChangeNotifier {
             'Cap sanitary plastic shrink seal arrived torn along the neck. Requesting replacement swap container.',
         status: 'pending',
         createdAt: now.subtract(const Duration(hours: 3)),
+        isTransactionDone: false,
       ),
     ]);
   }
@@ -67,13 +105,16 @@ class DeliveryIssueService extends ChangeNotifier {
             callback: (payload) {
               try {
                 final issue = DeliveryIssueModel.fromJson(
-                    Map<String, dynamic>.from(payload));
+                  Map<String, dynamic>.from(payload),
+                );
                 final idx = _issues.indexWhere((i) => i.id == issue.id);
                 if (idx >= 0) {
                   _issues[idx] = issue;
                 } else {
                   _issues.insert(0, issue);
                 }
+                _hasLoadedFromCacheOrServer = true;
+                _saveToCache();
                 notifyListeners();
               } catch (e) {
                 debugPrint('Issue broadcast parse error: $e');
@@ -99,12 +140,14 @@ class DeliveryIssueService extends ChangeNotifier {
           .toList();
 
       if (fetched.isNotEmpty) {
+        _hasLoadedFromCacheOrServer = true;
         bool changed = false;
         for (var f in fetched) {
           final idx = _issues.indexWhere((i) => i.id == f.id);
           if (idx >= 0) {
             if (_issues[idx].status != f.status ||
-                _issues[idx].adminFeedback != f.adminFeedback) {
+                _issues[idx].adminFeedback != f.adminFeedback ||
+                _issues[idx].isTransactionDone != f.isTransactionDone) {
               _issues[idx] = f;
               changed = true;
             }
@@ -114,11 +157,14 @@ class DeliveryIssueService extends ChangeNotifier {
           }
         }
         if (changed || !silent) {
+          _saveToCache();
           notifyListeners();
         }
+      } else if (!_hasLoadedFromCacheOrServer && _issues.isEmpty) {
+        _seedInitialMockIssues();
       }
     } catch (_) {
-      // Table may not exist yet in Supabase; retain local memory issues silently
+      // Retain local cached issues silently if offline or table pending
     }
   }
 
@@ -126,6 +172,45 @@ class DeliveryIssueService extends ChangeNotifier {
     if (!isSupabaseConfigured) return;
     try {
       final client = Supabase.instance.client;
+
+      // 1. Listen for live Postgres changes (realtime WebSockets)
+      _postgresChannel = client.channel('public:delivery_issues_realtime');
+      _postgresChannel!
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'delivery_issues',
+            callback: (payload) {
+              try {
+                final record = payload.newRecord;
+                if (record.isNotEmpty) {
+                  final issue = DeliveryIssueModel.fromJson(record);
+                  final idx = _issues.indexWhere((i) => i.id == issue.id);
+                  if (idx >= 0) {
+                    _issues[idx] = issue;
+                  } else {
+                    _issues.insert(0, issue);
+                  }
+                  _hasLoadedFromCacheOrServer = true;
+                  _saveToCache();
+                  notifyListeners();
+                } else if (payload.eventType == PostgresChangeEvent.delete) {
+                  final oldRecord = payload.oldRecord;
+                  final id = oldRecord['id']?.toString();
+                  if (id != null) {
+                    _issues.removeWhere((i) => i.id == id);
+                    _saveToCache();
+                    notifyListeners();
+                  }
+                }
+              } catch (e) {
+                debugPrint('Delivery issues realtime postgres error: $e');
+              }
+            },
+          )
+          .subscribe();
+
+      // 2. Continuous stream subscription backup
       _streamSub = client
           .from('delivery_issues')
           .stream(primaryKey: ['id'])
@@ -135,8 +220,16 @@ class DeliveryIssueService extends ChangeNotifier {
                 .map((m) => DeliveryIssueModel.fromJson(m))
                 .toList();
             if (fetched.isNotEmpty) {
-              _issues.clear();
-              _issues.addAll(fetched);
+              _hasLoadedFromCacheOrServer = true;
+              for (var f in fetched) {
+                final idx = _issues.indexWhere((i) => i.id == f.id);
+                if (idx >= 0) {
+                  _issues[idx] = f;
+                } else {
+                  _issues.add(f);
+                }
+              }
+              _saveToCache();
               notifyListeners();
             }
           }, onError: (err) {
@@ -172,9 +265,12 @@ class DeliveryIssueService extends ChangeNotifier {
       description: description.trim(),
       status: 'pending',
       createdAt: DateTime.now(),
+      isTransactionDone: false,
     );
 
     _issues.insert(0, newIssue);
+    _hasLoadedFromCacheOrServer = true;
+    _saveToCache();
     notifyListeners();
 
     if (isSupabaseConfigured) {
@@ -187,14 +283,14 @@ class DeliveryIssueService extends ChangeNotifier {
 
       try {
         final client = Supabase.instance.client;
-        await client.from('delivery_issues').insert(newIssue.toJson());
+        await client.from('delivery_issues').upsert(newIssue.toJson());
       } catch (e) {
         debugPrint('Supabase insert delivery issue error: $e');
       }
     }
   }
 
-  Future<void> acceptIssue(String issueId, {String? adminFeedback}) async {
+  Future<void> acceptIssue(String issueId, {String? adminFeedback, bool markDone = false}) async {
     final idx = _issues.indexWhere((i) => i.id == issueId);
     if (idx < 0) return;
 
@@ -202,9 +298,11 @@ class DeliveryIssueService extends ChangeNotifier {
       status: 'accepted',
       adminFeedback: adminFeedback ?? 'Approved for replacement swap on your next order delivery.',
       resolvedAt: DateTime.now(),
+      isTransactionDone: markDone,
     );
 
     _issues[idx] = updated;
+    _saveToCache();
     notifyListeners();
 
     if (isSupabaseConfigured) {
@@ -219,10 +317,42 @@ class DeliveryIssueService extends ChangeNotifier {
         final client = Supabase.instance.client;
         await client
             .from('delivery_issues')
-            .update(updated.toJson())
-            .eq('id', issueId);
+            .upsert(updated.toJson());
       } catch (e) {
         debugPrint('Supabase accept delivery issue error: $e');
+      }
+    }
+  }
+
+  Future<void> completeTransaction(String issueId) async {
+    final idx = _issues.indexWhere((i) => i.id == issueId);
+    if (idx < 0) return;
+
+    final updated = _issues[idx].copyWith(
+      status: 'completed',
+      isTransactionDone: true,
+      resolvedAt: DateTime.now(),
+    );
+
+    _issues[idx] = updated;
+    _saveToCache();
+    notifyListeners();
+
+    if (isSupabaseConfigured) {
+      try {
+        _broadcastChannel?.sendBroadcastMessage(
+          event: 'issue_updated',
+          payload: updated.toJson(),
+        );
+      } catch (_) {}
+
+      try {
+        final client = Supabase.instance.client;
+        await client
+            .from('delivery_issues')
+            .upsert(updated.toJson());
+      } catch (e) {
+        debugPrint('Supabase complete delivery issue error: $e');
       }
     }
   }
@@ -235,9 +365,11 @@ class DeliveryIssueService extends ChangeNotifier {
       status: 'declined',
       adminFeedback: reason.trim(),
       resolvedAt: DateTime.now(),
+      isTransactionDone: true, // Once declined, the claim transaction is completed/done
     );
 
     _issues[idx] = updated;
+    _saveToCache();
     notifyListeners();
 
     if (isSupabaseConfigured) {
@@ -252,8 +384,7 @@ class DeliveryIssueService extends ChangeNotifier {
         final client = Supabase.instance.client;
         await client
             .from('delivery_issues')
-            .update(updated.toJson())
-            .eq('id', issueId);
+            .upsert(updated.toJson());
       } catch (e) {
         debugPrint('Supabase decline delivery issue error: $e');
       }
@@ -265,20 +396,23 @@ class DeliveryIssueService extends ChangeNotifier {
     for (int i = 0; i < _issues.length; i++) {
       if ((_issues[i].customerId == customerId || _issues[i].customerName == customerId) &&
           _issues[i].status == 'accepted') {
-        _issues[i] = _issues[i].copyWith(status: 'redeemed');
+        _issues[i] = _issues[i].copyWith(
+          status: 'redeemed',
+          isTransactionDone: true,
+        );
         remainingToRedeem -= _issues[i].affectedGallonsCount;
         if (isSupabaseConfigured) {
           try {
             Supabase.instance.client
                 .from('delivery_issues')
-                .update({'status': 'redeemed'})
-                .eq('id', _issues[i].id)
+                .upsert(_issues[i].toJson())
                 .catchError((_) {});
           } catch (_) {}
         }
         if (remainingToRedeem <= 0) break;
       }
     }
+    _saveToCache();
     notifyListeners();
   }
 
@@ -286,7 +420,8 @@ class DeliveryIssueService extends ChangeNotifier {
     return _issues
         .where((i) =>
             (i.customerId == customerId || i.customerName == customerName) &&
-            i.status == 'accepted')
+            i.status == 'accepted' &&
+            !i.isTransactionDone)
         .fold(0, (sum, i) => sum + i.affectedGallonsCount);
   }
 
@@ -307,15 +442,24 @@ class DeliveryIssueService extends ChangeNotifier {
   }
 
   int getPendingCount() {
-    return _issues.where((i) => i.status == 'pending').length;
+    return _issues.where((i) => i.isPending && !i.isDone).length;
   }
 
   int get pendingCount => getPendingCount();
+
+  int get activeCount => _issues.where((i) => !i.isDone).length;
+
+  List<DeliveryIssueModel> get activeIssues =>
+      _issues.where((i) => !i.isDone).toList();
+
+  List<DeliveryIssueModel> get completedIssues =>
+      _issues.where((i) => i.isDone).toList();
 
   @override
   void dispose() {
     _streamSub?.cancel();
     _broadcastChannel?.unsubscribe();
+    _postgresChannel?.unsubscribe();
     _pollingTimer?.cancel();
     super.dispose();
   }

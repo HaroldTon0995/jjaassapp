@@ -9,10 +9,11 @@ class DeliveryIssueModel {
   final String? photoUrl;
   final String? photoBase64;
   final String description;
-  final String status; // 'pending', 'accepted', 'declined', 'redeemed'
+  final String status; // 'pending', 'accepted', 'declined', 'redeemed', 'completed'
   final String? adminFeedback;
   final DateTime createdAt;
   final DateTime? resolvedAt;
+  final bool isTransactionDone;
 
   DeliveryIssueModel({
     required this.id,
@@ -29,6 +30,7 @@ class DeliveryIssueModel {
     this.adminFeedback,
     required this.createdAt,
     this.resolvedAt,
+    this.isTransactionDone = false,
   });
 
   Map<String, dynamic> toJson() => {
@@ -46,6 +48,7 @@ class DeliveryIssueModel {
         'admin_feedback': adminFeedback,
         'created_at': createdAt.toIso8601String(),
         'resolved_at': resolvedAt?.toIso8601String(),
+        'is_transaction_done': isTransactionDone,
       };
 
   factory DeliveryIssueModel.fromJson(Map<String, dynamic> json) =>
@@ -68,12 +71,17 @@ class DeliveryIssueModel {
         resolvedAt: json['resolved_at'] != null
             ? DateTime.tryParse(json['resolved_at'].toString())
             : null,
+        isTransactionDone: json['is_transaction_done'] == true ||
+            json['isTransactionDone'] == true ||
+            json['status'] == 'completed' ||
+            json['status'] == 'redeemed',
       );
 
   DeliveryIssueModel copyWith({
     String? status,
     String? adminFeedback,
     DateTime? resolvedAt,
+    bool? isTransactionDone,
   }) {
     return DeliveryIssueModel(
       id: id,
@@ -90,6 +98,7 @@ class DeliveryIssueModel {
       adminFeedback: adminFeedback ?? this.adminFeedback,
       createdAt: createdAt,
       resolvedAt: resolvedAt ?? this.resolvedAt,
+      isTransactionDone: isTransactionDone ?? this.isTransactionDone,
     );
   }
 
@@ -98,6 +107,8 @@ class DeliveryIssueModel {
   bool get isAccepted => status == 'accepted';
   bool get isDeclined => status == 'declined';
   bool get isRedeemed => status == 'redeemed';
+  bool get isCompleted => status == 'completed' || isTransactionDone;
+  bool get isDone => isTransactionDone || status == 'completed' || status == 'redeemed';
   int get affectedGallons => affectedGallonsCount;
   String? get adminNotes => adminFeedback;
   String get createdAtFormatted {
