@@ -52,10 +52,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
   // Search/filter states for Inventory
   final TextEditingController _inventorySearchController =
       TextEditingController();
-  final TextEditingController _borrowSearchController =
-      TextEditingController();
-  int _inventorySubTab = 0; // 0: Inventory Items, 1: Customer Borrowed Gallons Log
-  String _inventoryCategoryFilter = 'all'; // 'all', 'water', 'container', 'accessory'
+  final TextEditingController _borrowSearchController = TextEditingController();
+  int _inventorySubTab =
+      0; // 0: Inventory Items, 1: Customer Borrowed Gallons Log
+  String _inventoryCategoryFilter =
+      'all'; // 'all', 'water', 'container', 'accessory'
   String _borrowFilter = 'all'; // 'all', 'active', 'returned', 'slim', 'round'
 
   // Sub-tabs & Filter states for Orders
@@ -97,8 +98,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
   DateTime _selectedReportDate = DateTime.now();
 
   // Realtime Payments Filter and Search States
-  String _paymentsFilter = 'All'; // 'All', 'GCash', 'Cash on Delivery', 'Paid', 'Pending'
-  final TextEditingController _paymentsSearchController = TextEditingController();
+  String _paymentsFilter =
+      'All'; // 'All', 'GCash', 'Cash on Delivery', 'Paid', 'Pending'
+  final TextEditingController _paymentsSearchController =
+      TextEditingController();
 
   // Realtime Live Notifications
   final List<Map<String, dynamic>> _notifications = [];
@@ -110,12 +113,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
   final TextEditingController _orderSearchController = TextEditingController();
 
   // Admin Profile Controllers (Settings)
-  final TextEditingController _adminNameController =
-      TextEditingController(text: 'harold borbo');
-  final TextEditingController _adminEmailController =
-      TextEditingController(text: 'admin@jjaasswater.com');
-  final TextEditingController _adminPhoneController =
-      TextEditingController(text: '+63 995 113 3652');
+  final TextEditingController _adminNameController = TextEditingController(
+    text: 'harold borbo',
+  );
+  final TextEditingController _adminEmailController = TextEditingController(
+    text: 'admin@jjaasswater.com',
+  );
+  final TextEditingController _adminPhoneController = TextEditingController(
+    text: '+63 995 113 3652',
+  );
 
   // Customer & Driver Direct Messages (Decoupled from order system notifications)
   final List<Map<String, dynamic>> _inboxMessages = [
@@ -353,11 +359,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
           .listen(
             (List<Map<String, dynamic>> response) {
               if (!mounted) return;
-              final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+              final orderProvider = Provider.of<OrderProvider>(
+                context,
+                listen: false,
+              );
               final currentProfiles = response.map((item) {
                 final model = UserModel.fromJson(item);
                 final lower = model.name.trim().toLowerCase();
-                if (lower.isEmpty || lower == 'new user' || lower == 'registered user') {
+                if (lower.isEmpty ||
+                    lower == 'new user' ||
+                    lower == 'registered user') {
                   for (final o in orderProvider.orders) {
                     if (o.customerId == model.id &&
                         o.customerName.trim().isNotEmpty &&
@@ -697,16 +708,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
   }
 
-  Future<void> _confirmDeleteUser(
-    UserModel user,
-    bool isDark,
-  ) async {
+  Future<void> _confirmDeleteUser(UserModel user, bool isDark) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogCtx) {
         return AlertDialog(
           backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Row(
             children: [
               Container(
@@ -715,7 +725,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   color: Colors.red.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.delete_forever_rounded, color: Colors.red, size: 22),
+                child: const Icon(
+                  Icons.delete_forever_rounded,
+                  color: Colors.red,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 12),
               const Text(
@@ -740,7 +754,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF8FAFC),
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.05)
+                      : const Color(0xFFF8FAFC),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
                     color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
@@ -760,14 +776,22 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         Expanded(
                           child: Text(
                             user.name,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
-                            color: _getRoleColor(user.role).withValues(alpha: 0.1),
+                            color: _getRoleColor(
+                              user.role,
+                            ).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -784,7 +808,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     const SizedBox(height: 4),
                     Text(
                       user.email,
-                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
                     ),
                   ],
                 ),
@@ -803,11 +830,23 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
             ElevatedButton.icon(
               onPressed: () => Navigator.of(dialogCtx).pop(true),
-              icon: const Icon(Icons.delete_outline_rounded, size: 16, color: Colors.white),
-              label: const Text('Delete Permanently', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              icon: const Icon(
+                Icons.delete_outline_rounded,
+                size: 16,
+                color: Colors.white,
+              ),
+              label: const Text(
+                'Delete Permanently',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.redAccent,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             ),
           ],
@@ -841,11 +880,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       }
     } catch (e) {
       if (mounted) {
-        Helpers.showSnackBar(
-          context,
-          'Error deleting user: $e',
-          isError: true,
-        );
+        Helpers.showSnackBar(context, 'Error deleting user: $e', isError: true);
       }
     } finally {
       if (mounted) {
@@ -872,7 +907,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
         _searchController.text = rawQuery.trim();
       });
       _applyFilters();
-      Helpers.showSnackBar(context, 'Navigated to Users & Roles for "$rawQuery"');
+      Helpers.showSnackBar(
+        context,
+        'Navigated to Users & Roles for "$rawQuery"',
+      );
     } else if (query.contains('order') ||
         query.startsWith('#col') ||
         query.startsWith('#ord') ||
@@ -884,7 +922,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
         _orderSearchController.text = rawQuery.trim();
       });
       Helpers.showSnackBar(
-          context, 'Navigated to Orders Management for "$rawQuery"');
+        context,
+        'Navigated to Orders Management for "$rawQuery"',
+      );
     } else if (query.contains('deliver') ||
         query.contains('fleet') ||
         query.contains('rider') ||
@@ -896,7 +936,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
         _deliveriesSearchController.text = rawQuery.trim();
       });
       Helpers.showSnackBar(
-          context, 'Navigated to Fleet Deliveries for "$rawQuery"');
+        context,
+        'Navigated to Fleet Deliveries for "$rawQuery"',
+      );
     } else if (query.contains('invent') ||
         query.contains('stock') ||
         query.contains('tank') ||
@@ -928,7 +970,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
         _activeSidebarMenu = 6;
       });
       Helpers.showSnackBar(
-          context, 'Navigated to Analytics & Reports for "$rawQuery"');
+        context,
+        'Navigated to Analytics & Reports for "$rawQuery"',
+      );
     } else if (query.contains('ai') ||
         query.contains('chat') ||
         query.contains('bot') ||
@@ -939,7 +983,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
         _activeSidebarMenu = 7;
       });
       Helpers.showSnackBar(
-          context, 'Navigated to AI Chat Support for "$rawQuery"');
+        context,
+        'Navigated to AI Chat Support for "$rawQuery"',
+      );
     } else if (query.contains('setting') ||
         query.contains('permit') ||
         query.contains('sanitary') ||
@@ -953,17 +999,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
     } else {
       // Check if matches an order id or customer in order provider
       final orderProvider = Provider.of<OrderProvider>(context, listen: false);
-      final hasOrder = orderProvider.orders.any((o) =>
-          o.id.toLowerCase().contains(query) ||
-          o.customerName.toLowerCase().contains(query));
+      final hasOrder = orderProvider.orders.any(
+        (o) =>
+            o.id.toLowerCase().contains(query) ||
+            o.customerName.toLowerCase().contains(query),
+      );
       if (hasOrder) {
         setState(() {
           _selectedTab = 1;
           _activeSidebarMenu = 1;
           _orderSearchController.text = rawQuery.trim();
         });
-        Helpers.showSnackBar(
-            context, 'Found matching order for "$rawQuery"');
+        Helpers.showSnackBar(context, 'Found matching order for "$rawQuery"');
       } else {
         setState(() {
           _selectedTab = 3;
@@ -983,7 +1030,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
       builder: (dialogCtx) {
         return AlertDialog(
           backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Row(
             children: [
               Container(
@@ -992,8 +1041,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   color: Colors.red.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.delete_forever_rounded,
-                    color: Colors.red, size: 22),
+                child: const Icon(
+                  Icons.delete_forever_rounded,
+                  color: Colors.red,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 12),
               const Text(
@@ -1030,23 +1082,33 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Order ID: ${order.id}',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            color: AppTheme.primaryColor)),
+                    Text(
+                      'Order ID: ${order.id}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: AppTheme.primaryColor,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    Text('Customer: ${_resolveCustomerDisplayName(order)}',
-                        style: const TextStyle(fontSize: 12)),
+                    Text(
+                      'Customer: ${_resolveCustomerDisplayName(order)}',
+                      style: const TextStyle(fontSize: 12),
+                    ),
                     const SizedBox(height: 4),
-                    Text('Products: ${order.itemsSummary}',
-                        style: const TextStyle(fontSize: 12)),
+                    Text(
+                      'Products: ${order.itemsSummary}',
+                      style: const TextStyle(fontSize: 12),
+                    ),
                     const SizedBox(height: 4),
-                    Text('Grand Total: ${order.formattedTotal}',
-                        style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green)),
+                    Text(
+                      'Grand Total: ${order.formattedTotal}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1054,9 +1116,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
               const Text(
                 '⚠️ Warning: This action cannot be undone and will permanently remove this transaction from the database and revenue reports.',
                 style: TextStyle(
-                    fontSize: 11.5,
-                    color: Colors.redAccent,
-                    fontWeight: FontWeight.w600),
+                  fontSize: 11.5,
+                  color: Colors.redAccent,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
@@ -1071,11 +1134,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 backgroundColor: Colors.red,
                 foregroundColor: Colors.white,
               ),
-              icon: const Icon(Icons.delete_outline_rounded,
-                  size: 16, color: Colors.white),
-              label: const Text('Delete Permanently',
-                  style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold)),
+              icon: const Icon(
+                Icons.delete_outline_rounded,
+                size: 16,
+                color: Colors.white,
+              ),
+              label: const Text(
+                'Delete Permanently',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         );
@@ -1089,11 +1159,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
       if (!mounted) return;
       if (success) {
         Helpers.showSnackBar(
-            context, 'Order ${order.id} has been permanently deleted.');
+          context,
+          'Order ${order.id} has been permanently deleted.',
+        );
       } else {
         Helpers.showSnackBar(
-            context, 'Failed to delete order. Please check connection.',
-            isError: true);
+          context,
+          'Failed to delete order. Please check connection.',
+          isError: true,
+        );
       }
     }
   }
@@ -1125,11 +1199,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
             final isDriver = selectedRole == UserRole.driver;
             final activeColor = isAdmin
                 ? const Color(0xFF6366F1)
-                : (isDriver ? AppTheme.secondaryColor : const Color(0xFF10B981));
+                : (isDriver
+                      ? AppTheme.secondaryColor
+                      : const Color(0xFF10B981));
 
             return AlertDialog(
               backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               title: Row(
                 children: [
                   Container(
@@ -1141,7 +1219,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     child: Icon(
                       isAdmin
                           ? Icons.admin_panel_settings_rounded
-                          : (isDriver ? Icons.local_shipping_rounded : Icons.person_add_rounded),
+                          : (isDriver
+                                ? Icons.local_shipping_rounded
+                                : Icons.person_add_rounded),
                       color: activeColor,
                       size: 22,
                     ),
@@ -1151,7 +1231,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     child: Text(
                       isAdmin
                           ? 'Create Administrator Account'
-                          : (isDriver ? 'Create Driver Account' : 'Create Customer Account'),
+                          : (isDriver
+                                ? 'Create Driver Account'
+                                : 'Create Customer Account'),
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.bold,
@@ -1171,7 +1253,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       // Role Selector Buttons
                       const Text(
                         'Select Account Role',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF475569),
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Row(
@@ -1179,13 +1265,22 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           Expanded(
                             child: InkWell(
                               borderRadius: BorderRadius.circular(10),
-                              onTap: () => setDialogState(() => selectedRole = UserRole.customer),
+                              onTap: () => setDialogState(
+                                () => selectedRole = UserRole.customer,
+                              ),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 10,
+                                  horizontal: 8,
+                                ),
                                 decoration: BoxDecoration(
                                   color: selectedRole == UserRole.customer
-                                      ? const Color(0xFF10B981).withValues(alpha: 0.12)
-                                      : (isDark ? Colors.white10 : Colors.grey.shade100),
+                                      ? const Color(
+                                          0xFF10B981,
+                                        ).withValues(alpha: 0.12)
+                                      : (isDark
+                                            ? Colors.white10
+                                            : Colors.grey.shade100),
                                   borderRadius: BorderRadius.circular(10),
                                   border: Border.all(
                                     color: selectedRole == UserRole.customer
@@ -1200,7 +1295,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                     Icon(
                                       Icons.person_rounded,
                                       size: 16,
-                                      color: selectedRole == UserRole.customer ? const Color(0xFF10B981) : Colors.grey,
+                                      color: selectedRole == UserRole.customer
+                                          ? const Color(0xFF10B981)
+                                          : Colors.grey,
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
@@ -1208,7 +1305,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.bold,
-                                        color: selectedRole == UserRole.customer ? const Color(0xFF10B981) : Colors.grey,
+                                        color: selectedRole == UserRole.customer
+                                            ? const Color(0xFF10B981)
+                                            : Colors.grey,
                                       ),
                                     ),
                                   ],
@@ -1220,13 +1319,22 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           Expanded(
                             child: InkWell(
                               borderRadius: BorderRadius.circular(10),
-                              onTap: () => setDialogState(() => selectedRole = UserRole.driver),
+                              onTap: () => setDialogState(
+                                () => selectedRole = UserRole.driver,
+                              ),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 10,
+                                  horizontal: 8,
+                                ),
                                 decoration: BoxDecoration(
                                   color: selectedRole == UserRole.driver
-                                      ? AppTheme.secondaryColor.withValues(alpha: 0.12)
-                                      : (isDark ? Colors.white10 : Colors.grey.shade100),
+                                      ? AppTheme.secondaryColor.withValues(
+                                          alpha: 0.12,
+                                        )
+                                      : (isDark
+                                            ? Colors.white10
+                                            : Colors.grey.shade100),
                                   borderRadius: BorderRadius.circular(10),
                                   border: Border.all(
                                     color: selectedRole == UserRole.driver
@@ -1241,7 +1349,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                     Icon(
                                       Icons.local_shipping_rounded,
                                       size: 16,
-                                      color: selectedRole == UserRole.driver ? AppTheme.secondaryColor : Colors.grey,
+                                      color: selectedRole == UserRole.driver
+                                          ? AppTheme.secondaryColor
+                                          : Colors.grey,
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
@@ -1249,7 +1359,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.bold,
-                                        color: selectedRole == UserRole.driver ? AppTheme.secondaryColor : Colors.grey,
+                                        color: selectedRole == UserRole.driver
+                                            ? AppTheme.secondaryColor
+                                            : Colors.grey,
                                       ),
                                     ),
                                   ],
@@ -1261,13 +1373,22 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           Expanded(
                             child: InkWell(
                               borderRadius: BorderRadius.circular(10),
-                              onTap: () => setDialogState(() => selectedRole = UserRole.admin),
+                              onTap: () => setDialogState(
+                                () => selectedRole = UserRole.admin,
+                              ),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 10,
+                                  horizontal: 8,
+                                ),
                                 decoration: BoxDecoration(
                                   color: selectedRole == UserRole.admin
-                                      ? const Color(0xFF6366F1).withValues(alpha: 0.12)
-                                      : (isDark ? Colors.white10 : Colors.grey.shade100),
+                                      ? const Color(
+                                          0xFF6366F1,
+                                        ).withValues(alpha: 0.12)
+                                      : (isDark
+                                            ? Colors.white10
+                                            : Colors.grey.shade100),
                                   borderRadius: BorderRadius.circular(10),
                                   border: Border.all(
                                     color: selectedRole == UserRole.admin
@@ -1282,7 +1403,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                     Icon(
                                       Icons.admin_panel_settings_rounded,
                                       size: 16,
-                                      color: selectedRole == UserRole.admin ? const Color(0xFF6366F1) : Colors.grey,
+                                      color: selectedRole == UserRole.admin
+                                          ? const Color(0xFF6366F1)
+                                          : Colors.grey,
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
@@ -1290,7 +1413,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.bold,
-                                        color: selectedRole == UserRole.admin ? const Color(0xFF6366F1) : Colors.grey,
+                                        color: selectedRole == UserRole.admin
+                                            ? const Color(0xFF6366F1)
+                                            : Colors.grey,
                                       ),
                                     ),
                                   ],
@@ -1308,7 +1433,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         textCapitalization: TextCapitalization.words,
                         decoration: InputDecoration(
                           labelText: 'Full Name *',
-                          hintText: selectedRole == UserRole.driver ? 'e.g. Juan Perez (Driver)' : 'e.g. Maria Santos',
+                          hintText: selectedRole == UserRole.driver
+                              ? 'e.g. Juan Perez (Driver)'
+                              : 'e.g. Maria Santos',
                           prefixIcon: const Icon(Icons.badge_outlined),
                         ),
                       ),
@@ -1335,12 +1462,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           prefixIcon: const Icon(Icons.lock_outline_rounded),
                           suffixIcon: IconButton(
                             icon: Icon(
-                              obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                              obscurePassword
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
                               size: 20,
                             ),
-                            onPressed: () => setDialogState(() => obscurePassword = !obscurePassword),
+                            onPressed: () => setDialogState(
+                              () => obscurePassword = !obscurePassword,
+                            ),
                           ),
-                          helperText: 'Password for login (at least 6 characters)',
+                          helperText:
+                              'Password for login (at least 6 characters)',
                         ),
                       ),
                       const SizedBox(height: 14),
@@ -1367,34 +1499,42 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           hintText: selectedRole == UserRole.driver
                               ? 'e.g. Tabaco City / Bacacay Route'
                               : 'e.g. Purok 2, Tabaco City, Albay',
-                          prefixIcon: Icon(selectedRole == UserRole.driver ? Icons.two_wheeler_rounded : Icons.location_on_outlined),
+                          prefixIcon: Icon(
+                            selectedRole == UserRole.driver
+                                ? Icons.two_wheeler_rounded
+                                : Icons.location_on_outlined,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 6,
                         runSpacing: 6,
-                        children: const [
-                          'Tabaco City',
-                          'Bacacay',
-                          'Malilipot',
-                          'Malinao',
-                          'Santo Domingo',
-                          'Tiwi',
-                        ].map((mun) {
-                          return ActionChip(
-                            visualDensity: VisualDensity.compact,
-                            label: Text(mun, style: const TextStyle(fontSize: 11)),
-                            onPressed: () {
-                              final current = addressController.text.trim();
-                              if (!current.contains(mun)) {
-                                addressController.text = current.isEmpty
-                                    ? '$mun, Albay'
-                                    : '$current, $mun, Albay';
-                              }
-                            },
-                          );
-                        }).toList(),
+                        children:
+                            const [
+                              'Tabaco City',
+                              'Bacacay',
+                              'Malilipot',
+                              'Malinao',
+                              'Santo Domingo',
+                              'Tiwi',
+                            ].map((mun) {
+                              return ActionChip(
+                                visualDensity: VisualDensity.compact,
+                                label: Text(
+                                  mun,
+                                  style: const TextStyle(fontSize: 11),
+                                ),
+                                onPressed: () {
+                                  final current = addressController.text.trim();
+                                  if (!current.contains(mun)) {
+                                    addressController.text = current.isEmpty
+                                        ? '$mun, Albay'
+                                        : '$current, $mun, Albay';
+                                  }
+                                },
+                              );
+                            }).toList(),
                       ),
                     ],
                   ),
@@ -1402,7 +1542,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ),
               actions: [
                 TextButton(
-                  onPressed: isSubmitting ? null : () => Navigator.of(dialogContext).pop(),
+                  onPressed: isSubmitting
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
                   child: const Text('Cancel'),
                 ),
                 ElevatedButton.icon(
@@ -1416,15 +1558,27 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           final address = addressController.text.trim();
 
                           if (name.isEmpty) {
-                            Helpers.showSnackBar(context, 'Please enter a full name.', isError: true);
+                            Helpers.showSnackBar(
+                              context,
+                              'Please enter a full name.',
+                              isError: true,
+                            );
                             return;
                           }
                           if (email.isEmpty || !email.contains('@')) {
-                            Helpers.showSnackBar(context, 'Please enter a valid email address.', isError: true);
+                            Helpers.showSnackBar(
+                              context,
+                              'Please enter a valid email address.',
+                              isError: true,
+                            );
                             return;
                           }
                           if (password.length < 6) {
-                            Helpers.showSnackBar(context, 'Password must be at least 6 characters long.', isError: true);
+                            Helpers.showSnackBar(
+                              context,
+                              'Password must be at least 6 characters long.',
+                              isError: true,
+                            );
                             return;
                           }
 
@@ -1451,7 +1605,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               );
                               await _loadAllDashboardData();
                             } else {
-                              Helpers.showSnackBar(context, 'Failed to create user account.', isError: true);
+                              Helpers.showSnackBar(
+                                context,
+                                'Failed to create user account.',
+                                isError: true,
+                              );
                             }
                           } catch (e) {
                             if (subContext.mounted) {
@@ -1470,20 +1628,31 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       ? const SizedBox(
                           width: 16,
                           height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
                       : const Icon(Icons.check_rounded, size: 16),
                   label: Text(
                     isSubmitting
                         ? 'Creating Account...'
                         : (selectedRole == UserRole.admin
-                            ? 'Create Admin'
-                            : (selectedRole == UserRole.driver ? 'Create Driver' : 'Create Customer')),
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                              ? 'Create Admin'
+                              : (selectedRole == UserRole.driver
+                                    ? 'Create Driver'
+                                    : 'Create Customer')),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: activeColor,
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 12,
+                    ),
                   ),
                 ),
               ],
@@ -1560,9 +1729,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           Expanded(
             child: _isLoading
                 ? const Center(
-                    child: CircularProgressIndicator(
-                      color: AppTheme.navyColor,
-                    ),
+                    child: CircularProgressIndicator(color: AppTheme.navyColor),
                   )
                 : Column(
                     children: [
@@ -1597,10 +1764,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(
-          bottom: BorderSide(
-            color: Color(0xFFCBD5E1),
-            width: 1.0,
-          ),
+          bottom: BorderSide(color: Color(0xFFCBD5E1), width: 1.0),
         ),
       ),
       child: Row(
@@ -1665,7 +1829,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   color: AppTheme.primaryColor,
                   size: 18,
                 ),
-                prefixIconConstraints: BoxConstraints(minWidth: 36, minHeight: 36),
+                prefixIconConstraints: BoxConstraints(
+                  minWidth: 36,
+                  minHeight: 36,
+                ),
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
@@ -1684,11 +1851,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           _buildRealtimeMessagesPopup(isDark),
 
           const SizedBox(width: 24),
-          Container(
-            height: 32,
-            width: 1,
-            color: const Color(0xFFCBD5E1),
-          ),
+          Container(height: 32, width: 1, color: const Color(0xFFCBD5E1)),
           const SizedBox(width: 24),
           Row(
             children: [
@@ -1734,7 +1897,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildRealtimeNotificationsPopup(bool isDark) {
-    final unreadCount = _notifications.where((n) => !(n['isRead'] as bool)).length;
+    final unreadCount = _notifications
+        .where((n) => !(n['isRead'] as bool))
+        .length;
 
     return Tooltip(
       message: 'System Notifications',
@@ -1747,7 +1912,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF8FAFC),
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : const Color(0xFFF8FAFC),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -1766,7 +1933,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     color: Colors.redAccent,
                     shape: BoxShape.circle,
                   ),
-                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                  constraints: const BoxConstraints(
+                    minWidth: 16,
+                    minHeight: 16,
+                  ),
                   child: Center(
                     child: Text(
                       '$unreadCount',
@@ -1792,13 +1962,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (dialogCtx, setDialogState) {
-            final unreadCount =
-                _notifications.where((n) => !(n['isRead'] as bool)).length;
+            final unreadCount = _notifications
+                .where((n) => !(n['isRead'] as bool))
+                .length;
 
             return AlertDialog(
               backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
-              shape:
-                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               contentPadding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
               titlePadding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
               title: Row(
@@ -1809,22 +1981,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       color: AppTheme.primaryColor.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.notifications_active_rounded,
-                        color: AppTheme.primaryColor, size: 20),
+                    child: const Icon(
+                      Icons.notifications_active_rounded,
+                      color: AppTheme.primaryColor,
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   const Text(
                     'System Notifications',
                     style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 16,
-                        color: AppTheme.navyColor),
+                      fontWeight: FontWeight.w900,
+                      fontSize: 16,
+                      color: AppTheme.navyColor,
+                    ),
                   ),
                   if (unreadCount > 0) ...[
                     const SizedBox(width: 8),
                     Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.redAccent,
                         borderRadius: BorderRadius.circular(10),
@@ -1832,9 +2010,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       child: Text(
                         '$unreadCount new',
                         style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold),
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],
@@ -1848,12 +2027,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       });
                       setDialogState(() {});
                       Helpers.showSnackBar(
-                          context, 'All notifications marked as read.');
+                        context,
+                        'All notifications marked as read.',
+                      );
                     },
                     icon: const Icon(Icons.done_all_rounded, size: 14),
-                    label: const Text('Mark All Read',
-                        style: TextStyle(
-                            fontSize: 11, fontWeight: FontWeight.bold)),
+                    label: const Text(
+                      'Mark All Read',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -1866,8 +2051,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     Expanded(
                       child: _notifications.isEmpty
                           ? const Center(
-                              child: Text('No system notifications yet.',
-                                  style: TextStyle(color: Colors.grey)))
+                              child: Text(
+                                'No system notifications yet.',
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            )
                           : Scrollbar(
                               thumbVisibility: true,
                               child: ListView.separated(
@@ -1879,17 +2067,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                   final bool isRead = n['isRead'] as bool;
                                   return ListTile(
                                     contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 4, vertical: 4),
+                                      horizontal: 4,
+                                      vertical: 4,
+                                    ),
                                     leading: CircleAvatar(
                                       radius: 18,
-                                      backgroundColor: (n['color'] as Color? ??
-                                              Colors.blue)
-                                          .withValues(alpha: 0.12),
+                                      backgroundColor:
+                                          (n['color'] as Color? ?? Colors.blue)
+                                              .withValues(alpha: 0.12),
                                       child: Icon(
                                         n['icon'] as IconData? ??
                                             Icons.notifications,
-                                        color: n['color'] as Color? ??
-                                            Colors.blue,
+                                        color:
+                                            n['color'] as Color? ?? Colors.blue,
                                         size: 18,
                                       ),
                                     ),
@@ -1912,8 +2102,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                         Text(
                                           n['time'] as String,
                                           style: const TextStyle(
-                                              color: Color(0xFF64748B),
-                                              fontSize: 10),
+                                            color: Color(0xFF64748B),
+                                            fontSize: 10,
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -1934,10 +2125,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                         n['isRead'] = true;
                                       });
                                       setDialogState(() {});
-                                      if ((n['id'] as String)
-                                              .startsWith('new_') ||
-                                          (n['id'] as String)
-                                              .startsWith('status_')) {
+                                      if ((n['id'] as String).startsWith(
+                                            'new_',
+                                          ) ||
+                                          (n['id'] as String).startsWith(
+                                            'status_',
+                                          )) {
                                         Navigator.of(ctx).pop();
                                         setState(() {
                                           _selectedTab = 1;
@@ -1960,14 +2153,21 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             backgroundColor: AppTheme.primaryColor,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 18, vertical: 10),
+                              horizontal: 18,
+                              vertical: 10,
+                            ),
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                           ),
                           icon: const Icon(Icons.arrow_back_rounded, size: 16),
-                          label: const Text('Back to Dashboard',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 12)),
+                          label: const Text(
+                            'Back to Dashboard',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -1985,8 +2185,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return ListenableBuilder(
       listenable: ChatService.instance,
       builder: (context, _) {
-        final unreadCount =
-            ChatService.instance.getUnreadCount('admin', 'admin');
+        final unreadCount = ChatService.instance.getUnreadCount(
+          'admin',
+          'admin',
+        );
 
         return Tooltip(
           message: 'Customer & Driver Messages',
@@ -2020,8 +2222,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         color: Colors.redAccent,
                         shape: BoxShape.circle,
                       ),
-                      constraints:
-                          const BoxConstraints(minWidth: 16, minHeight: 16),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
                       child: Center(
                         child: Text(
                           '$unreadCount',
@@ -2094,9 +2298,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       : nonAdmin.senderRole;
                   final partnerRole = rawRole.isEmpty
                       ? 'Customer'
-                      : rawRole[0].toUpperCase() + rawRole.substring(1).toLowerCase();
-                  final partnerId =
-                      isPartnerAdmin ? nonAdmin.receiverId : nonAdmin.senderId;
+                      : rawRole[0].toUpperCase() +
+                            rawRole.substring(1).toLowerCase();
+                  final partnerId = isPartnerAdmin
+                      ? nonAdmin.receiverId
+                      : nonAdmin.senderId;
                   final unreadCount = list
                       .where((m) => !m.isRead && m.senderRole != 'admin')
                       .length;
@@ -2110,7 +2316,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   } else if (diff.inHours < 24) {
                     timeStr = '${diff.inHours}h ago';
                   } else {
-                    timeStr = '${lastMsg.createdAt.month}/${lastMsg.createdAt.day}';
+                    timeStr =
+                        '${lastMsg.createdAt.month}/${lastMsg.createdAt.day}';
                   }
 
                   return {
@@ -2133,17 +2340,21 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       a['messages'] as List<ChatMessageModel>;
                   final List<ChatMessageModel> bList =
                       b['messages'] as List<ChatMessageModel>;
-                  final aTime =
-                      aList.isNotEmpty ? aList.last.createdAt : DateTime(2000);
-                  final bTime =
-                      bList.isNotEmpty ? bList.last.createdAt : DateTime(2000);
+                  final aTime = aList.isNotEmpty
+                      ? aList.last.createdAt
+                      : DateTime(2000);
+                  final bTime = bList.isNotEmpty
+                      ? bList.last.createdAt
+                      : DateTime(2000);
                   return bTime.compareTo(aTime);
                 });
 
                 if (selectedConvoId == null && convos.isNotEmpty) {
                   selectedConvoId = convos.first['id'] as String;
-                  ChatService.instance
-                      .markConversationAsRead(selectedConvoId!, 'admin');
+                  ChatService.instance.markConversationAsRead(
+                    selectedConvoId!,
+                    'admin',
+                  );
                 }
 
                 Map<String, dynamic>? selectedConvo;
@@ -2154,8 +2365,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   );
                 }
 
-                final orderProvider =
-                    Provider.of<OrderProvider>(context, listen: false);
+                final orderProvider = Provider.of<OrderProvider>(
+                  context,
+                  listen: false,
+                );
                 OrderModel? convoOrder;
                 if (selectedConvo != null && selectedConvo['orderId'] != null) {
                   for (var o in orderProvider.orders) {
@@ -2165,14 +2378,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     }
                   }
                 }
-                final bool isTransactionLocked = convoOrder != null &&
+                final bool isTransactionLocked =
+                    convoOrder != null &&
                     (convoOrder.orderStatus == OrderStatus.completed ||
                         convoOrder.orderStatus == OrderStatus.cancelled);
 
                 return AlertDialog(
                   backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16)),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   contentPadding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
                   titlePadding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
                   title: Row(
@@ -2183,16 +2398,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           color: Colors.green.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.mark_chat_unread_rounded,
-                            color: Colors.green, size: 20),
+                        child: const Icon(
+                          Icons.mark_chat_unread_rounded,
+                          color: Colors.green,
+                          size: 20,
+                        ),
                       ),
                       const SizedBox(width: 10),
                       const Text(
                         'Customer & Driver Communication Hub',
                         style: TextStyle(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 16,
-                            color: AppTheme.navyColor),
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                          color: AppTheme.navyColor,
+                        ),
                       ),
                       const Spacer(),
                       IconButton(
@@ -2225,9 +2444,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 ),
                                 child: convos.isEmpty
                                     ? const Center(
-                                        child: Text('No active messages.',
-                                            style:
-                                                TextStyle(color: Colors.grey)))
+                                        child: Text(
+                                          'No active messages.',
+                                          style: TextStyle(color: Colors.grey),
+                                        ),
+                                      )
                                     : ListView.separated(
                                         itemCount: convos.length,
                                         separatorBuilder: (_, _) =>
@@ -2236,14 +2457,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                           final convo = convos[i];
                                           final isSelected =
                                               selectedConvo?['id'] ==
-                                                  convo['id'];
+                                              convo['id'];
                                           final bool isRead =
                                               convo['isRead'] as bool? ?? true;
                                           final int unread =
                                               convo['unreadCount'] as int? ?? 0;
                                           final senderStr =
                                               (convo['sender'] as String? ??
-                                                  'U');
+                                              'U');
                                           final initial = senderStr.isNotEmpty
                                               ? senderStr[0].toUpperCase()
                                               : 'U';
@@ -2255,8 +2476,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                                 .withValues(alpha: 0.08),
                                             contentPadding:
                                                 const EdgeInsets.symmetric(
-                                                    horizontal: 10,
-                                                    vertical: 4),
+                                                  horizontal: 10,
+                                                  vertical: 4,
+                                                ),
                                             leading: CircleAvatar(
                                               radius: 16,
                                               backgroundColor: AppTheme
@@ -2265,14 +2487,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                               child: Text(
                                                 initial,
                                                 style: const TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    color:
-                                                        AppTheme.primaryColor),
+                                                  fontWeight: FontWeight.bold,
+                                                  color: AppTheme.primaryColor,
+                                                ),
                                               ),
                                             ),
                                             title: Row(
                                               mainAxisAlignment:
-                                                  MainAxisAlignment.spaceBetween,
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
                                               children: [
                                                 Expanded(
                                                   child: Text(
@@ -2290,28 +2513,37 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                                 Container(
                                                   padding:
                                                       const EdgeInsets.symmetric(
-                                                          horizontal: 5,
-                                                          vertical: 1.5),
+                                                        horizontal: 5,
+                                                        vertical: 1.5,
+                                                      ),
                                                   decoration: BoxDecoration(
-                                                    color: (convo['role'] ==
-                                                                'Driver'
-                                                            ? Colors.orange
-                                                            : Colors.blue)
-                                                        .withValues(alpha: 0.1),
+                                                    color:
+                                                        (convo['role'] ==
+                                                                    'Driver'
+                                                                ? Colors.orange
+                                                                : Colors.blue)
+                                                            .withValues(
+                                                              alpha: 0.1,
+                                                            ),
                                                     borderRadius:
                                                         BorderRadius.circular(
-                                                            4),
+                                                          4,
+                                                        ),
                                                   ),
                                                   child: Text(
-                                                    convo['role']?.toString() ?? '',
+                                                    convo['role']?.toString() ??
+                                                        '',
                                                     style: TextStyle(
                                                       fontSize: 9,
-                                                      color: convo['role'] ==
+                                                      color:
+                                                          convo['role'] ==
                                                               'Driver'
                                                           ? Colors
-                                                              .orange.shade800
+                                                                .orange
+                                                                .shade800
                                                           : Colors
-                                                              .blue.shade800,
+                                                                .blue
+                                                                .shade800,
                                                       fontWeight:
                                                           FontWeight.bold,
                                                     ),
@@ -2328,21 +2560,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                                     overflow:
                                                         TextOverflow.ellipsis,
                                                     style: const TextStyle(
-                                                        fontSize: 10.5),
+                                                      fontSize: 10.5,
+                                                    ),
                                                   ),
                                                 ),
                                                 if (unread > 0)
                                                   Container(
                                                     margin:
                                                         const EdgeInsets.only(
-                                                            left: 4),
+                                                          left: 4,
+                                                        ),
                                                     padding:
                                                         const EdgeInsets.all(4),
                                                     decoration:
                                                         const BoxDecoration(
-                                                      color: Colors.redAccent,
-                                                      shape: BoxShape.circle,
-                                                    ),
+                                                          color:
+                                                              Colors.redAccent,
+                                                          shape:
+                                                              BoxShape.circle,
+                                                        ),
                                                     child: Text(
                                                       '$unread',
                                                       style: const TextStyle(
@@ -2362,8 +2598,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                               });
                                               ChatService.instance
                                                   .markConversationAsRead(
-                                                      convo['id'] as String,
-                                                      'admin');
+                                                    convo['id'] as String,
+                                                    'admin',
+                                                  );
                                               scrollToBottom();
                                             },
                                           );
@@ -2373,14 +2610,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
                               // Right: Message Thread & Reply
                               Expanded(
-                                child: selectedConvo == null ||
+                                child:
+                                    selectedConvo == null ||
                                         selectedConvo.isEmpty
                                     ? const Center(
                                         child: Text(
-                                            'Select a conversation to message.'))
+                                          'Select a conversation to message.',
+                                        ),
+                                      )
                                     : Padding(
-                                        padding:
-                                            const EdgeInsets.only(left: 16.0),
+                                        padding: const EdgeInsets.only(
+                                          left: 16.0,
+                                        ),
                                         child: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
@@ -2399,11 +2640,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                                             'U')[0]
                                                         .toUpperCase(),
                                                     style: const TextStyle(
-                                                        fontSize: 11,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        color: AppTheme
-                                                            .primaryColor),
+                                                      fontSize: 11,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color:
+                                                          AppTheme.primaryColor,
+                                                    ),
                                                   ),
                                                 ),
                                                 const SizedBox(width: 8),
@@ -2416,15 +2658,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                                               as String? ??
                                                           'User',
                                                       style: const TextStyle(
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                          fontSize: 13),
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        fontSize: 13,
+                                                      ),
                                                     ),
                                                     Text(
                                                       'Role: ${selectedConvo['role'] ?? "User"}${selectedConvo['orderId'] != null ? " • Order ${selectedConvo['orderId']}" : ""}',
                                                       style: const TextStyle(
-                                                          fontSize: 10,
-                                                          color: Colors.grey),
+                                                        fontSize: 10,
+                                                        color: Colors.grey,
+                                                      ),
                                                     ),
                                                   ],
                                                 ),
@@ -2434,27 +2678,32 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                             if (isTransactionLocked)
                                               Container(
                                                 margin: const EdgeInsets.only(
-                                                    bottom: 8),
+                                                  bottom: 8,
+                                                ),
                                                 padding:
                                                     const EdgeInsets.symmetric(
-                                                        horizontal: 10,
-                                                        vertical: 6),
+                                                      horizontal: 10,
+                                                      vertical: 6,
+                                                    ),
                                                 decoration: BoxDecoration(
-                                                  color:
-                                                      const Color(0xFFFEF3C7),
+                                                  color: const Color(
+                                                    0xFFFEF3C7,
+                                                  ),
                                                   borderRadius:
                                                       BorderRadius.circular(6),
                                                   border: Border.all(
-                                                      color: const Color(
-                                                          0xFFFDE68A)),
+                                                    color: const Color(
+                                                      0xFFFDE68A,
+                                                    ),
+                                                  ),
                                                 ),
                                                 child: Row(
                                                   children: [
                                                     const Icon(
-                                                        Icons.lock_rounded,
-                                                        size: 14,
-                                                        color:
-                                                            Color(0xFFB45309)),
+                                                      Icons.lock_rounded,
+                                                      size: 14,
+                                                      color: Color(0xFFB45309),
+                                                    ),
                                                     const SizedBox(width: 6),
                                                     Expanded(
                                                       child: Text(
@@ -2463,8 +2712,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                                           fontSize: 10.5,
                                                           fontWeight:
                                                               FontWeight.bold,
-                                                          color:
-                                                              Color(0xFF92400E),
+                                                          color: Color(
+                                                            0xFF92400E,
+                                                          ),
                                                         ),
                                                       ),
                                                     ),
@@ -2478,104 +2728,113 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                                 controller:
                                                     convoScrollController,
                                                 children: [
-                                                  ...?((selectedConvo[
-                                                                  'messages']
-                                                              as List<
-                                                                  ChatMessageModel>?)
-                                                          ?.map((msg) {
-                                                    final bool isAdmin =
-                                                        msg.senderRole ==
+                                                  ...?((selectedConvo['messages']
+                                                          as List<
+                                                            ChatMessageModel
+                                                          >?)
+                                                      ?.map((msg) {
+                                                        final bool isAdmin =
+                                                            msg.senderRole ==
                                                             'admin';
-                                                    final timeFormatted =
-                                                        '${msg.createdAt.hour.toString().padLeft(2, '0')}:${msg.createdAt.minute.toString().padLeft(2, '0')}';
-                                                    return Align(
-                                                      alignment: isAdmin
-                                                          ? Alignment.centerRight
-                                                          : Alignment
-                                                              .centerLeft,
-                                                      child: Container(
-                                                        margin: const EdgeInsets
-                                                            .symmetric(
-                                                            vertical: 4),
-                                                        padding:
-                                                            const EdgeInsets
-                                                                .all(10),
-                                                        constraints:
-                                                            const BoxConstraints(
-                                                                maxWidth: 340),
-                                                        decoration:
-                                                            BoxDecoration(
-                                                          color: isAdmin
-                                                              ? AppTheme
-                                                                  .primaryColor
-                                                              : (isDark
-                                                                  ? Colors
-                                                                      .white10
-                                                                  : const Color(
-                                                                      0xFFF1F5F9)),
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(10),
-                                                        ),
-                                                        child: Column(
-                                                          crossAxisAlignment:
-                                                              CrossAxisAlignment
-                                                                  .start,
-                                                          children: [
-                                                            Text(
-                                                              isAdmin
-                                                                  ? 'Admin (You)'
-                                                                  : msg.senderName,
-                                                              style: TextStyle(
-                                                                fontSize: 9,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold,
-                                                                color: isAdmin
-                                                                    ? Colors
-                                                                        .white70
-                                                                    : AppTheme
-                                                                        .primaryColor,
-                                                              ),
-                                                            ),
-                                                            const SizedBox(
-                                                                height: 2),
-                                                            Text(
-                                                              msg.message,
-                                                              style: TextStyle(
-                                                                fontSize: 11.5,
-                                                                color: isAdmin
-                                                                    ? Colors
-                                                                        .white
-                                                                    : (isDark
-                                                                        ? Colors
-                                                                            .white
-                                                                        : Colors
-                                                                            .black87),
-                                                              ),
-                                                            ),
-                                                            const SizedBox(
-                                                                height: 2),
-                                                            Align(
-                                                              alignment: Alignment
-                                                                  .bottomRight,
-                                                              child: Text(
-                                                                timeFormatted,
-                                                                style: TextStyle(
-                                                                  fontSize: 8,
-                                                                  color: isAdmin
-                                                                      ? Colors
-                                                                          .white60
-                                                                      : Colors
-                                                                          .grey,
+                                                        final timeFormatted =
+                                                            '${msg.createdAt.hour.toString().padLeft(2, '0')}:${msg.createdAt.minute.toString().padLeft(2, '0')}';
+                                                        return Align(
+                                                          alignment: isAdmin
+                                                              ? Alignment
+                                                                    .centerRight
+                                                              : Alignment
+                                                                    .centerLeft,
+                                                          child: Container(
+                                                            margin:
+                                                                const EdgeInsets.symmetric(
+                                                                  vertical: 4,
                                                                 ),
-                                                              ),
+                                                            padding:
+                                                                const EdgeInsets.all(
+                                                                  10,
+                                                                ),
+                                                            constraints:
+                                                                const BoxConstraints(
+                                                                  maxWidth: 340,
+                                                                ),
+                                                            decoration: BoxDecoration(
+                                                              color: isAdmin
+                                                                  ? AppTheme
+                                                                        .primaryColor
+                                                                  : (isDark
+                                                                        ? Colors
+                                                                              .white10
+                                                                        : const Color(
+                                                                            0xFFF1F5F9,
+                                                                          )),
+                                                              borderRadius:
+                                                                  BorderRadius.circular(
+                                                                    10,
+                                                                  ),
                                                             ),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                    );
-                                                  })),
+                                                            child: Column(
+                                                              crossAxisAlignment:
+                                                                  CrossAxisAlignment
+                                                                      .start,
+                                                              children: [
+                                                                Text(
+                                                                  isAdmin
+                                                                      ? 'Admin (You)'
+                                                                      : msg.senderName,
+                                                                  style: TextStyle(
+                                                                    fontSize: 9,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold,
+                                                                    color:
+                                                                        isAdmin
+                                                                        ? Colors
+                                                                              .white70
+                                                                        : AppTheme
+                                                                              .primaryColor,
+                                                                  ),
+                                                                ),
+                                                                const SizedBox(
+                                                                  height: 2,
+                                                                ),
+                                                                Text(
+                                                                  msg.message,
+                                                                  style: TextStyle(
+                                                                    fontSize:
+                                                                        11.5,
+                                                                    color:
+                                                                        isAdmin
+                                                                        ? Colors
+                                                                              .white
+                                                                        : (isDark
+                                                                              ? Colors.white
+                                                                              : Colors.black87),
+                                                                  ),
+                                                                ),
+                                                                const SizedBox(
+                                                                  height: 2,
+                                                                ),
+                                                                Align(
+                                                                  alignment:
+                                                                      Alignment
+                                                                          .bottomRight,
+                                                                  child: Text(
+                                                                    timeFormatted,
+                                                                    style: TextStyle(
+                                                                      fontSize:
+                                                                          8,
+                                                                      color:
+                                                                          isAdmin
+                                                                          ? Colors.white60
+                                                                          : Colors.grey,
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                        );
+                                                      })),
                                                 ],
                                               ),
                                             ),
@@ -2585,10 +2844,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                             if (isTransactionLocked)
                                               Container(
                                                 width: double.infinity,
-                                                padding: const EdgeInsets.symmetric(
-                                                    vertical: 10, horizontal: 12),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 10,
+                                                      horizontal: 12,
+                                                    ),
                                                 decoration: BoxDecoration(
-                                                  color: const Color(0xFFF1F5F9),
+                                                  color: const Color(
+                                                    0xFFF1F5F9,
+                                                  ),
                                                   borderRadius:
                                                       BorderRadius.circular(8),
                                                 ),
@@ -2596,16 +2860,22 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                                   mainAxisAlignment:
                                                       MainAxisAlignment.center,
                                                   children: const [
-                                                    Icon(Icons.lock_outline_rounded,
-                                                        size: 14,
-                                                        color: Color(0xFF64748B)),
+                                                    Icon(
+                                                      Icons
+                                                          .lock_outline_rounded,
+                                                      size: 14,
+                                                      color: Color(0xFF64748B),
+                                                    ),
                                                     SizedBox(width: 6),
                                                     Text(
                                                       'Transaction completed. Chat history is locked for audit records.',
                                                       style: TextStyle(
                                                         fontSize: 11,
-                                                        color: Color(0xFF64748B),
-                                                        fontWeight: FontWeight.w600,
+                                                        color: Color(
+                                                          0xFF64748B,
+                                                        ),
+                                                        fontWeight:
+                                                            FontWeight.w600,
                                                       ),
                                                     ),
                                                   ],
@@ -2613,131 +2883,126 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                               )
                                             else
                                               Row(
-                                              children: [
-                                                Expanded(
-                                                  child: TextField(
-                                                    controller:
-                                                        replyController,
-                                                    style: const TextStyle(
-                                                        fontSize: 12),
-                                                    decoration:
-                                                        InputDecoration(
-                                                      hintText:
-                                                          'Type reply to ${selectedConvo['sender']}...',
-                                                      hintStyle:
-                                                          const TextStyle(
-                                                              fontSize: 11),
-                                                      isDense: true,
-                                                      contentPadding:
-                                                          const EdgeInsets
-                                                              .symmetric(
+                                                children: [
+                                                  Expanded(
+                                                    child: TextField(
+                                                      controller:
+                                                          replyController,
+                                                      style: const TextStyle(
+                                                        fontSize: 12,
+                                                      ),
+                                                      decoration: InputDecoration(
+                                                        hintText:
+                                                            'Type reply to ${selectedConvo['sender']}...',
+                                                        hintStyle:
+                                                            const TextStyle(
+                                                              fontSize: 11,
+                                                            ),
+                                                        isDense: true,
+                                                        contentPadding:
+                                                            const EdgeInsets.symmetric(
                                                               horizontal: 12,
-                                                              vertical: 10),
-                                                      border: OutlineInputBorder(
+                                                              vertical: 10,
+                                                            ),
+                                                        border: OutlineInputBorder(
                                                           borderRadius:
-                                                              BorderRadius
-                                                                  .circular(
-                                                                      8)),
+                                                              BorderRadius.circular(
+                                                                8,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                      onSubmitted: (text) async {
+                                                        final clean = text
+                                                            .trim();
+                                                        if (clean.isEmpty) {
+                                                          return;
+                                                        }
+                                                        replyController.clear();
+                                                        await ChatService.instance.sendMessage(
+                                                          conversationId:
+                                                              selectedConvo!['conversationId']
+                                                                  as String,
+                                                          orderId:
+                                                              selectedConvo['orderId']
+                                                                  as String?,
+                                                          senderId: 'admin',
+                                                          senderName:
+                                                              'Station Admin',
+                                                          senderRole: 'admin',
+                                                          receiverId:
+                                                              selectedConvo['partnerId']
+                                                                  as String?,
+                                                          receiverName:
+                                                              selectedConvo['sender']
+                                                                  as String?,
+                                                          receiverRole:
+                                                              (selectedConvo['role']
+                                                                          as String? ??
+                                                                      'customer')
+                                                                  .toLowerCase(),
+                                                          text: clean,
+                                                        );
+                                                        scrollToBottom();
+                                                      },
                                                     ),
-                                                    onSubmitted: (text) async {
-                                                      final clean =
-                                                          text.trim();
-                                                      if (clean.isEmpty) return;
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  ElevatedButton(
+                                                    onPressed: () async {
+                                                      final text =
+                                                          replyController.text
+                                                              .trim();
+                                                      if (text.isEmpty) return;
                                                       replyController.clear();
-                                                      await ChatService
-                                                          .instance
-                                                          .sendMessage(
+                                                      await ChatService.instance.sendMessage(
                                                         conversationId:
-                                                            selectedConvo![
-                                                                    'conversationId']
+                                                            selectedConvo!['conversationId']
                                                                 as String,
-                                                        orderId: selectedConvo[
-                                                                'orderId']
-                                                            as String?,
+                                                        orderId:
+                                                            selectedConvo['orderId']
+                                                                as String?,
                                                         senderId: 'admin',
                                                         senderName:
                                                             'Station Admin',
                                                         senderRole: 'admin',
                                                         receiverId:
-                                                            selectedConvo[
-                                                                    'partnerId']
+                                                            selectedConvo['partnerId']
                                                                 as String?,
                                                         receiverName:
-                                                            selectedConvo[
-                                                                    'sender']
+                                                            selectedConvo['sender']
                                                                 as String?,
                                                         receiverRole:
-                                                            (selectedConvo[
-                                                                            'role']
+                                                            (selectedConvo['role']
                                                                         as String? ??
                                                                     'customer')
                                                                 .toLowerCase(),
-                                                        text: clean,
+                                                        text: text,
                                                       );
                                                       scrollToBottom();
                                                     },
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                ElevatedButton(
-                                                  onPressed: () async {
-                                                    final text =
-                                                        replyController.text
-                                                            .trim();
-                                                    if (text.isEmpty) return;
-                                                    replyController.clear();
-                                                    await ChatService
-                                                        .instance
-                                                        .sendMessage(
-                                                      conversationId:
-                                                          selectedConvo![
-                                                                  'conversationId']
-                                                              as String,
-                                                      orderId: selectedConvo[
-                                                              'orderId']
-                                                          as String?,
-                                                      senderId: 'admin',
-                                                      senderName:
-                                                          'Station Admin',
-                                                      senderRole: 'admin',
-                                                      receiverId: selectedConvo[
-                                                              'partnerId']
-                                                          as String?,
-                                                      receiverName:
-                                                          selectedConvo[
-                                                                  'sender']
-                                                              as String?,
-                                                      receiverRole:
-                                                          (selectedConvo['role']
-                                                                      as String? ??
-                                                                  'customer')
-                                                              .toLowerCase(),
-                                                      text: text,
-                                                    );
-                                                    scrollToBottom();
-                                                  },
-                                                  style:
-                                                      ElevatedButton.styleFrom(
-                                                    backgroundColor: AppTheme
-                                                        .primaryColor,
-                                                    padding: const EdgeInsets
-                                                        .symmetric(
-                                                        horizontal: 14,
-                                                        vertical: 10),
-                                                    shape:
-                                                        RoundedRectangleBorder(
-                                                            borderRadius:
-                                                                BorderRadius
-                                                                    .circular(
-                                                                        8)),
-                                                  ),
-                                                  child: const Icon(
+                                                    style: ElevatedButton.styleFrom(
+                                                      backgroundColor:
+                                                          AppTheme.primaryColor,
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 14,
+                                                            vertical: 10,
+                                                          ),
+                                                      shape: RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              8,
+                                                            ),
+                                                      ),
+                                                    ),
+                                                    child: const Icon(
                                                       Icons.send_rounded,
                                                       size: 16,
-                                                      color: Colors.white),
-                                                ),
-                                              ],
-                                            ),
+                                                      color: Colors.white,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
                                           ],
                                         ),
                                       ),
@@ -2755,14 +3020,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 backgroundColor: AppTheme.navyColor,
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8)),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
                               ),
-                              icon: const Icon(Icons.arrow_back_rounded,
-                                  size: 16),
-                              label: const Text('Back to Dashboard',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12)),
+                              icon: const Icon(
+                                Icons.arrow_back_rounded,
+                                size: 16,
+                              ),
+                              label: const Text(
+                                'Back to Dashboard',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -2808,7 +3079,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
       {'title': 'Dashboard', 'icon': Icons.home_rounded},
       {'title': 'Orders', 'icon': Icons.shopping_bag_rounded},
       {'title': 'Deliveries', 'icon': Icons.local_shipping_rounded},
-      {'title': 'User / Roles & Permissions', 'icon': Icons.manage_accounts_rounded},
+      {
+        'title': 'User / Roles & Permissions',
+        'icon': Icons.manage_accounts_rounded,
+      },
       {'title': 'Inventory', 'icon': Icons.inventory_2_rounded},
       {'title': 'Payments', 'icon': Icons.payment_rounded},
       {'title': 'Reports', 'icon': Icons.analytics_rounded},
@@ -2821,9 +3095,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       height: double.infinity,
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(
-          right: BorderSide(color: Color(0xFFCBD5E1), width: 1),
-        ),
+        border: Border(right: BorderSide(color: Color(0xFFCBD5E1), width: 1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2838,9 +3110,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
             decoration: const BoxDecoration(
               color: Color(0xFFF8FAFC),
-              border: Border(
-                bottom: BorderSide(color: Color(0xFFE2E8F0)),
-              ),
+              border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
             ),
             child: Row(
               children: [
@@ -3106,7 +3376,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 Text(
                   title,
                   style: TextStyle(
-                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
+                    color: isDark
+                        ? const Color(0xFF94A3B8)
+                        : const Color(0xFF475569),
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                   ),
@@ -3127,15 +3399,22 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 ),
                 const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: isUpTrend
-                        ? const Color(0xFF10B981).withValues(alpha: isDark ? 0.2 : 0.1)
+                        ? const Color(
+                            0xFF10B981,
+                          ).withValues(alpha: isDark ? 0.2 : 0.1)
                         : Colors.red.withValues(alpha: isDark ? 0.2 : 0.1),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: isUpTrend
-                          ? const Color(0xFF10B981).withValues(alpha: isDark ? 0.45 : 0.25)
+                          ? const Color(
+                              0xFF10B981,
+                            ).withValues(alpha: isDark ? 0.45 : 0.25)
                           : Colors.red.withValues(alpha: isDark ? 0.45 : 0.25),
                     ),
                   ),
@@ -3154,7 +3433,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         trend,
                         style: TextStyle(
                           color: isUpTrend
-                              ? (isDark ? const Color(0xFF34D399) : const Color(0xFF047857))
+                              ? (isDark
+                                    ? const Color(0xFF34D399)
+                                    : const Color(0xFF047857))
                               : Colors.red,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
@@ -3436,7 +3717,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-
   Widget _buildRecentOrdersListCard(bool isDark) {
     final orderProvider = Provider.of<OrderProvider>(context);
     final orders = orderProvider.orders;
@@ -3482,7 +3762,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   'View All',
                   style: TextStyle(
                     fontSize: 12,
-                    color: isDark ? const Color(0xFF38BDF8) : AppTheme.primaryColor,
+                    color: isDark
+                        ? const Color(0xFF38BDF8)
+                        : AppTheme.primaryColor,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -3498,12 +3780,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4.0),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 7,
+                    ),
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                      color: isDark
+                          ? const Color(0xFF0F172A)
+                          : const Color(0xFFF8FAFC),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                        color: isDark
+                            ? const Color(0xFF334155)
+                            : const Color(0xFFE2E8F0),
                         width: 1.0,
                       ),
                     ),
@@ -3530,13 +3819,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 11,
-                                  color: isDark ? Colors.white : const Color(0xFF1E293B),
+                                  color: isDark
+                                      ? Colors.white
+                                      : const Color(0xFF1E293B),
                                 ),
                               ),
                               Text(
                                 '${order.customerName} • ${order.itemsSummary}',
                                 style: TextStyle(
-                                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                  color: isDark
+                                      ? const Color(0xFF94A3B8)
+                                      : const Color(0xFF64748B),
                                   fontSize: 10,
                                 ),
                                 overflow: TextOverflow.ellipsis,
@@ -3576,7 +3869,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             Text(
                               order.createdAt.toString().split(' ')[0],
                               style: TextStyle(
-                                color: isDark ? const Color(0xFF64748B) : const Color(0xFF475569),
+                                color: isDark
+                                    ? const Color(0xFF64748B)
+                                    : const Color(0xFF475569),
                                 fontSize: 9,
                               ),
                             ),
@@ -3668,171 +3963,173 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: DataTable(
-              columnSpacing: 28,
-              horizontalMargin: 0,
-              headingRowHeight: 40,
-              dataRowMinHeight: 48,
-              dataRowMaxHeight: 48,
-              columns: const [
-                DataColumn(
-                  label: Text(
-                    'Order ID',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Customer',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Products',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Address',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Status',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Total',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Date',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                ),
-              ],
-              rows: orders.map((data) {
-                return DataRow(
-                  cells: [
-                    DataCell(
-                      Text(
-                        data.id,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryColor,
+                    columnSpacing: 28,
+                    horizontalMargin: 0,
+                    headingRowHeight: 40,
+                    dataRowMinHeight: 48,
+                    dataRowMaxHeight: 48,
+                    columns: const [
+                      DataColumn(
+                        label: Text(
+                          'Order ID',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF64748B),
+                          ),
                         ),
                       ),
-                    ),
-                    DataCell(
-                      Text(
-                        data.customerName,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF1E293B),
+                      DataColumn(
+                        label: Text(
+                          'Customer',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF64748B),
+                          ),
                         ),
                       ),
-                    ),
-                    DataCell(
-                      Text(
-                        data.itemsSummary,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF475569),
+                      DataColumn(
+                        label: Text(
+                          'Products',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF64748B),
+                          ),
                         ),
                       ),
-                    ),
-                    DataCell(
-                      Text(
-                        data.deliveryAddress,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF475569),
+                      DataColumn(
+                        label: Text(
+                          'Address',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF64748B),
+                          ),
                         ),
                       ),
-                    ),
-                    DataCell(
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
+                      DataColumn(
+                        label: Text(
+                          'Status',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF64748B),
+                          ),
                         ),
-                        decoration: BoxDecoration(
-                          color: data.orderStatus.color.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: data.orderStatus.color.withValues(
-                              alpha: 0.15,
+                      ),
+                      DataColumn(
+                        label: Text(
+                          'Total',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                      ),
+                      DataColumn(
+                        label: Text(
+                          'Date',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                      ),
+                    ],
+                    rows: orders.map((data) {
+                      return DataRow(
+                        cells: [
+                          DataCell(
+                            Text(
+                              data.id,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.primaryColor,
+                              ),
                             ),
                           ),
-                        ),
-                        child: Text(
-                          data.orderStatus.displayName,
-                          style: TextStyle(
-                            color: data.orderStatus.color,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                          DataCell(
+                            Text(
+                              data.customerName,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF1E293B),
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                    ),
-                    DataCell(
-                      Text(
-                        data.formattedTotal,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1E293B),
-                        ),
-                      ),
-                    ),
-                    DataCell(
-                      Text(
-                        data.createdAt.toString().split(' ')[0],
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF64748B),
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              }).toList(),
+                          DataCell(
+                            Text(
+                              data.itemsSummary,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF475569),
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            Text(
+                              data.deliveryAddress,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF475569),
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: data.orderStatus.color.withValues(
+                                  alpha: 0.08,
+                                ),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: data.orderStatus.color.withValues(
+                                    alpha: 0.15,
+                                  ),
+                                ),
+                              ),
+                              child: Text(
+                                data.orderStatus.displayName,
+                                style: TextStyle(
+                                  color: data.orderStatus.color,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            Text(
+                              data.formattedTotal,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1E293B),
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            Text(
+                              data.createdAt.toString().split(' ')[0],
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF64748B),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    }).toList(),
                   ),
                 ),
               ),
@@ -4185,13 +4482,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
           builder: (context, setDialogState) {
             final isDelivery = fulfillmentType == 'Delivery';
             final screenWidth = MediaQuery.of(context).size.width;
-            final dialogWidth = screenWidth < 580 ? (screenWidth * 0.92) : 520.0;
+            final dialogWidth = screenWidth < 580
+                ? (screenWidth * 0.92)
+                : 520.0;
             final isMobile = screenWidth < 480;
 
             return AlertDialog(
               backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 24,
+              ),
               title: Row(
                 children: [
                   Container(
@@ -4233,7 +4537,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
+                          color: isDark
+                              ? const Color(0xFF94A3B8)
+                              : const Color(0xFF475569),
                           letterSpacing: 0.5,
                         ),
                       ),
@@ -4245,7 +4551,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               onTap: () {
                                 setDialogState(() {
                                   fulfillmentType = 'Delivery';
-                                  if (addressController.text.contains('Store Pickup')) {
+                                  if (addressController.text.contains(
+                                    'Store Pickup',
+                                  )) {
                                     addressController.clear();
                                   }
                                   if (selectedPaymentMethod == 'Cash') {
@@ -4255,16 +4563,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               },
                               borderRadius: BorderRadius.circular(10),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                  horizontal: 10,
+                                ),
                                 decoration: BoxDecoration(
                                   color: isDelivery
-                                      ? AppTheme.primaryColor.withValues(alpha: 0.1)
-                                      : (isDark ? Colors.white10 : const Color(0xFFF8FAFC)),
+                                      ? AppTheme.primaryColor.withValues(
+                                          alpha: 0.1,
+                                        )
+                                      : (isDark
+                                            ? Colors.white10
+                                            : const Color(0xFFF8FAFC)),
                                   borderRadius: BorderRadius.circular(10),
                                   border: Border.all(
                                     color: isDelivery
                                         ? AppTheme.primaryColor
-                                        : (isDark ? Colors.white24 : const Color(0xFFCBD5E1)),
+                                        : (isDark
+                                              ? Colors.white24
+                                              : const Color(0xFFCBD5E1)),
                                     width: isDelivery ? 2.0 : 1.0,
                                   ),
                                 ),
@@ -4274,7 +4591,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                     Icon(
                                       Icons.local_shipping_rounded,
                                       size: 20,
-                                      color: isDelivery ? AppTheme.primaryColor : Colors.grey,
+                                      color: isDelivery
+                                          ? AppTheme.primaryColor
+                                          : Colors.grey,
                                     ),
                                     const SizedBox(width: 8),
                                     Flexible(
@@ -4284,7 +4603,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                         style: TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.bold,
-                                          color: isDelivery ? AppTheme.primaryColor : (isDark ? Colors.white70 : const Color(0xFF1E293B)),
+                                          color: isDelivery
+                                              ? AppTheme.primaryColor
+                                              : (isDark
+                                                    ? Colors.white70
+                                                    : const Color(0xFF1E293B)),
                                         ),
                                       ),
                                     ),
@@ -4299,24 +4622,35 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               onTap: () {
                                 setDialogState(() {
                                   fulfillmentType = 'Pickup';
-                                  addressController.text = 'Store Pickup / Walk-in (JJAASS Water Station)';
-                                  if (selectedPaymentMethod == 'Cash on Delivery') {
+                                  addressController.text =
+                                      'Store Pickup / Walk-in (JJAASS Water Station)';
+                                  if (selectedPaymentMethod ==
+                                      'Cash on Delivery') {
                                     selectedPaymentMethod = 'Cash';
                                   }
                                 });
                               },
                               borderRadius: BorderRadius.circular(10),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                  horizontal: 10,
+                                ),
                                 decoration: BoxDecoration(
                                   color: !isDelivery
-                                      ? const Color(0xFF10B981).withValues(alpha: 0.1)
-                                      : (isDark ? Colors.white10 : const Color(0xFFF8FAFC)),
+                                      ? const Color(
+                                          0xFF10B981,
+                                        ).withValues(alpha: 0.1)
+                                      : (isDark
+                                            ? Colors.white10
+                                            : const Color(0xFFF8FAFC)),
                                   borderRadius: BorderRadius.circular(10),
                                   border: Border.all(
                                     color: !isDelivery
                                         ? const Color(0xFF10B981)
-                                        : (isDark ? Colors.white24 : const Color(0xFFCBD5E1)),
+                                        : (isDark
+                                              ? Colors.white24
+                                              : const Color(0xFFCBD5E1)),
                                     width: !isDelivery ? 2.0 : 1.0,
                                   ),
                                 ),
@@ -4326,7 +4660,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                     Icon(
                                       Icons.storefront_rounded,
                                       size: 20,
-                                      color: !isDelivery ? const Color(0xFF10B981) : Colors.grey,
+                                      color: !isDelivery
+                                          ? const Color(0xFF10B981)
+                                          : Colors.grey,
                                     ),
                                     const SizedBox(width: 8),
                                     Flexible(
@@ -4336,7 +4672,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                         style: TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.bold,
-                                          color: !isDelivery ? const Color(0xFF10B981) : (isDark ? Colors.white70 : const Color(0xFF1E293B)),
+                                          color: !isDelivery
+                                              ? const Color(0xFF10B981)
+                                              : (isDark
+                                                    ? Colors.white70
+                                                    : const Color(0xFF1E293B)),
                                         ),
                                       ),
                                     ),
@@ -4355,7 +4695,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
+                          color: isDark
+                              ? const Color(0xFF94A3B8)
+                              : const Color(0xFF475569),
                           letterSpacing: 0.5,
                         ),
                       ),
@@ -4403,14 +4745,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             padding: EdgeInsets.symmetric(vertical: 6.0),
                             child: Text(
                               'No registered customer accounts found. You can enter details manually below.',
-                              style: TextStyle(color: Colors.orange, fontSize: 12),
+                              style: TextStyle(
+                                color: Colors.orange,
+                                fontSize: 12,
+                              ),
                             ),
                           )
                         else
                           DropdownButtonFormField<UserModel>(
                             isExpanded: true,
                             initialValue: selectedCustomer,
-                            dropdownColor: isDark ? AppTheme.darkSurface : Colors.white,
+                            dropdownColor: isDark
+                                ? AppTheme.darkSurface
+                                : Colors.white,
                             decoration: const InputDecoration(
                               labelText: 'Select Registered Customer',
                               prefixIcon: Icon(Icons.account_circle_rounded),
@@ -4457,9 +4804,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         controller: addressController,
                         enabled: isDelivery,
                         decoration: InputDecoration(
-                          labelText: isDelivery ? 'Delivery Address (Albay 1st District) *' : 'Pickup Location',
-                          hintText: isDelivery ? 'e.g. Purok 1, Tabaco City, Albay' : null,
-                          prefixIcon: Icon(isDelivery ? Icons.location_on : Icons.storefront_rounded),
+                          labelText: isDelivery
+                              ? 'Delivery Address (Albay 1st District) *'
+                              : 'Pickup Location',
+                          hintText: isDelivery
+                              ? 'e.g. Purok 1, Tabaco City, Albay'
+                              : null,
+                          prefixIcon: Icon(
+                            isDelivery
+                                ? Icons.location_on
+                                : Icons.storefront_rounded,
+                          ),
                           helperText: !isDelivery
                               ? 'Store pickup orders are collected at the station'
                               : 'Service Scope: Tabaco City, Bacacay, Malilipot, Malinao, Santo Domingo, Tiwi',
@@ -4470,29 +4825,34 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         Wrap(
                           spacing: 6,
                           runSpacing: 6,
-                          children: const [
-                            'Tabaco City',
-                            'Bacacay',
-                            'Malilipot',
-                            'Malinao',
-                            'Santo Domingo',
-                            'Tiwi',
-                          ].map((mun) {
-                            return ActionChip(
-                              visualDensity: VisualDensity.compact,
-                              label: Text(mun, style: const TextStyle(fontSize: 11)),
-                              onPressed: () {
-                                setDialogState(() {
-                                  final current = addressController.text.trim();
-                                  if (!current.contains(mun)) {
-                                    addressController.text = current.isEmpty
-                                        ? '$mun, Albay'
-                                        : '$current, $mun, Albay';
-                                  }
-                                });
-                              },
-                            );
-                          }).toList(),
+                          children:
+                              const [
+                                'Tabaco City',
+                                'Bacacay',
+                                'Malilipot',
+                                'Malinao',
+                                'Santo Domingo',
+                                'Tiwi',
+                              ].map((mun) {
+                                return ActionChip(
+                                  visualDensity: VisualDensity.compact,
+                                  label: Text(
+                                    mun,
+                                    style: const TextStyle(fontSize: 11),
+                                  ),
+                                  onPressed: () {
+                                    setDialogState(() {
+                                      final current = addressController.text
+                                          .trim();
+                                      if (!current.contains(mun)) {
+                                        addressController.text = current.isEmpty
+                                            ? '$mun, Albay'
+                                            : '$current, $mun, Albay';
+                                      }
+                                    });
+                                  },
+                                );
+                              }).toList(),
                         ),
                       ],
                       const SizedBox(height: 18),
@@ -4502,10 +4862,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         Container(
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF8B5CF6).withValues(alpha: 0.08),
+                            color: const Color(
+                              0xFF8B5CF6,
+                            ).withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: const Color(0xFF8B5CF6).withValues(alpha: 0.3),
+                              color: const Color(
+                                0xFF8B5CF6,
+                              ).withValues(alpha: 0.3),
                             ),
                           ),
                           child: Column(
@@ -4534,13 +4898,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               if (driversList.isEmpty)
                                 const Text(
                                   'No registered drivers found. The order will be created as Confirmed (Open for dispatch).',
-                                  style: TextStyle(fontSize: 12, color: Color(0xFF7C3AED)),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF7C3AED),
+                                  ),
                                 )
                               else
                                 DropdownButtonFormField<UserModel?>(
                                   isExpanded: true,
                                   initialValue: selectedDriver,
-                                  dropdownColor: isDark ? AppTheme.darkSurface : Colors.white,
+                                  dropdownColor: isDark
+                                      ? AppTheme.darkSurface
+                                      : Colors.white,
                                   decoration: const InputDecoration(
                                     labelText: 'Select Driver to Dispatch',
                                     filled: true,
@@ -4578,15 +4947,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         const SizedBox(height: 18),
                       ] else ...[
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF10B981).withValues(alpha: 0.08),
+                            color: const Color(
+                              0xFF10B981,
+                            ).withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.25)),
+                            border: Border.all(
+                              color: const Color(
+                                0xFF10B981,
+                              ).withValues(alpha: 0.25),
+                            ),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.info_outline_rounded, color: Color(0xFF059669), size: 18),
+                              const Icon(
+                                Icons.info_outline_rounded,
+                                color: Color(0xFF059669),
+                                size: 18,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
@@ -4608,23 +4990,29 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                              color: isDark
+                                  ? const Color(0xFF1E293B)
+                                  : const Color(0xFFF1F5F9),
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
                                 color: isBorrowingContainers
                                     ? AppTheme.primaryColor
-                                    : (isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+                                    : (isDark
+                                          ? Colors.white12
+                                          : const Color(0xFFE2E8F0)),
                               ),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     const Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             'Borrow Station Containers (Bulk Order)',
@@ -4636,7 +5024,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                           SizedBox(height: 2),
                                           Text(
                                             'Enable if registered customer borrows station gallons',
-                                            style: TextStyle(fontSize: 11, color: Colors.grey),
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.grey,
+                                            ),
                                           ),
                                         ],
                                       ),
@@ -4647,8 +5038,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                         setDialogState(() {
                                           isBorrowingContainers = val;
                                           if (val) {
-                                            final currentQty = int.tryParse(qtyController.text) ?? 1;
-                                            slimBorrowController.text = currentQty.toString();
+                                            final currentQty =
+                                                int.tryParse(
+                                                  qtyController.text,
+                                                ) ??
+                                                1;
+                                            slimBorrowController.text =
+                                                currentQty.toString();
                                             roundBorrowController.text = '0';
                                           }
                                         });
@@ -4698,7 +5094,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
+                          color: isDark
+                              ? const Color(0xFF94A3B8)
+                              : const Color(0xFF475569),
                           letterSpacing: 0.5,
                         ),
                       ),
@@ -4707,8 +5105,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         DropdownButtonFormField<String>(
                           isExpanded: true,
                           initialValue: selectedWaterType,
-                          dropdownColor: isDark ? AppTheme.darkSurface : Colors.white,
-                          decoration: const InputDecoration(labelText: 'Water Product'),
+                          dropdownColor: isDark
+                              ? AppTheme.darkSurface
+                              : Colors.white,
+                          decoration: const InputDecoration(
+                            labelText: 'Water Product',
+                          ),
                           items: orderProvider.waterProducts.map((prod) {
                             final name = prod['name'] as String;
                             final price = prod['price'] as double;
@@ -4725,7 +5127,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             if (val != null) {
                               setDialogState(() {
                                 selectedWaterType = val;
-                                final match = orderProvider.waterProducts.firstWhere((p) => p['name'] == val);
+                                final match = orderProvider.waterProducts
+                                    .firstWhere((p) => p['name'] == val);
                                 pricePerUnit = match['price'] as double;
                               });
                             }
@@ -4749,8 +5152,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               child: DropdownButtonFormField<String>(
                                 isExpanded: true,
                                 initialValue: selectedWaterType,
-                                dropdownColor: isDark ? AppTheme.darkSurface : Colors.white,
-                                decoration: const InputDecoration(labelText: 'Water Product'),
+                                dropdownColor: isDark
+                                    ? AppTheme.darkSurface
+                                    : Colors.white,
+                                decoration: const InputDecoration(
+                                  labelText: 'Water Product',
+                                ),
                                 items: orderProvider.waterProducts.map((prod) {
                                   final name = prod['name'] as String;
                                   final price = prod['price'] as double;
@@ -4767,7 +5174,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                   if (val != null) {
                                     setDialogState(() {
                                       selectedWaterType = val;
-                                      final match = orderProvider.waterProducts.firstWhere((p) => p['name'] == val);
+                                      final match = orderProvider.waterProducts
+                                          .firstWhere((p) => p['name'] == val);
                                       pricePerUnit = match['price'] as double;
                                     });
                                   }
@@ -4795,13 +5203,38 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         DropdownButtonFormField<String>(
                           isExpanded: true,
                           initialValue: selectedPaymentMethod,
-                          dropdownColor: isDark ? AppTheme.darkSurface : Colors.white,
-                          decoration: const InputDecoration(labelText: 'Payment Method'),
+                          dropdownColor: isDark
+                              ? AppTheme.darkSurface
+                              : Colors.white,
+                          decoration: const InputDecoration(
+                            labelText: 'Payment Method',
+                          ),
                           items: [
-                            const DropdownMenuItem(value: 'Cash', child: Text('Cash', overflow: TextOverflow.ellipsis, maxLines: 1)),
-                            const DropdownMenuItem(value: 'GCash', child: Text('GCash', overflow: TextOverflow.ellipsis, maxLines: 1)),
+                            const DropdownMenuItem(
+                              value: 'Cash',
+                              child: Text(
+                                'Cash',
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                            ),
+                            const DropdownMenuItem(
+                              value: 'GCash',
+                              child: Text(
+                                'GCash',
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                            ),
                             if (isDelivery)
-                              const DropdownMenuItem(value: 'Cash on Delivery', child: Text('Cash on Delivery (COD)', overflow: TextOverflow.ellipsis, maxLines: 1)),
+                              const DropdownMenuItem(
+                                value: 'Cash on Delivery',
+                                child: Text(
+                                  'Cash on Delivery (COD)',
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ),
                           ],
                           onChanged: (val) {
                             if (val != null) {
@@ -4815,11 +5248,29 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         DropdownButtonFormField<String>(
                           isExpanded: true,
                           initialValue: selectedPaymentStatus,
-                          dropdownColor: isDark ? AppTheme.darkSurface : Colors.white,
-                          decoration: const InputDecoration(labelText: 'Payment Status'),
+                          dropdownColor: isDark
+                              ? AppTheme.darkSurface
+                              : Colors.white,
+                          decoration: const InputDecoration(
+                            labelText: 'Payment Status',
+                          ),
                           items: const [
-                            DropdownMenuItem(value: 'Pending', child: Text('Pending', overflow: TextOverflow.ellipsis, maxLines: 1)),
-                            DropdownMenuItem(value: 'Paid', child: Text('Paid', overflow: TextOverflow.ellipsis, maxLines: 1)),
+                            DropdownMenuItem(
+                              value: 'Pending',
+                              child: Text(
+                                'Pending',
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Paid',
+                              child: Text(
+                                'Paid',
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                            ),
                           ],
                           onChanged: (val) {
                             if (val != null) {
@@ -4836,13 +5287,38 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               child: DropdownButtonFormField<String>(
                                 isExpanded: true,
                                 initialValue: selectedPaymentMethod,
-                                dropdownColor: isDark ? AppTheme.darkSurface : Colors.white,
-                                decoration: const InputDecoration(labelText: 'Payment Method'),
+                                dropdownColor: isDark
+                                    ? AppTheme.darkSurface
+                                    : Colors.white,
+                                decoration: const InputDecoration(
+                                  labelText: 'Payment Method',
+                                ),
                                 items: [
-                                  const DropdownMenuItem(value: 'Cash', child: Text('Cash', overflow: TextOverflow.ellipsis, maxLines: 1)),
-                                  const DropdownMenuItem(value: 'GCash', child: Text('GCash', overflow: TextOverflow.ellipsis, maxLines: 1)),
+                                  const DropdownMenuItem(
+                                    value: 'Cash',
+                                    child: Text(
+                                      'Cash',
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
+                                  ),
+                                  const DropdownMenuItem(
+                                    value: 'GCash',
+                                    child: Text(
+                                      'GCash',
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
+                                  ),
                                   if (isDelivery)
-                                    const DropdownMenuItem(value: 'Cash on Delivery', child: Text('Cash on Delivery (COD)', overflow: TextOverflow.ellipsis, maxLines: 1)),
+                                    const DropdownMenuItem(
+                                      value: 'Cash on Delivery',
+                                      child: Text(
+                                        'Cash on Delivery (COD)',
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                      ),
+                                    ),
                                 ],
                                 onChanged: (val) {
                                   if (val != null) {
@@ -4858,11 +5334,29 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               child: DropdownButtonFormField<String>(
                                 isExpanded: true,
                                 initialValue: selectedPaymentStatus,
-                                dropdownColor: isDark ? AppTheme.darkSurface : Colors.white,
-                                decoration: const InputDecoration(labelText: 'Payment Status'),
+                                dropdownColor: isDark
+                                    ? AppTheme.darkSurface
+                                    : Colors.white,
+                                decoration: const InputDecoration(
+                                  labelText: 'Payment Status',
+                                ),
                                 items: const [
-                                  DropdownMenuItem(value: 'Pending', child: Text('Pending', overflow: TextOverflow.ellipsis, maxLines: 1)),
-                                  DropdownMenuItem(value: 'Paid', child: Text('Paid', overflow: TextOverflow.ellipsis, maxLines: 1)),
+                                  DropdownMenuItem(
+                                    value: 'Pending',
+                                    child: Text(
+                                      'Pending',
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'Paid',
+                                    child: Text(
+                                      'Paid',
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
+                                  ),
                                 ],
                                 onChanged: (val) {
                                   if (val != null) {
@@ -4884,16 +5378,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           return Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: AppTheme.primaryColor.withValues(alpha: 0.06),
+                              color: AppTheme.primaryColor.withValues(
+                                alpha: 0.06,
+                              ),
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2)),
+                              border: Border.all(
+                                color: AppTheme.primaryColor.withValues(
+                                  alpha: 0.2,
+                                ),
+                              ),
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 const Text(
                                   'Total Order Amount:',
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
                                 ),
                                 Text(
                                   '₱${total.toStringAsFixed(2)}',
@@ -4931,18 +5434,30 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         final qty = int.tryParse(qtyController.text) ?? 1;
 
                         if (name.isEmpty) {
-                          Helpers.showSnackBar(context, 'Please enter customer name.', isError: true);
+                          Helpers.showSnackBar(
+                            context,
+                            'Please enter customer name.',
+                            isError: true,
+                          );
                           return;
                         }
                         if (isDelivery && address.isEmpty) {
-                          Helpers.showSnackBar(context, 'Please enter delivery address for home delivery.', isError: true);
+                          Helpers.showSnackBar(
+                            context,
+                            'Please enter delivery address for home delivery.',
+                            isError: true,
+                          );
                           return;
                         }
                         if (!isDelivery && address.isEmpty) {
-                          address = 'Store Pickup / Walk-in (JJAASS Water Station)';
+                          address =
+                              'Store Pickup / Walk-in (JJAASS Water Station)';
                         }
 
-                        final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+                        final orderProvider = Provider.of<OrderProvider>(
+                          context,
+                          listen: false,
+                        );
                         final custId = isRegistered && selectedCustomer != null
                             ? selectedCustomer!.id
                             : 'usr_walkin_guest';
@@ -4951,21 +5466,31 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         // If Delivery: Confirm & Assign driver if selected (OrderStatus.assigned), or Confirmed
                         // If Pickup: Confirmed, and NO rider assigned
                         final OrderStatus orderStatus = isDelivery
-                            ? (selectedDriver != null ? OrderStatus.assigned : OrderStatus.confirmed)
+                            ? (selectedDriver != null
+                                  ? OrderStatus.assigned
+                                  : OrderStatus.confirmed)
                             : OrderStatus.confirmed;
 
-                        final String? driverId = isDelivery ? selectedDriver?.id : null;
+                        final String? driverId = isDelivery
+                            ? selectedDriver?.id
+                            : null;
                         final String? driverName = isDelivery
                             ? selectedDriver?.name
                             : 'Not Needed (Walk-in/Pickup)';
 
                         try {
-                          final int borrowedSlim = isBorrowingContainers ? (int.tryParse(slimBorrowController.text) ?? 0) : 0;
-                          final int borrowedRound = isBorrowingContainers ? (int.tryParse(roundBorrowController.text) ?? 0) : 0;
+                          final int borrowedSlim = isBorrowingContainers
+                              ? (int.tryParse(slimBorrowController.text) ?? 0)
+                              : 0;
+                          final int borrowedRound = isBorrowingContainers
+                              ? (int.tryParse(roundBorrowController.text) ?? 0)
+                              : 0;
                           final newOrder = await orderProvider.placeOrder(
                             customerId: custId,
                             customerName: name,
-                            customerPhone: phone.isNotEmpty ? phone : '+63 Guest',
+                            customerPhone: phone.isNotEmpty
+                                ? phone
+                                : '+63 Guest',
                             deliveryAddress: address,
                             waterType: selectedWaterType,
                             quantity: qty,
@@ -4985,18 +5510,23 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             Navigator.of(context).pop();
                             final String successMsg = isDelivery
                                 ? (selectedDriver != null
-                                    ? 'Order ${newOrder.id} created & assigned to ${selectedDriver!.name}!'
-                                    : 'Order ${newOrder.id} created for delivery (confirmed)!')
+                                      ? 'Order ${newOrder.id} created & assigned to ${selectedDriver!.name}!'
+                                      : 'Order ${newOrder.id} created for delivery (confirmed)!')
                                 : 'Store pickup order ${newOrder.id} created successfully!';
                             Helpers.showSnackBar(context, successMsg);
 
-                            if (selectedPaymentMethod == 'GCash' && selectedPaymentStatus == 'Pending') {
+                            if (selectedPaymentMethod == 'GCash' &&
+                                selectedPaymentStatus == 'Pending') {
                               _showGcashPaymentDialog(newOrder, isDark);
                             }
                           }
                         } catch (e) {
                           if (context.mounted) {
-                            Helpers.showSnackBar(context, 'Failed to create order: $e', isError: true);
+                            Helpers.showSnackBar(
+                              context,
+                              'Failed to create order: $e',
+                              isError: true,
+                            );
                           }
                         }
                       },
@@ -5005,7 +5535,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryColor,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                       ),
                     ),
                   ],
@@ -5026,8 +5559,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final filtered = _activeOrderFilter == 'All'
         ? allOrders
         : allOrders
-            .where((o) => o.orderStatus.displayName == _activeOrderFilter)
-            .toList();
+              .where((o) => o.orderStatus.displayName == _activeOrderFilter)
+              .toList();
 
     final searchQuery = _orderSearchController.text.trim().toLowerCase();
     final searchFiltered = searchQuery.isEmpty
@@ -5073,84 +5606,99 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     color: isDark ? Colors.white : const Color(0xFF1E293B),
                   ),
                 ),
-              ElevatedButton.icon(
-                onPressed: () => _showCreateOrderDialog(isDark),
-                icon: const Icon(
-                  Icons.add_rounded,
-                  size: 16,
-                  color: Colors.white,
-                ),
-                label: const Text(
-                  'New Order',
-                  style: TextStyle(fontSize: 12, color: Colors.white),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
+                ElevatedButton.icon(
+                  onPressed: () => _showCreateOrderDialog(isDark),
+                  icon: const Icon(
+                    Icons.add_rounded,
+                    size: 16,
+                    color: Colors.white,
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                  label: const Text(
+                    'New Order',
+                    style: TextStyle(fontSize: 12, color: Colors.white),
                   ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-
-          // Search & Filter Bar
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? const Color(0xFF1E293B)
-                        : const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFFCBD5E1)),
-                  ),
-                  child: TextField(
-                    controller: _orderSearchController,
-                    onChanged: (_) => setState(() {}),
-                    textAlignVertical: TextAlignVertical.center,
-                    style: const TextStyle(fontSize: 12),
-                    decoration: InputDecoration(
-                      isDense: true,
-                      hintText:
-                          'Search orders by ID (#COL, #ORD), customer name, address...',
-                      hintStyle: const TextStyle(
-                          fontSize: 11, color: Color(0xFF64748B)),
-                      prefixIcon: const Icon(Icons.search_rounded,
-                          size: 16, color: AppTheme.primaryColor),
-                      prefixIconConstraints:
-                          const BoxConstraints(minWidth: 34, minHeight: 34),
-                      suffixIcon: _orderSearchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.close_rounded, size: 14),
-                              onPressed: () => setState(
-                                  () => _orderSearchController.clear()),
-                            )
-                          : null,
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
+              ],
+            ),
+            const SizedBox(height: 14),
 
-          // Filter Tabs
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children:
-                  ['All', 'Pending', 'On Delivery', 'Completed', 'Cancelled'].map(
-                    (status) {
+            // Search & Filter Bar
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? const Color(0xFF1E293B)
+                          : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                    ),
+                    child: TextField(
+                      controller: _orderSearchController,
+                      onChanged: (_) => setState(() {}),
+                      textAlignVertical: TextAlignVertical.center,
+                      style: const TextStyle(fontSize: 12),
+                      decoration: InputDecoration(
+                        isDense: true,
+                        hintText:
+                            'Search orders by ID (#COL, #ORD), customer name, address...',
+                        hintStyle: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF64748B),
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.search_rounded,
+                          size: 16,
+                          color: AppTheme.primaryColor,
+                        ),
+                        prefixIconConstraints: const BoxConstraints(
+                          minWidth: 34,
+                          minHeight: 34,
+                        ),
+                        suffixIcon: _orderSearchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.close_rounded, size: 14),
+                                onPressed: () => setState(
+                                  () => _orderSearchController.clear(),
+                                ),
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Filter Tabs
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children:
+                    [
+                      'All',
+                      'Pending',
+                      'On Delivery',
+                      'Completed',
+                      'Cancelled',
+                    ].map((status) {
                       final isSel = _activeOrderFilter == status;
                       return Container(
                         margin: const EdgeInsets.only(right: 8),
@@ -5170,365 +5718,420 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           },
                         ),
                       );
-                    },
-                  ).toList(),
+                    }).toList(),
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
-          Expanded(
-            child: searchFiltered.isEmpty
-                ? const Center(
-                    child: Text('No orders match this status or search query.'))
-                : ListView(
-                    children: [
-                      for (var entry in customerDivisions.entries) ...[
-                        Container(
-                          margin: const EdgeInsets.only(top: 10, bottom: 8),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? const Color(0xFF1E293B)
-                                : const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: AppTheme.primaryColor
-                                  .withValues(alpha: 0.25),
+            const SizedBox(height: 20),
+            Expanded(
+              child: searchFiltered.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'No orders match this status or search query.',
+                      ),
+                    )
+                  : ListView(
+                      children: [
+                        for (var entry in customerDivisions.entries) ...[
+                          Container(
+                            margin: const EdgeInsets.only(top: 10, bottom: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 8,
                             ),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.badge_rounded,
-                                  color: AppTheme.primaryColor, size: 17),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Customer Division: ${entry.key}',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 13,
-                                  color: isDark
-                                      ? Colors.white
-                                      : AppTheme.navyColor,
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? const Color(0xFF1E293B)
+                                  : const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: AppTheme.primaryColor.withValues(
+                                  alpha: 0.25,
                                 ),
                               ),
-                              const Spacer(),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.primaryColor,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  '${entry.value.length} Order${entry.value.length > 1 ? "s" : ""}',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        ...entry.value.map((order) {
-                          final bool isPending =
-                              order.orderStatus == OrderStatus.pending;
-                          return PulsingBorder(
-                        active: isPending,
-                        color: Colors.orange,
-                        margin: const EdgeInsets.only(bottom: 12),
-                        child: Card(
-                          margin: EdgeInsets.zero,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            ),
+                            child: Row(
                               children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      order.id,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: AppTheme.primaryColor,
-                                      ),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: order.orderStatus.color
-                                            .withValues(alpha: 0.08),
-                                        borderRadius: BorderRadius.circular(6),
-                                        border: Border.all(
-                                          color: order.orderStatus.color
-                                              .withValues(alpha: 0.2),
-                                        ),
-                                      ),
-                                      child: Text(
-                                        order.orderStatus.displayName,
-                                        style: TextStyle(
-                                          color: order.orderStatus.color,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 10,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                                const Icon(
+                                  Icons.badge_rounded,
+                                  color: AppTheme.primaryColor,
+                                  size: 17,
                                 ),
-                                const SizedBox(height: 12),
+                                const SizedBox(width: 8),
                                 Text(
-                                  'Customer: ${_resolveCustomerDisplayName(order)} (${order.customerPhone})',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
+                                  'Customer Division: ${entry.key}',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 13,
+                                    color: isDark
+                                        ? Colors.white
+                                        : AppTheme.navyColor,
                                   ),
                                 ),
-                                Text('Products: ${order.itemsSummary}'),
-                                Text(
-                                  'Delivery Address: ${order.deliveryAddress}',
-                                ),
-                                if (order.deliveryNote != null)
-                                  Container(
-                                    margin: const EdgeInsets.symmetric(
-                                      vertical: 6,
-                                    ),
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFFEF3C7),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: const Color(0xFFF59E0B),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      '📝 Customer Note: ${order.deliveryNote}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF78350F),
-                                      ),
+                                const Spacer(),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primaryColor,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    '${entry.value.length} Order${entry.value.length > 1 ? "s" : ""}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                Text(
-                                  'Assigned Driver: ${order.requiresDriver ? (order.driverName ?? "Unassigned") : "Not Needed (Walk-in/Pickup)"}',
-                                ),
-                                Wrap(
-                                  crossAxisAlignment: WrapCrossAlignment.center,
-                                  spacing: 8,
-                                  runSpacing: 4,
-                                  children: [
-                                    Text(
-                                      'Total Amount: ${order.formattedTotal} (${order.paymentMethod} • ${order.paymentStatus})',
-                                      style: const TextStyle(fontWeight: FontWeight.w600),
-                                    ),
-                                    if (order.paymentStatus == 'Pending' &&
-                                        order.paymentMethod == 'GCash') ...[
-                                      InkWell(
-                                        onTap: () => _showGcashPaymentDialog(
-                                          order,
-                                          isDark,
-                                        ),
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.blue.withValues(
-                                              alpha: 0.1,
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              4,
-                                            ),
-                                            border: Border.all(
-                                              color: Colors.blue.withValues(
-                                                alpha: 0.3,
-                                              ),
-                                            ),
-                                          ),
-                                          child: const Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(
-                                                Icons.qr_code_2_rounded,
-                                                size: 12,
-                                                color: Colors.blue,
-                                              ),
-                                              SizedBox(width: 4),
-                                              Text(
-                                                'Scan QR',
-                                                style: TextStyle(
-                                                  fontSize: 9,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.blue,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                                if (order.orderStatus ==
-                                    OrderStatus.pending) ...[
-                                  const SizedBox(height: 12),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: ElevatedButton(
-                                      onPressed: () async {
-                                        final orderProvider =
-                                            Provider.of<OrderProvider>(
-                                              context,
-                                              listen: false,
-                                            );
-                                        await orderProvider.confirmOrder(
-                                          order.id,
-                                        );
-                                        if (!mounted) return;
-                                        Helpers.showSnackBar(
-                                          context,
-                                          'Order ${order.id} confirmed successfully!',
-                                        );
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppTheme.primaryColor,
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 12,
-                                        ),
-                                      ),
-                                      child: const Text(
-                                        'Confirm Order',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ] else if (order.orderStatus ==
-                                    OrderStatus.confirmed) ...[
-                                  const SizedBox(height: 12),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: ElevatedButton(
-                                      onPressed: () async {
-                                        if (order.requiresDriver) {
-                                          final driversList = _allUsers
-                                              .where(
-                                                (u) =>
-                                                    u.role == UserRole.driver,
-                                              )
-                                              .toList();
-                                          if (driversList.isEmpty) {
-                                            Helpers.showSnackBar(
-                                              context,
-                                              'No registered riders available to dispatch.',
-                                              isError: true,
-                                            );
-                                            return;
-                                          }
-                                          _showAssignDriverDialog(
-                                            order,
-                                            driversList,
-                                            isDark,
-                                          );
-                                        } else {
-                                          final orderProvider =
-                                              Provider.of<OrderProvider>(
-                                                context,
-                                                listen: false,
-                                              );
-                                          await orderProvider.updateOrderStatus(
-                                            orderId: order.id,
-                                            newStatus: OrderStatus.completed,
-                                          );
-                                          if (!mounted) return;
-                                          Helpers.showSnackBar(
-                                            context,
-                                            'Order ${order.id} completed successfully!',
-                                          );
-                                        }
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor:
-                                            order.paymentMethod ==
-                                                'Cash on Delivery'
-                                            ? const Color(0xFF8B5CF6)
-                                            : const Color(0xFF10B981),
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 12,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        order.paymentMethod ==
-                                                'Cash on Delivery'
-                                            ? 'Assign Rider'
-                                            : 'Complete Order',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                                const Divider(height: 16),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    OutlinedButton.icon(
-                                      onPressed: () => _showInboxDialog(isDark, targetConversationId: 'order_${order.id}'),
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: AppTheme.primaryColor,
-                                        side: const BorderSide(color: AppTheme.primaryColor),
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                      ),
-                                      icon: const Icon(Icons.chat_bubble_outline_rounded, size: 14, color: AppTheme.primaryColor),
-                                      label: const Text('Live Chat', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    OutlinedButton.icon(
-                                      onPressed: () =>
-                                          _confirmDeleteOrder(order, isDark),
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: Colors.redAccent,
-                                        side: const BorderSide(
-                                            color: Colors.redAccent),
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 6,
-                                        ),
-                                      ),
-                                      icon: const Icon(
-                                        Icons.delete_outline_rounded,
-                                        size: 14,
-                                        color: Colors.redAccent,
-                                      ),
-                                      label: const Text(
-                                        'Delete Order',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.redAccent,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
                                 ),
                               ],
                             ),
                           ),
-                        ),
-                      );
-                    }),
-                  ],
-                ],
-              ),
+                          ...entry.value.map((order) {
+                            final bool isPending =
+                                order.orderStatus == OrderStatus.pending;
+                            return PulsingBorder(
+                              active: isPending,
+                              color: Colors.orange,
+                              margin: const EdgeInsets.only(bottom: 12),
+                              child: Card(
+                                margin: EdgeInsets.zero,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            order.id,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: AppTheme.primaryColor,
+                                            ),
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 4,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: order.orderStatus.color
+                                                  .withValues(alpha: 0.08),
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                              border: Border.all(
+                                                color: order.orderStatus.color
+                                                    .withValues(alpha: 0.2),
+                                              ),
+                                            ),
+                                            child: Text(
+                                              order.orderStatus.displayName,
+                                              style: TextStyle(
+                                                color: order.orderStatus.color,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 10,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        'Customer: ${_resolveCustomerDisplayName(order)} (${order.customerPhone})',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      Text('Products: ${order.itemsSummary}'),
+                                      Text(
+                                        'Delivery Address: ${order.deliveryAddress}',
+                                      ),
+                                      if (order.deliveryNote != null)
+                                        Container(
+                                          margin: const EdgeInsets.symmetric(
+                                            vertical: 6,
+                                          ),
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFFEF3C7),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            border: Border.all(
+                                              color: const Color(0xFFF59E0B),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            '📝 Customer Note: ${order.deliveryNote}',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF78350F),
+                                            ),
+                                          ),
+                                        ),
+                                      Text(
+                                        'Assigned Driver: ${order.requiresDriver ? (order.driverName ?? "Unassigned") : "Not Needed (Walk-in/Pickup)"}',
+                                      ),
+                                      Wrap(
+                                        crossAxisAlignment:
+                                            WrapCrossAlignment.center,
+                                        spacing: 8,
+                                        runSpacing: 4,
+                                        children: [
+                                          Text(
+                                            'Total Amount: ${order.formattedTotal} (${order.paymentMethod} • ${order.paymentStatus})',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          if (order.paymentStatus ==
+                                                  'Pending' &&
+                                              order.paymentMethod ==
+                                                  'GCash') ...[
+                                            InkWell(
+                                              onTap: () =>
+                                                  _showGcashPaymentDialog(
+                                                    order,
+                                                    isDark,
+                                                  ),
+                                              child: Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 2,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.blue.withValues(
+                                                    alpha: 0.1,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(4),
+                                                  border: Border.all(
+                                                    color: Colors.blue
+                                                        .withValues(alpha: 0.3),
+                                                  ),
+                                                ),
+                                                child: const Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                      Icons.qr_code_2_rounded,
+                                                      size: 12,
+                                                      color: Colors.blue,
+                                                    ),
+                                                    SizedBox(width: 4),
+                                                    Text(
+                                                      'Scan QR',
+                                                      style: TextStyle(
+                                                        fontSize: 9,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: Colors.blue,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                      if (order.orderStatus ==
+                                          OrderStatus.pending) ...[
+                                        const SizedBox(height: 12),
+                                        SizedBox(
+                                          width: double.infinity,
+                                          child: ElevatedButton(
+                                            onPressed: () async {
+                                              final orderProvider =
+                                                  Provider.of<OrderProvider>(
+                                                    context,
+                                                    listen: false,
+                                                  );
+                                              await orderProvider.confirmOrder(
+                                                order.id,
+                                              );
+                                              if (!mounted) return;
+                                              Helpers.showSnackBar(
+                                                context,
+                                                'Order ${order.id} confirmed successfully!',
+                                              );
+                                            },
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  AppTheme.primaryColor,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 12,
+                                                  ),
+                                            ),
+                                            child: const Text(
+                                              'Confirm Order',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ] else if (order.orderStatus ==
+                                          OrderStatus.confirmed) ...[
+                                        const SizedBox(height: 12),
+                                        SizedBox(
+                                          width: double.infinity,
+                                          child: ElevatedButton(
+                                            onPressed: () async {
+                                              if (order.requiresDriver) {
+                                                final driversList = _allUsers
+                                                    .where(
+                                                      (u) =>
+                                                          u.role ==
+                                                          UserRole.driver,
+                                                    )
+                                                    .toList();
+                                                if (driversList.isEmpty) {
+                                                  Helpers.showSnackBar(
+                                                    context,
+                                                    'No registered riders available to dispatch.',
+                                                    isError: true,
+                                                  );
+                                                  return;
+                                                }
+                                                _showAssignDriverDialog(
+                                                  order,
+                                                  driversList,
+                                                  isDark,
+                                                );
+                                              } else {
+                                                final orderProvider =
+                                                    Provider.of<OrderProvider>(
+                                                      context,
+                                                      listen: false,
+                                                    );
+                                                await orderProvider
+                                                    .updateOrderStatus(
+                                                      orderId: order.id,
+                                                      newStatus:
+                                                          OrderStatus.completed,
+                                                    );
+                                                if (!mounted) return;
+                                                Helpers.showSnackBar(
+                                                  context,
+                                                  'Order ${order.id} completed successfully!',
+                                                );
+                                              }
+                                            },
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  order.paymentMethod ==
+                                                      'Cash on Delivery'
+                                                  ? const Color(0xFF8B5CF6)
+                                                  : const Color(0xFF10B981),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 12,
+                                                  ),
+                                            ),
+                                            child: Text(
+                                              order.paymentMethod ==
+                                                      'Cash on Delivery'
+                                                  ? 'Assign Rider'
+                                                  : 'Complete Order',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                      const Divider(height: 16),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.end,
+                                        children: [
+                                          OutlinedButton.icon(
+                                            onPressed: () => _showInboxDialog(
+                                              isDark,
+                                              targetConversationId:
+                                                  'order_${order.id}',
+                                            ),
+                                            style: OutlinedButton.styleFrom(
+                                              foregroundColor:
+                                                  AppTheme.primaryColor,
+                                              side: const BorderSide(
+                                                color: AppTheme.primaryColor,
+                                              ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 10,
+                                                    vertical: 6,
+                                                  ),
+                                            ),
+                                            icon: const Icon(
+                                              Icons.chat_bubble_outline_rounded,
+                                              size: 14,
+                                              color: AppTheme.primaryColor,
+                                            ),
+                                            label: const Text(
+                                              'Live Chat',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: AppTheme.primaryColor,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          OutlinedButton.icon(
+                                            onPressed: () =>
+                                                _confirmDeleteOrder(
+                                                  order,
+                                                  isDark,
+                                                ),
+                                            style: OutlinedButton.styleFrom(
+                                              foregroundColor: Colors.redAccent,
+                                              side: const BorderSide(
+                                                color: Colors.redAccent,
+                                              ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 10,
+                                                    vertical: 6,
+                                                  ),
+                                            ),
+                                            icon: const Icon(
+                                              Icons.delete_outline_rounded,
+                                              size: 14,
+                                              color: Colors.redAccent,
+                                            ),
+                                            label: const Text(
+                                              'Delete Order',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.redAccent,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                        ],
+                      ],
+                    ),
             ),
           ],
         ],
@@ -5585,17 +6188,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           size: 16,
                           color: _ordersSubTab == 0
                               ? AppTheme.primaryColor
-                              : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                              : (isDark
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade600),
                         ),
                         const SizedBox(width: 8),
                         Text(
                           'Orders Log ($allOrdersCount)',
                           style: TextStyle(
                             fontSize: 13,
-                            fontWeight: _ordersSubTab == 0 ? FontWeight.bold : FontWeight.w500,
+                            fontWeight: _ordersSubTab == 0
+                                ? FontWeight.bold
+                                : FontWeight.w500,
                             color: _ordersSubTab == 0
-                                ? (isDark ? Colors.white : const Color(0xFF0F172A))
-                                : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                                ? (isDark
+                                      ? Colors.white
+                                      : const Color(0xFF0F172A))
+                                : (isDark
+                                      ? Colors.grey.shade400
+                                      : Colors.grey.shade600),
                           ),
                         ),
                       ],
@@ -5632,24 +6243,37 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           Icons.swap_horizontal_circle_rounded,
                           size: 16,
                           color: _ordersSubTab == 1
-                              ? (pendingCount > 0 ? const Color(0xFFDC2626) : const Color(0xFF059669))
-                              : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                              ? (pendingCount > 0
+                                    ? const Color(0xFFDC2626)
+                                    : const Color(0xFF059669))
+                              : (isDark
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade600),
                         ),
                         const SizedBox(width: 8),
                         Text(
                           'Delivery Defect & Swap Claims ($activeCount)',
                           style: TextStyle(
                             fontSize: 13,
-                            fontWeight: _ordersSubTab == 1 ? FontWeight.bold : FontWeight.w500,
+                            fontWeight: _ordersSubTab == 1
+                                ? FontWeight.bold
+                                : FontWeight.w500,
                             color: _ordersSubTab == 1
-                                ? (isDark ? Colors.white : const Color(0xFF0F172A))
-                                : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                                ? (isDark
+                                      ? Colors.white
+                                      : const Color(0xFF0F172A))
+                                : (isDark
+                                      ? Colors.grey.shade400
+                                      : Colors.grey.shade600),
                           ),
                         ),
                         if (pendingCount > 0) ...[
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: const Color(0xFFEF4444),
                               borderRadius: BorderRadius.circular(10),
@@ -5685,27 +6309,44 @@ class _AdminDashboardState extends State<AdminDashboard> {
         final pendingCount = DeliveryIssueService.instance.pendingCount;
 
         // Auto-complete claims whose order transaction is finished
-        final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+        final orderProvider = Provider.of<OrderProvider>(
+          context,
+          listen: false,
+        );
         for (var i in allIssues) {
           if (!i.isDone && (i.isApproved || i.isDeclined)) {
             final o = orderProvider.orders.cast<OrderModel?>().firstWhere(
-                  (ord) => ord?.id == i.orderId || '#${ord?.id}' == i.orderId || ord?.id == i.orderId.replaceAll('#', ''),
-                  orElse: () => null,
-                );
-            if (o != null && (o.orderStatus == OrderStatus.completed || o.orderStatus == OrderStatus.cancelled)) {
+              (ord) =>
+                  ord?.id == i.orderId ||
+                  '#${ord?.id}' == i.orderId ||
+                  ord?.id == i.orderId.replaceAll('#', ''),
+              orElse: () => null,
+            );
+            if (o != null &&
+                (o.orderStatus == OrderStatus.completed ||
+                    o.orderStatus == OrderStatus.cancelled)) {
               DeliveryIssueService.instance.completeTransaction(i.id);
             }
           }
         }
 
         // Filter by category chip
-        final filteredByStatus = (_claimFilter == 'All' || _claimFilter == 'Active')
+        final filteredByStatus =
+            (_claimFilter == 'All' || _claimFilter == 'Active')
             ? allIssues.where((i) => !i.isDone).toList()
             : allIssues.where((i) {
-                if (_claimFilter == 'Pending') return i.isPending && !i.isDone;
-                if (_claimFilter == 'Approved') return i.isApproved && !i.isDone;
-                if (_claimFilter == 'Declined') return i.isDeclined;
-                if (_claimFilter == 'Done & History') return i.isDone || i.isDeclined;
+                if (_claimFilter == 'Pending') {
+                  return i.isPending && !i.isDone;
+                }
+                if (_claimFilter == 'Approved') {
+                  return i.isApproved && !i.isDone;
+                }
+                if (_claimFilter == 'Declined') {
+                  return i.isDeclined;
+                }
+                if (_claimFilter == 'Done & History') {
+                  return i.isDone || i.isDeclined;
+                }
                 return !i.isDone;
               }).toList();
 
@@ -5722,7 +6363,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
               }).toList();
 
         final cardBgColor = isDark ? const Color(0xFF1E293B) : Colors.white;
-        final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+        final borderColor = isDark
+            ? const Color(0xFF334155)
+            : const Color(0xFFE2E8F0);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -5740,7 +6383,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          color: isDark
+                              ? Colors.white
+                              : const Color(0xFF0F172A),
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -5748,7 +6393,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         'Review customer complaints, verify photo evidence, and authorize free replacement swaps on next delivery.',
                         style: TextStyle(
                           fontSize: 12,
-                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                          color: isDark
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600,
                         ),
                       ),
                     ],
@@ -5757,29 +6404,44 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 const SizedBox(width: 12),
                 // Quick Summary Pill
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
-                    color: pendingCount > 0 ? const Color(0xFFFEF2F2) : const Color(0xFFECFDF5),
+                    color: pendingCount > 0
+                        ? const Color(0xFFFEF2F2)
+                        : const Color(0xFFECFDF5),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: pendingCount > 0 ? const Color(0xFFFCA5A5) : const Color(0xFF6EE7B7),
+                      color: pendingCount > 0
+                          ? const Color(0xFFFCA5A5)
+                          : const Color(0xFF6EE7B7),
                     ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        pendingCount > 0 ? Icons.warning_amber_rounded : Icons.verified_rounded,
+                        pendingCount > 0
+                            ? Icons.warning_amber_rounded
+                            : Icons.verified_rounded,
                         size: 16,
-                        color: pendingCount > 0 ? const Color(0xFFDC2626) : const Color(0xFF059669),
+                        color: pendingCount > 0
+                            ? const Color(0xFFDC2626)
+                            : const Color(0xFF059669),
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        pendingCount > 0 ? '$pendingCount Claims Awaiting Decision' : 'All Claims Resolved',
+                        pendingCount > 0
+                            ? '$pendingCount Claims Awaiting Decision'
+                            : 'All Claims Resolved',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: pendingCount > 0 ? const Color(0xFFDC2626) : const Color(0xFF059669),
+                          color: pendingCount > 0
+                              ? const Color(0xFFDC2626)
+                              : const Color(0xFF059669),
                         ),
                       ),
                     ],
@@ -5796,7 +6458,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   child: Container(
                     height: 40,
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                      color: isDark
+                          ? const Color(0xFF1E293B)
+                          : const Color(0xFFF8FAFC),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: borderColor),
                     ),
@@ -5807,12 +6471,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       style: const TextStyle(fontSize: 12),
                       decoration: InputDecoration(
                         isDense: true,
-                        hintText: 'Search by Claim ID, Order ID, Customer name or issue...',
+                        hintText:
+                            'Search by Claim ID, Order ID, Customer name or issue...',
                         hintStyle: TextStyle(
                           fontSize: 12,
-                          color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
+                          color: isDark
+                              ? Colors.grey.shade500
+                              : Colors.grey.shade400,
                         ),
-                        prefixIcon: const Icon(Icons.search_rounded, size: 16, color: Color(0xFF94A3B8)),
+                        prefixIcon: const Icon(
+                          Icons.search_rounded,
+                          size: 16,
+                          color: Color(0xFF94A3B8),
+                        ),
                         suffixIcon: _claimSearchController.text.isNotEmpty
                             ? IconButton(
                                 icon: const Icon(Icons.clear, size: 14),
@@ -5823,21 +6494,40 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               )
                             : null,
                         border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                        ),
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 // Status Filter Chips: Active (Default), Pending, Approved, Done & History
-                ...['Active', 'Pending', 'Approved', 'Done & History'].map((filter) {
-                  final isSelected = (_claimFilter == filter) ||
+                ...['Active', 'Pending', 'Approved', 'Done & History'].map((
+                  filter,
+                ) {
+                  final isSelected =
+                      (_claimFilter == filter) ||
                       (_claimFilter == 'All' && filter == 'Active');
                   int count = 0;
-                  if (filter == 'Active') count = allIssues.where((i) => !i.isDone).length;
-                  if (filter == 'Pending') count = allIssues.where((i) => i.isPending && !i.isDone).length;
-                  if (filter == 'Approved') count = allIssues.where((i) => i.isApproved && !i.isDone).length;
-                  if (filter == 'Done & History') count = allIssues.where((i) => i.isDone || i.isDeclined).length;
+                  if (filter == 'Active') {
+                    count = allIssues.where((i) => !i.isDone).length;
+                  }
+                  if (filter == 'Pending') {
+                    count = allIssues
+                        .where((i) => i.isPending && !i.isDone)
+                        .length;
+                  }
+                  if (filter == 'Approved') {
+                    count = allIssues
+                        .where((i) => i.isApproved && !i.isDone)
+                        .length;
+                  }
+                  if (filter == 'Done & History') {
+                    count = allIssues
+                        .where((i) => i.isDone || i.isDeclined)
+                        .length;
+                  }
 
                   return Padding(
                     padding: const EdgeInsets.only(left: 6),
@@ -5846,17 +6536,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       label: Text('$filter ($count)'),
                       labelStyle: TextStyle(
                         fontSize: 11.5,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.w500,
                         color: isSelected
                             ? Colors.white
-                            : (isDark ? Colors.grey.shade300 : const Color(0xFF334155)),
+                            : (isDark
+                                  ? Colors.grey.shade300
+                                  : const Color(0xFF334155)),
                       ),
-                      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                      backgroundColor: isDark
+                          ? const Color(0xFF0F172A)
+                          : const Color(0xFFF1F5F9),
                       selectedColor: filter == 'Pending'
                           ? const Color(0xFFF59E0B)
                           : (filter == 'Approved'
-                              ? const Color(0xFF10B981)
-                              : (filter == 'Done & History' ? const Color(0xFF64748B) : AppTheme.primaryColor)),
+                                ? const Color(0xFF10B981)
+                                : (filter == 'Done & History'
+                                      ? const Color(0xFF64748B)
+                                      : AppTheme.primaryColor)),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                         side: BorderSide(
@@ -5908,7 +6606,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 12,
-                        color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                        color: isDark
+                            ? Colors.grey.shade400
+                            : Colors.grey.shade600,
                       ),
                     ),
                   ],
@@ -5922,7 +6622,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 separatorBuilder: (_, _) => const SizedBox(height: 14),
                 itemBuilder: (context, idx) {
                   final claim = filtered[idx];
-                  return _buildDeliveryIssueClaimCard(context, claim, isDark, cardBgColor, borderColor);
+                  return _buildDeliveryIssueClaimCard(
+                    context,
+                    claim,
+                    isDark,
+                    cardBgColor,
+                    borderColor,
+                  );
                 },
               ),
           ],
@@ -5946,23 +6652,27 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final Color statusColor = isDone
         ? const Color(0xFF64748B)
         : (isApproved
-            ? const Color(0xFF059669)
-            : (isDeclined ? const Color(0xFFDC2626) : const Color(0xFFD97706)));
+              ? const Color(0xFF059669)
+              : (isDeclined
+                    ? const Color(0xFFDC2626)
+                    : const Color(0xFFD97706)));
     final Color statusBg = isDone
         ? const Color(0xFFF1F5F9)
         : (isApproved
-            ? const Color(0xFFECFDF5)
-            : (isDeclined ? const Color(0xFFFEF2F2) : const Color(0xFFFEF3C7)));
+              ? const Color(0xFFECFDF5)
+              : (isDeclined
+                    ? const Color(0xFFFEF2F2)
+                    : const Color(0xFFFEF3C7)));
 
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
     final relatedOrder = orderProvider.orders.cast<OrderModel?>().firstWhere(
-          (o) =>
-              o?.id == claim.orderId ||
-              '#${o?.id}' == claim.orderId ||
-              '##${o?.id}' == claim.orderId ||
-              o?.id == claim.orderId.replaceAll('#', ''),
-          orElse: () => null,
-        );
+      (o) =>
+          o?.id == claim.orderId ||
+          '#${o?.id}' == claim.orderId ||
+          '##${o?.id}' == claim.orderId ||
+          o?.id == claim.orderId.replaceAll('#', ''),
+      orElse: () => null,
+    );
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -6006,7 +6716,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
+                  color: isDark
+                      ? const Color(0xFF334155)
+                      : const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -6014,14 +6726,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.grey.shade300 : const Color(0xFF475569),
+                    color: isDark
+                        ? Colors.grey.shade300
+                        : const Color(0xFF475569),
                   ),
                 ),
               ),
               const Spacer(),
               // Status Pill
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: statusBg,
                   borderRadius: BorderRadius.circular(8),
@@ -6034,18 +6751,24 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       isDone
                           ? Icons.check_circle_outline_rounded
                           : (isApproved
-                              ? Icons.check_circle_rounded
-                              : (isDeclined ? Icons.cancel_rounded : Icons.hourglass_top_rounded)),
+                                ? Icons.check_circle_rounded
+                                : (isDeclined
+                                      ? Icons.cancel_rounded
+                                      : Icons.hourglass_top_rounded)),
                       size: 13,
                       color: statusColor,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       isDone
-                          ? (isDeclined ? 'Declined & Closed' : 'Transaction Completed (Done)')
+                          ? (isDeclined
+                                ? 'Declined & Closed'
+                                : 'Transaction Completed (Done)')
                           : (isApproved
-                              ? 'Swap Approved (${claim.affectedGallons} Gallons)'
-                              : (isDeclined ? 'Claim Declined' : 'Pending Review')),
+                                ? 'Swap Approved (${claim.affectedGallons} Gallons)'
+                                : (isDeclined
+                                      ? 'Claim Declined'
+                                      : 'Pending Review')),
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
@@ -6058,7 +6781,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
               const SizedBox(width: 10),
               Text(
                 claim.createdAtFormatted,
-                style: TextStyle(fontSize: 11, color: isDark ? Colors.grey.shade500 : Colors.grey.shade400),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
+                ),
               ),
             ],
           ),
@@ -6081,8 +6807,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           radius: 14,
                           backgroundColor: const Color(0xFFE0E7FF),
                           child: Text(
-                            claim.customerName.isNotEmpty ? claim.customerName[0].toUpperCase() : 'C',
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF3730A3)),
+                            claim.customerName.isNotEmpty
+                                ? claim.customerName[0].toUpperCase()
+                                : 'C',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF3730A3),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -6091,28 +6823,47 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white : const Color(0xFF0F172A),
+                            color: isDark
+                                ? Colors.white
+                                : const Color(0xFF0F172A),
                           ),
                         ),
                         if (claim.customerPhone.isNotEmpty) ...[
                           const SizedBox(width: 6),
                           Text(
                             '• ${claim.customerPhone}',
-                            style: TextStyle(fontSize: 12, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.shade600,
+                            ),
                           ),
                         ],
                       ],
                     ),
-                    if (relatedOrder?.deliveryAddress != null && relatedOrder!.deliveryAddress.isNotEmpty) ...[
+                    if (relatedOrder?.deliveryAddress != null &&
+                        relatedOrder!.deliveryAddress.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(Icons.location_on_outlined, size: 13, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                          Icon(
+                            Icons.location_on_outlined,
+                            size: 13,
+                            color: isDark
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade600,
+                          ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               relatedOrder.deliveryAddress,
-                              style: TextStyle(fontSize: 11.5, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: isDark
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade600,
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -6128,7 +6879,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       runSpacing: 6,
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFEF2F2),
                             borderRadius: BorderRadius.circular(6),
@@ -6137,7 +6891,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.error_outline_rounded, size: 13, color: Color(0xFFDC2626)),
+                              const Icon(
+                                Icons.error_outline_rounded,
+                                size: 13,
+                                color: Color(0xFFDC2626),
+                              ),
                               const SizedBox(width: 4),
                               Text(
                                 claim.issueType,
@@ -6151,7 +6909,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFEFF6FF),
                             borderRadius: BorderRadius.circular(6),
@@ -6160,7 +6921,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.water_drop_rounded, size: 13, color: Color(0xFF1D4ED8)),
+                              const Icon(
+                                Icons.water_drop_rounded,
+                                size: 13,
+                                color: Color(0xFF1D4ED8),
+                              ),
                               const SizedBox(width: 4),
                               Text(
                                 '${claim.affectedGallons} Gallon(s) Affected',
@@ -6182,7 +6947,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                          color: isDark
+                              ? const Color(0xFF0F172A)
+                              : const Color(0xFFF8FAFC),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: borderColor),
                         ),
@@ -6191,30 +6958,41 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           style: TextStyle(
                             fontSize: 12,
                             fontStyle: FontStyle.italic,
-                            color: isDark ? Colors.grey.shade300 : const Color(0xFF334155),
+                            color: isDark
+                                ? Colors.grey.shade300
+                                : const Color(0xFF334155),
                           ),
                         ),
                       ),
                     ],
 
-                    if (claim.adminNotes != null && claim.adminNotes!.isNotEmpty) ...[
+                    if (claim.adminNotes != null &&
+                        claim.adminNotes!.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: isApproved ? const Color(0xFFECFDF5) : const Color(0xFFFEF2F2),
+                          color: isApproved
+                              ? const Color(0xFFECFDF5)
+                              : const Color(0xFFFEF2F2),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: isApproved ? const Color(0xFF6EE7B7) : const Color(0xFFFCA5A5),
+                            color: isApproved
+                                ? const Color(0xFF6EE7B7)
+                                : const Color(0xFFFCA5A5),
                           ),
                         ),
                         child: Row(
                           children: [
                             Icon(
-                              isApproved ? Icons.verified_user_rounded : Icons.info_outline_rounded,
+                              isApproved
+                                  ? Icons.verified_user_rounded
+                                  : Icons.info_outline_rounded,
                               size: 14,
-                              color: isApproved ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                              color: isApproved
+                                  ? const Color(0xFF059669)
+                                  : const Color(0xFFDC2626),
                             ),
                             const SizedBox(width: 6),
                             Expanded(
@@ -6223,7 +7001,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 style: TextStyle(
                                   fontSize: 11.5,
                                   fontWeight: FontWeight.w600,
-                                  color: isApproved ? const Color(0xFF065F46) : const Color(0xFF991B1B),
+                                  color: isApproved
+                                      ? const Color(0xFF065F46)
+                                      : const Color(0xFF991B1B),
                                 ),
                               ),
                             ),
@@ -6248,11 +7028,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                        color: isDark
+                            ? Colors.grey.shade400
+                            : Colors.grey.shade600,
                       ),
                     ),
                     const SizedBox(height: 6),
-                    _buildEvidenceThumbnail(claim.photoUrl ?? claim.photoBase64, context, claim),
+                    _buildEvidenceThumbnail(
+                      claim.photoUrl ?? claim.photoBase64,
+                      context,
+                      claim,
+                    ),
                   ],
                 ),
               ),
@@ -6269,12 +7055,24 @@ class _AdminDashboardState extends State<AdminDashboard> {
               children: [
                 OutlinedButton.icon(
                   onPressed: () => _showDeclineClaimDialog(context, claim),
-                  icon: const Icon(Icons.close_rounded, size: 14, color: Color(0xFFDC2626)),
-                  label: const Text('Decline Claim', style: TextStyle(color: Color(0xFFDC2626), fontSize: 12)),
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    size: 14,
+                    color: Color(0xFFDC2626),
+                  ),
+                  label: const Text(
+                    'Decline Claim',
+                    style: TextStyle(color: Color(0xFFDC2626), fontSize: 12),
+                  ),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Color(0xFFF87171)),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -6292,15 +7090,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       );
                     }
                   },
-                  icon: const Icon(Icons.check_rounded, size: 14, color: Colors.white),
+                  icon: const Icon(
+                    Icons.check_rounded,
+                    size: 14,
+                    color: Colors.white,
+                  ),
                   label: Text(
                     'Accept & Issue Swap (${claim.affectedGallons} Gallons)',
-                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF059669),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
               ],
@@ -6314,7 +7125,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
               children: [
                 ElevatedButton.icon(
                   onPressed: () async {
-                    await DeliveryIssueService.instance.completeTransaction(claim.id);
+                    await DeliveryIssueService.instance.completeTransaction(
+                      claim.id,
+                    );
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
@@ -6326,15 +7139,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       );
                     }
                   },
-                  icon: const Icon(Icons.check_circle_outline_rounded, size: 14, color: Colors.white),
+                  icon: const Icon(
+                    Icons.check_circle_outline_rounded,
+                    size: 14,
+                    color: Colors.white,
+                  ),
                   label: const Text(
                     'Complete Transaction & Dismiss',
-                    style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF059669),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
               ],
@@ -6344,17 +7170,31 @@ class _AdminDashboardState extends State<AdminDashboard> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
+                color: isDark
+                    ? const Color(0xFF334155)
+                    : const Color(0xFFF1F5F9),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.check_circle_outline, size: 14, color: isDark ? Colors.grey.shade400 : const Color(0xFF64748B)),
+                  Icon(
+                    Icons.check_circle_outline,
+                    size: 14,
+                    color: isDark
+                        ? Colors.grey.shade400
+                        : const Color(0xFF64748B),
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     'Transaction Completed & Closed',
-                    style: TextStyle(fontSize: 11, color: isDark ? Colors.grey.shade400 : const Color(0xFF64748B), fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark
+                          ? Colors.grey.shade400
+                          : const Color(0xFF64748B),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),
@@ -6365,7 +7205,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  Widget _buildEvidenceThumbnail(String? photoUrl, BuildContext context, DeliveryIssueModel issue) {
+  Widget _buildEvidenceThumbnail(
+    String? photoUrl,
+    BuildContext context,
+    DeliveryIssueModel issue,
+  ) {
     final hasPhoto = photoUrl != null && photoUrl.trim().isNotEmpty;
 
     return InkWell(
@@ -6389,9 +7233,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
               const Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.image_not_supported_outlined, size: 28, color: Color(0xFF94A3B8)),
+                  Icon(
+                    Icons.image_not_supported_outlined,
+                    size: 28,
+                    color: Color(0xFF94A3B8),
+                  ),
                   SizedBox(height: 4),
-                  Text('No Photo', style: TextStyle(fontSize: 10, color: Color(0xFF94A3B8))),
+                  Text(
+                    'No Photo',
+                    style: TextStyle(fontSize: 10, color: Color(0xFF94A3B8)),
+                  ),
                 ],
               ),
             // Zoom Overlay Icon
@@ -6404,7 +7255,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   color: Colors.black.withValues(alpha: 0.6),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.zoom_in_rounded, size: 14, color: Colors.white),
+                child: const Icon(
+                  Icons.zoom_in_rounded,
+                  size: 14,
+                  color: Colors.white,
+                ),
               ),
             ),
           ],
@@ -6417,25 +7272,30 @@ class _AdminDashboardState extends State<AdminDashboard> {
     if (photoUrl.startsWith('data:image')) {
       try {
         final commaIdx = photoUrl.indexOf(',');
-        final base64Str = commaIdx != -1 ? photoUrl.substring(commaIdx + 1) : photoUrl;
+        final base64Str = commaIdx != -1
+            ? photoUrl.substring(commaIdx + 1)
+            : photoUrl;
         final bytes = base64Decode(base64Str);
         return Image.memory(
           bytes,
           fit: BoxFit.cover,
           width: double.infinity,
           height: double.infinity,
-          errorBuilder: (_, _, _) => const Icon(Icons.broken_image_rounded, color: Colors.grey),
+          errorBuilder: (_, _, _) =>
+              const Icon(Icons.broken_image_rounded, color: Colors.grey),
         );
       } catch (_) {
         return const Icon(Icons.broken_image_rounded, color: Colors.grey);
       }
-    } else if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
+    } else if (photoUrl.startsWith('http://') ||
+        photoUrl.startsWith('https://')) {
       return Image.network(
         photoUrl,
         fit: BoxFit.cover,
         width: double.infinity,
         height: double.infinity,
-        errorBuilder: (_, _, _) => const Icon(Icons.broken_image_rounded, color: Colors.grey),
+        errorBuilder: (_, _, _) =>
+            const Icon(Icons.broken_image_rounded, color: Colors.grey),
       );
     } else {
       // Mock / fallback preview
@@ -6447,14 +7307,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
           children: [
             Icon(Icons.water_drop_rounded, size: 28, color: Color(0xFF0284C7)),
             SizedBox(height: 2),
-            Text('Evidence Attached', textAlign: TextAlign.center, style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF0369A1))),
+            Text(
+              'Evidence Attached',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0369A1),
+              ),
+            ),
           ],
         ),
       );
     }
   }
 
-  void _showInspectEvidenceDialog(BuildContext context, DeliveryIssueModel issue) {
+  void _showInspectEvidenceDialog(
+    BuildContext context,
+    DeliveryIssueModel issue,
+  ) {
     final photo = issue.photoUrl ?? issue.photoBase64;
     showDialog(
       context: context,
@@ -6464,12 +7335,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
         contentPadding: const EdgeInsets.symmetric(horizontal: 20),
         title: Row(
           children: [
-            const Icon(Icons.photo_library_rounded, color: AppTheme.primaryColor),
+            const Icon(
+              Icons.photo_library_rounded,
+              color: AppTheme.primaryColor,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 'Defect Evidence - Claim #${issue.id}',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             IconButton(
@@ -6499,9 +7376,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     : const Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.image_not_supported_rounded, size: 48, color: Colors.white54),
+                          Icon(
+                            Icons.image_not_supported_rounded,
+                            size: 48,
+                            color: Colors.white54,
+                          ),
                           SizedBox(height: 8),
-                          Text('No photo was uploaded with this claim.', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                          Text(
+                            'No photo was uploaded with this claim.',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 13,
+                            ),
+                          ),
                         ],
                       ),
               ),
@@ -6521,27 +7408,55 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Order ID: #${issue.orderId}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        Text(
+                          'Order ID: #${issue.orderId}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFEF2F2),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             '⚠️ ${issue.affectedGallons} Gallon(s) Affected',
-                            style: const TextStyle(color: Color(0xFFDC2626), fontWeight: FontWeight.bold, fontSize: 11.5),
+                            style: const TextStyle(
+                              color: Color(0xFFDC2626),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11.5,
+                            ),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 6),
-                    Text('Customer: ${issue.customerName} (${issue.customerPhone})', style: const TextStyle(fontSize: 12)),
+                    Text(
+                      'Customer: ${issue.customerName} (${issue.customerPhone})',
+                      style: const TextStyle(fontSize: 12),
+                    ),
                     const SizedBox(height: 2),
-                    Text('Issue Type: ${issue.issueType}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                    Text(
+                      'Issue Type: ${issue.issueType}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     if (issue.description.isNotEmpty) ...[
                       const SizedBox(height: 4),
-                      Text('Customer Note: "${issue.description}"', style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
+                      Text(
+                        'Customer Note: "${issue.description}"',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
                     ],
                   ],
                 ),
@@ -6564,7 +7479,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: Color(0xFFEF4444)),
               ),
-              child: const Text('Decline Claim', style: TextStyle(color: Color(0xFFEF4444))),
+              child: const Text(
+                'Decline Claim',
+                style: TextStyle(color: Color(0xFFEF4444)),
+              ),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -6573,34 +7491,53 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('✓ Swap claim approved for ${issue.customerName} (${issue.affectedGallons} Gallons)!'),
+                      content: Text(
+                        '✓ Swap claim approved for ${issue.customerName} (${issue.affectedGallons} Gallons)!',
+                      ),
                       backgroundColor: const Color(0xFF059669),
                     ),
                   );
                 }
               },
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF059669),
+              ),
               child: Text(
                 'Accept Swap (${issue.affectedGallons} Gallons)',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ] else if (issue.isApproved && !issue.isDone) ...[
             ElevatedButton(
               onPressed: () async {
                 Navigator.pop(ctx);
-                await DeliveryIssueService.instance.completeTransaction(issue.id);
+                await DeliveryIssueService.instance.completeTransaction(
+                  issue.id,
+                );
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('✓ Transaction for Claim #${issue.id} completed. Removed from active queue.'),
+                      content: Text(
+                        '✓ Transaction for Claim #${issue.id} completed. Removed from active queue.',
+                      ),
                       backgroundColor: const Color(0xFF059669),
                     ),
                   );
                 }
               },
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669)),
-              child: const Text('Complete Transaction', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF059669),
+              ),
+              child: const Text(
+                'Complete Transaction',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         ],
@@ -6623,7 +7560,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) {
           return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             title: Row(
               children: [
                 const Icon(Icons.cancel_outlined, color: Color(0xFFDC2626)),
@@ -6648,7 +7587,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     children: quickReasons.map((r) {
                       final isSelected = reasonController.text == r;
                       return ChoiceChip(
-                        label: Text(r, style: TextStyle(fontSize: 11, color: isSelected ? Colors.white : Colors.black87)),
+                        label: Text(
+                          r,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isSelected ? Colors.white : Colors.black87,
+                          ),
+                        ),
                         selected: isSelected,
                         selectedColor: const Color(0xFFDC2626),
                         onSelected: (_) {
@@ -6667,7 +7612,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     decoration: InputDecoration(
                       hintText: 'Enter reason for customer...',
                       hintStyle: const TextStyle(fontSize: 12),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       contentPadding: const EdgeInsets.all(10),
                     ),
                   ),
@@ -6685,7 +7632,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       ? reasonController.text.trim()
                       : 'Claim could not be verified.';
                   Navigator.pop(ctx);
-                  await DeliveryIssueService.instance.declineIssue(issue.id, reason);
+                  await DeliveryIssueService.instance.declineIssue(
+                    issue.id,
+                    reason,
+                  );
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -6695,8 +7645,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     );
                   }
                 },
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
-                child: const Text('Confirm Decline', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFDC2626),
+                ),
+                child: const Text(
+                  'Confirm Decline',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           );
@@ -6849,8 +7807,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryColor,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                       elevation: 1,
                     ),
                   ),
@@ -7096,329 +8059,346 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         itemCount: filteredDeliveries.length,
                         separatorBuilder: (context, index) =>
                             Divider(color: borderColor, height: 16),
-                    itemBuilder: (context, index) {
-                      final o = filteredDeliveries[index];
-                      final isSelected = _selectedDeliveryOrder?.id == o.id;
+                        itemBuilder: (context, index) {
+                          final o = filteredDeliveries[index];
+                          final isSelected = _selectedDeliveryOrder?.id == o.id;
 
-                      Color statusColor = o.orderStatus.color;
-                      IconData statusIcon = Icons.info_outline;
-                      if (o.orderStatus == OrderStatus.pending) {
-                        statusIcon = Icons.hourglass_empty_rounded;
-                      } else if (o.orderStatus == OrderStatus.confirmed) {
-                        statusIcon = Icons.assignment_turned_in_rounded;
-                      } else if (o.orderStatus == OrderStatus.assigned) {
-                        statusIcon = Icons.assignment_ind_rounded;
-                      } else if (o.orderStatus == OrderStatus.onDelivery) {
-                        statusIcon = Icons.local_shipping_rounded;
-                      } else if (o.orderStatus == OrderStatus.completed) {
-                        statusIcon = Icons.check_circle_rounded;
-                      }
+                          Color statusColor = o.orderStatus.color;
+                          IconData statusIcon = Icons.info_outline;
+                          if (o.orderStatus == OrderStatus.pending) {
+                            statusIcon = Icons.hourglass_empty_rounded;
+                          } else if (o.orderStatus == OrderStatus.confirmed) {
+                            statusIcon = Icons.assignment_turned_in_rounded;
+                          } else if (o.orderStatus == OrderStatus.assigned) {
+                            statusIcon = Icons.assignment_ind_rounded;
+                          } else if (o.orderStatus == OrderStatus.onDelivery) {
+                            statusIcon = Icons.local_shipping_rounded;
+                          } else if (o.orderStatus == OrderStatus.completed) {
+                            statusIcon = Icons.check_circle_rounded;
+                          }
 
-                      final bool isPending =
-                          o.orderStatus == OrderStatus.pending;
-                      final bool canAssign =
-                          o.orderStatus == OrderStatus.pending ||
-                          o.orderStatus == OrderStatus.confirmed ||
-                          o.orderStatus == OrderStatus.assigned;
-                      final bool canComplete =
-                          o.orderStatus == OrderStatus.onDelivery ||
-                          o.orderStatus == OrderStatus.assigned;
+                          final bool isPending =
+                              o.orderStatus == OrderStatus.pending;
+                          final bool canAssign =
+                              o.orderStatus == OrderStatus.pending ||
+                              o.orderStatus == OrderStatus.confirmed ||
+                              o.orderStatus == OrderStatus.assigned;
+                          final bool canComplete =
+                              o.orderStatus == OrderStatus.onDelivery ||
+                              o.orderStatus == OrderStatus.assigned;
 
-                      return Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? AppTheme.primaryColor.withValues(alpha: 0.08)
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
-                          border: isSelected
-                              ? Border.all(
-                                  color: AppTheme.primaryColor.withValues(
-                                    alpha: 0.5,
-                                  ),
-                                  width: 1.5,
-                                )
-                              : null,
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            // Status Icon
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: statusColor.withValues(alpha: 0.12),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                statusIcon,
-                                color: statusColor,
-                                size: 22,
-                              ),
+                          return Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? AppTheme.primaryColor.withValues(
+                                      alpha: 0.08,
+                                    )
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(12),
+                              border: isSelected
+                                  ? Border.all(
+                                      color: AppTheme.primaryColor.withValues(
+                                        alpha: 0.5,
+                                      ),
+                                      width: 1.5,
+                                    )
+                                  : null,
                             ),
-                            const SizedBox(width: 14),
-
-                            // Main Details
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Text(
-                                        o.id,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                          color: valueTextColor,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: statusColor.withValues(
-                                            alpha: 0.15,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          o.orderStatus.displayName,
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                            color: statusColor,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        '• ${o.waterType} (${o.quantity} jugs)',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: titleTextColor,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.location_on_outlined,
-                                        size: 14,
-                                        color: Colors.grey,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Expanded(
-                                        child: Text(
-                                          '${_resolveCustomerDisplayName(o)} • ${o.deliveryAddress}',
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: valueTextColor,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.two_wheeler_rounded,
-                                        size: 14,
-                                        color: AppTheme.primaryColor,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        'Rider: ${o.requiresDriver ? (o.driverName ?? "Unassigned") : "Pickup / Walk-in"}',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: o.driverName != null
-                                              ? AppTheme.primaryColor
-                                              : Colors.orange,
-                                          fontWeight: o.driverName != null
-                                              ? FontWeight.bold
-                                              : FontWeight.normal,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Text(
-                                        'Distance: ${o.distance}',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: titleTextColor,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-
-                            // Actions
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                // Focus on Map Button
-                                OutlinedButton.icon(
-                                  onPressed: () {
-                                    setState(() {
-                                      _selectedDeliveryOrder = o;
-                                    });
-                                  },
-                                  icon: const Icon(
-                                    Icons.pin_drop_rounded,
-                                    size: 14,
+                                // Status Icon
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: statusColor.withValues(alpha: 0.12),
+                                    shape: BoxShape.circle,
                                   ),
-                                  label: Text(
-                                    isSelected ? 'Selected' : 'Track',
-                                    style: const TextStyle(fontSize: 11),
-                                  ),
-                                  style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 8,
-                                    ),
-                                    side: BorderSide(
-                                      color: isSelected
-                                          ? AppTheme.primaryColor
-                                          : borderColor,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
+                                  child: Icon(
+                                    statusIcon,
+                                    color: statusColor,
+                                    size: 22,
                                   ),
                                 ),
-                                const SizedBox(width: 8),
+                                const SizedBox(width: 14),
 
-                                // Dispatch / Complete Button
-                                if (isPending)
-                                  ElevatedButton(
-                                    onPressed: () async {
-                                      await orderProvider.confirmOrder(o.id);
-                                      if (context.mounted) {
-                                        Helpers.showSnackBar(
-                                          context,
-                                          'Order ${o.id} confirmed!',
-                                        );
-                                      }
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppTheme.primaryColor,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 8,
+                                // Main Details
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Text(
+                                            o.id,
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                              color: valueTextColor,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: statusColor.withValues(
+                                                alpha: 0.15,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                            ),
+                                            child: Text(
+                                              o.orderStatus.displayName,
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: statusColor,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            '• ${o.waterType} (${o.quantity} jugs)',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: titleTextColor,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.location_on_outlined,
+                                            size: 14,
+                                            color: Colors.grey,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Expanded(
+                                            child: Text(
+                                              '${_resolveCustomerDisplayName(o)} • ${o.deliveryAddress}',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: valueTextColor,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ),
-                                    child: const Text(
-                                      'Confirm',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.white,
+                                      const SizedBox(height: 2),
+                                      Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.two_wheeler_rounded,
+                                            size: 14,
+                                            color: AppTheme.primaryColor,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'Rider: ${o.requiresDriver ? (o.driverName ?? "Unassigned") : "Pickup / Walk-in"}',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: o.driverName != null
+                                                  ? AppTheme.primaryColor
+                                                  : Colors.orange,
+                                              fontWeight: o.driverName != null
+                                                  ? FontWeight.bold
+                                                  : FontWeight.normal,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Text(
+                                            'Distance: ${o.distance}',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: titleTextColor,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ),
-                                  )
-                                else if (canAssign)
-                                  ElevatedButton.icon(
-                                    onPressed: () {
-                                      if (driversList.isEmpty) {
-                                        Helpers.showSnackBar(
-                                          context,
-                                          'No registered riders available to dispatch.',
-                                          isError: true,
-                                        );
-                                        return;
-                                      }
-                                      _showAssignDriverDialog(
-                                        o,
-                                        driversList,
-                                        isDark,
-                                      );
-                                    },
-                                    icon: const Icon(
-                                      Icons.person_add_alt_1_rounded,
-                                      size: 14,
-                                      color: Colors.white,
-                                    ),
-                                    label: Text(
-                                      o.driverName != null
-                                          ? 'Reassign'
-                                          : 'Assign Rider',
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF8B5CF6),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 8,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                  )
-                                else if (canComplete)
-                                  ElevatedButton.icon(
-                                    onPressed: () async {
-                                      await orderProvider.updateOrderStatus(
-                                        orderId: o.id,
-                                        newStatus: OrderStatus.completed,
-                                      );
-                                      if (context.mounted) {
-                                        Helpers.showSnackBar(
-                                          context,
-                                          'Order ${o.id} marked as Delivered!',
-                                        );
-                                      }
-                                    },
-                                    icon: const Icon(
-                                      Icons.check_rounded,
-                                      size: 14,
-                                      color: Colors.white,
-                                    ),
-                                    label: const Text(
-                                      'Delivered',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF10B981),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 8,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
+                                    ],
                                   ),
+                                ),
+                                const SizedBox(width: 12),
+
+                                // Actions
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    // Focus on Map Button
+                                    OutlinedButton.icon(
+                                      onPressed: () {
+                                        setState(() {
+                                          _selectedDeliveryOrder = o;
+                                        });
+                                      },
+                                      icon: const Icon(
+                                        Icons.pin_drop_rounded,
+                                        size: 14,
+                                      ),
+                                      label: Text(
+                                        isSelected ? 'Selected' : 'Track',
+                                        style: const TextStyle(fontSize: 11),
+                                      ),
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 8,
+                                        ),
+                                        side: BorderSide(
+                                          color: isSelected
+                                              ? AppTheme.primaryColor
+                                              : borderColor,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+
+                                    // Dispatch / Complete Button
+                                    if (isPending)
+                                      ElevatedButton(
+                                        onPressed: () async {
+                                          await orderProvider.confirmOrder(
+                                            o.id,
+                                          );
+                                          if (context.mounted) {
+                                            Helpers.showSnackBar(
+                                              context,
+                                              'Order ${o.id} confirmed!',
+                                            );
+                                          }
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor:
+                                              AppTheme.primaryColor,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 8,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          'Confirm',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      )
+                                    else if (canAssign)
+                                      ElevatedButton.icon(
+                                        onPressed: () {
+                                          if (driversList.isEmpty) {
+                                            Helpers.showSnackBar(
+                                              context,
+                                              'No registered riders available to dispatch.',
+                                              isError: true,
+                                            );
+                                            return;
+                                          }
+                                          _showAssignDriverDialog(
+                                            o,
+                                            driversList,
+                                            isDark,
+                                          );
+                                        },
+                                        icon: const Icon(
+                                          Icons.person_add_alt_1_rounded,
+                                          size: 14,
+                                          color: Colors.white,
+                                        ),
+                                        label: Text(
+                                          o.driverName != null
+                                              ? 'Reassign'
+                                              : 'Assign Rider',
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(
+                                            0xFF8B5CF6,
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 8,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                    else if (canComplete)
+                                      ElevatedButton.icon(
+                                        onPressed: () async {
+                                          await orderProvider.updateOrderStatus(
+                                            orderId: o.id,
+                                            newStatus: OrderStatus.completed,
+                                          );
+                                          if (context.mounted) {
+                                            Helpers.showSnackBar(
+                                              context,
+                                              'Order ${o.id} marked as Delivered!',
+                                            );
+                                          }
+                                        },
+                                        icon: const Icon(
+                                          Icons.check_rounded,
+                                          size: 14,
+                                          color: Colors.white,
+                                        ),
+                                        label: const Text(
+                                          'Delivered',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(
+                                            0xFF10B981,
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 8,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
                               ],
                             ),
-                          ],
-                        ),
-                      );
-                    },
+                          );
+                        },
+                      ),
+                    ),
                   ),
-                ),
-              ),
               ],
             ),
           ),
@@ -7647,7 +8627,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.people_outline, size: 54, color: Colors.grey),
+                  const Icon(
+                    Icons.people_outline,
+                    size: 54,
+                    color: Colors.grey,
+                  ),
                   const SizedBox(height: 12),
                   const Text(
                     'No registered user accounts found.\nYou can create customer or driver accounts directly without waiting for sign-ups.',
@@ -7681,12 +8665,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
     List<UserModel> displayUsers,
     List<UserModel> allUsersSource,
   ) {
-    final adminCount =
-        allUsersSource.where((u) => u.role == UserRole.admin).length;
-    final driverCount =
-        allUsersSource.where((u) => u.role == UserRole.driver).length;
-    final customerCount =
-        allUsersSource.where((u) => u.role == UserRole.customer).length;
+    final adminCount = allUsersSource
+        .where((u) => u.role == UserRole.admin)
+        .length;
+    final driverCount = allUsersSource
+        .where((u) => u.role == UserRole.driver)
+        .length;
+    final customerCount = allUsersSource
+        .where((u) => u.role == UserRole.customer)
+        .length;
 
     return Padding(
       padding: const EdgeInsets.all(24.0),
@@ -7733,12 +8720,21 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 icon: const Icon(Icons.person_add_rounded, size: 16),
                 label: const Text(
                   'Create Account',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: Colors.white,
+                  ),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               ),
             ],
@@ -7833,20 +8829,23 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         case UserRole.admin:
                           roleLabel = 'Admin';
                           roleColor = const Color(0xFF7C3AED); // Purple
-                          roleBgColor =
-                              const Color(0xFF7C3AED).withValues(alpha: 0.10);
+                          roleBgColor = const Color(
+                            0xFF7C3AED,
+                          ).withValues(alpha: 0.10);
                           break;
                         case UserRole.driver:
                           roleLabel = 'Driver';
                           roleColor = const Color(0xFFEA580C); // Orange
-                          roleBgColor =
-                              const Color(0xFFEA580C).withValues(alpha: 0.10);
+                          roleBgColor = const Color(
+                            0xFFEA580C,
+                          ).withValues(alpha: 0.10);
                           break;
                         case UserRole.customer:
                           roleLabel = 'Customers';
                           roleColor = const Color(0xFF10B981); // Emerald Green
-                          roleBgColor =
-                              const Color(0xFF10B981).withValues(alpha: 0.10);
+                          roleBgColor = const Color(
+                            0xFF10B981,
+                          ).withValues(alpha: 0.10);
                           break;
                       }
 
@@ -7867,8 +8866,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             vertical: 6,
                           ),
                           leading: CircleAvatar(
-                            backgroundColor:
-                                roleColor.withValues(alpha: 0.12),
+                            backgroundColor: roleColor.withValues(alpha: 0.12),
                             child: Text(
                               initial,
                               style: TextStyle(
@@ -7879,12 +8877,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           ),
                           title: Text(
                             cust.name,
-                            style:
-                                const TextStyle(fontWeight: FontWeight.bold),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
-                          subtitle: Text(
-                            '${cust.email} • Role: $roleLabel',
-                          ),
+                          subtitle: Text('${cust.email} • Role: $roleLabel'),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -7909,7 +8904,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                       color: roleBgColor,
                                       borderRadius: BorderRadius.circular(5),
                                       border: Border.all(
-                                        color: roleColor.withValues(alpha: 0.35),
+                                        color: roleColor.withValues(
+                                          alpha: 0.35,
+                                        ),
                                         width: 1,
                                       ),
                                     ),
@@ -7945,16 +8942,29 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                   message: 'Admin account (Protected)',
                                   child: Padding(
                                     padding: EdgeInsets.all(8.0),
-                                    child: Icon(Icons.lock_rounded, size: 16, color: Color(0xFF94A3B8)),
+                                    child: Icon(
+                                      Icons.lock_rounded,
+                                      size: 16,
+                                      color: Color(0xFF94A3B8),
+                                    ),
                                   ),
                                 )
                               else
                                 PopupMenuButton<UserRole>(
-                                  icon: const Icon(Icons.more_vert_rounded, size: 20),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                  onSelected: (newRole) => _handleUpdateRole(cust, newRole),
+                                  icon: const Icon(
+                                    Icons.more_vert_rounded,
+                                    size: 20,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  onSelected: (newRole) =>
+                                      _handleUpdateRole(cust, newRole),
                                   itemBuilder: (context) {
-                                    final assignableRoles = [UserRole.customer, UserRole.driver];
+                                    final assignableRoles = [
+                                      UserRole.customer,
+                                      UserRole.driver,
+                                    ];
                                     return assignableRoles.map((role) {
                                       final isCurrent = cust.role == role;
                                       return PopupMenuItem<UserRole>(
@@ -7962,19 +8972,31 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                         enabled: !isCurrent,
                                         child: Row(
                                           children: [
-                                            Icon(_getRoleIcon(role), size: 16, color: _getRoleColor(role)),
+                                            Icon(
+                                              _getRoleIcon(role),
+                                              size: 16,
+                                              color: _getRoleColor(role),
+                                            ),
                                             const SizedBox(width: 8),
                                             Text(
                                               'Set to ${Helpers.capitalize(role.name)}',
                                               style: TextStyle(
                                                 fontSize: 13,
-                                                fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
-                                                color: isCurrent ? Colors.grey : null,
+                                                fontWeight: isCurrent
+                                                    ? FontWeight.bold
+                                                    : FontWeight.w500,
+                                                color: isCurrent
+                                                    ? Colors.grey
+                                                    : null,
                                               ),
                                             ),
                                             if (isCurrent) ...[
                                               const SizedBox(width: 6),
-                                              const Icon(Icons.check_rounded, size: 14, color: Colors.green),
+                                              const Icon(
+                                                Icons.check_rounded,
+                                                size: 14,
+                                                color: Colors.green,
+                                              ),
                                             ],
                                           ],
                                         ),
@@ -8018,8 +9040,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color:
-              isSelected ? color.withValues(alpha: 0.14) : Colors.transparent,
+          color: isSelected
+              ? color.withValues(alpha: 0.14)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected ? color : Colors.grey.withValues(alpha: 0.35),
@@ -8095,10 +9118,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
         : Icons.water_drop_rounded;
     bool isRefill = isEditing
         ? ((itemToEdit['is_refill'] ??
-            (itemToEdit['category'] == 'water' &&
-                (itemToEdit['unit']?.toString().toLowerCase() == 'gallons' ||
-                    (itemToEdit['name']?.toString().toLowerCase().contains('refill') ?? false) ||
-                    (itemToEdit['name']?.toString().toLowerCase().contains('19l') ?? false)))) as bool)
+                  (itemToEdit['category'] == 'water' &&
+                      (itemToEdit['unit']?.toString().toLowerCase() ==
+                              'gallons' ||
+                          (itemToEdit['name']
+                                  ?.toString()
+                                  .toLowerCase()
+                                  .contains('refill') ??
+                              false) ||
+                          (itemToEdit['name']
+                                  ?.toString()
+                                  .toLowerCase()
+                                  .contains('19l') ??
+                              false))))
+              as bool)
         : (selectedCategory == 'water' && selectedUnit == 'Gallons');
 
     showDialog(
@@ -8155,7 +9188,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         items: const [
                           DropdownMenuItem(
                             value: 'water',
-                            child: Text('💧 Water Product / Refill (Customer App)'),
+                            child: Text(
+                              '💧 Water Product / Refill (Customer App)',
+                            ),
                           ),
                           DropdownMenuItem(
                             value: 'container',
@@ -8203,7 +9238,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           border: Border.all(
                             color: isRefill
                                 ? const Color(0xFF0284C7).withValues(alpha: 0.3)
-                                : const Color(0xFF10B981).withValues(alpha: 0.3),
+                                : const Color(
+                                    0xFF10B981,
+                                  ).withValues(alpha: 0.3),
                           ),
                         ),
                         child: Column(
@@ -8228,18 +9265,26 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                     },
                                     borderRadius: BorderRadius.circular(8),
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 8,
+                                        horizontal: 8,
+                                      ),
                                       decoration: BoxDecoration(
-                                        color: isRefill ? const Color(0xFF0284C7) : Colors.transparent,
+                                        color: isRefill
+                                            ? const Color(0xFF0284C7)
+                                            : Colors.transparent,
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
                                           Icon(
                                             Icons.water_drop_rounded,
                                             size: 16,
-                                            color: isRefill ? Colors.white : Colors.blueGrey,
+                                            color: isRefill
+                                                ? Colors.white
+                                                : Colors.blueGrey,
                                           ),
                                           const SizedBox(width: 6),
                                           Flexible(
@@ -8248,7 +9293,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                               style: TextStyle(
                                                 fontSize: 11.5,
                                                 fontWeight: FontWeight.bold,
-                                                color: isRefill ? Colors.white : Colors.blueGrey,
+                                                color: isRefill
+                                                    ? Colors.white
+                                                    : Colors.blueGrey,
                                               ),
                                               overflow: TextOverflow.ellipsis,
                                             ),
@@ -8268,18 +9315,26 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                     },
                                     borderRadius: BorderRadius.circular(8),
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 8,
+                                        horizontal: 8,
+                                      ),
                                       decoration: BoxDecoration(
-                                        color: !isRefill ? const Color(0xFF10B981) : Colors.transparent,
+                                        color: !isRefill
+                                            ? const Color(0xFF10B981)
+                                            : Colors.transparent,
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
                                           Icon(
                                             Icons.storefront_rounded,
                                             size: 16,
-                                            color: !isRefill ? Colors.white : Colors.blueGrey,
+                                            color: !isRefill
+                                                ? Colors.white
+                                                : Colors.blueGrey,
                                           ),
                                           const SizedBox(width: 6),
                                           Flexible(
@@ -8288,7 +9343,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                               style: TextStyle(
                                                 fontSize: 11.5,
                                                 fontWeight: FontWeight.bold,
-                                                color: !isRefill ? Colors.white : Colors.blueGrey,
+                                                color: !isRefill
+                                                    ? Colors.white
+                                                    : Colors.blueGrey,
                                               ),
                                               overflow: TextOverflow.ellipsis,
                                             ),
@@ -8307,7 +9364,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                   : '📦 Shows in Station Products & Items (Direct [ - ] [ + ] quantity purchase, e.g. 500ml Bottled Water, Jugs, Accessories).',
                               style: TextStyle(
                                 fontSize: 10.5,
-                                color: isDark ? Colors.white70 : const Color(0xFF475569),
+                                color: isDark
+                                    ? Colors.white70
+                                    : const Color(0xFF475569),
                               ),
                             ),
                           ],
@@ -8501,8 +9560,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     final name = nameController.text.trim();
                     final price = double.tryParse(priceController.text) ?? 0.0;
                     final stock = double.tryParse(stockController.text) ?? 0.0;
-                    final rawCap = double.tryParse(capacityController.text.trim());
-                    final capacity = (rawCap == null || rawCap < stock) ? stock : rawCap;
+                    final rawCap = double.tryParse(
+                      capacityController.text.trim(),
+                    );
+                    final capacity = (rawCap == null || rawCap < stock)
+                        ? stock
+                        : rawCap;
                     final desc = descController.text.trim();
 
                     if (name.isEmpty || price < 0 || stock < 0) {
@@ -8582,7 +9645,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final Color color = item['color'] as Color? ?? AppTheme.primaryColor;
 
     final stockController = TextEditingController(
-      text: currentStock == 0 ? '0' : currentStock.toStringAsFixed(currentStock % 1 == 0 ? 0 : 1),
+      text: currentStock == 0
+          ? '0'
+          : currentStock.toStringAsFixed(currentStock % 1 == 0 ? 0 : 1),
     );
     final capacityController = TextEditingController(
       text: currentCap == 0 ? '100' : currentCap.toStringAsFixed(0),
@@ -8618,14 +9683,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white : const Color(0xFF1E293B),
+                            color: isDark
+                                ? Colors.white
+                                : const Color(0xFF1E293B),
                           ),
                         ),
                         Text(
                           name,
                           style: TextStyle(
                             fontSize: 12,
-                            color: isDark ? Colors.white70 : Colors.grey.shade600,
+                            color: isDark
+                                ? Colors.white70
+                                : Colors.grey.shade600,
                           ),
                         ),
                       ],
@@ -8644,18 +9713,26 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       decoration: BoxDecoration(
                         color: Colors.blue.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+                        border: Border.all(
+                          color: Colors.blue.withValues(alpha: 0.2),
+                        ),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.info_outline_rounded, size: 18, color: Colors.blue),
+                          const Icon(
+                            Icons.info_outline_rounded,
+                            size: 18,
+                            color: Colors.blue,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               'Directly set your inventory count and max storage capacity. Replaces hardcoded defaults and persists permanently.',
                               style: TextStyle(
                                 fontSize: 11,
-                                color: isDark ? Colors.blue.shade200 : const Color(0xFF1E40AF),
+                                color: isDark
+                                    ? Colors.blue.shade200
+                                    : const Color(0xFF1E40AF),
                               ),
                             ),
                           ),
@@ -8665,30 +9742,38 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     const SizedBox(height: 16),
                     TextField(
                       controller: stockController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       autofocus: true,
                       decoration: InputDecoration(
                         labelText: 'Current Available Stock ($unit)',
                         hintText: 'Enter real available stock',
                         prefixIcon: const Icon(Icons.inventory_2_outlined),
-                        helperText: 'Recorded stock: ${currentStock.toStringAsFixed(0)} $unit',
+                        helperText:
+                            'Recorded stock: ${currentStock.toStringAsFixed(0)} $unit',
                       ),
                     ),
                     const SizedBox(height: 14),
                     TextField(
                       controller: capacityController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       decoration: const InputDecoration(
                         labelText: 'Max Storage Capacity',
                         hintText: 'e.g. 100, 200, 500',
                         prefixIcon: Icon(Icons.warehouse_rounded),
-                        helperText: 'Capacity automatically expands if stock exceeds it',
+                        helperText:
+                            'Capacity automatically expands if stock exceeds it',
                       ),
                     ),
                     const SizedBox(height: 14),
                     TextField(
                       controller: priceController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       decoration: const InputDecoration(
                         labelText: 'Unit Price (₱)',
                         prefixIcon: Icon(Icons.payments_outlined),
@@ -8704,17 +9789,32 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 ),
                 ElevatedButton.icon(
                   onPressed: () {
-                    final newStock = double.tryParse(stockController.text.trim());
-                    final newCap = double.tryParse(capacityController.text.trim());
-                    final newPrice = double.tryParse(priceController.text.trim());
+                    final newStock = double.tryParse(
+                      stockController.text.trim(),
+                    );
+                    final newCap = double.tryParse(
+                      capacityController.text.trim(),
+                    );
+                    final newPrice = double.tryParse(
+                      priceController.text.trim(),
+                    );
 
                     if (newStock == null || newStock < 0) {
-                      Helpers.showSnackBar(context, 'Please enter a valid stock amount.', isError: true);
+                      Helpers.showSnackBar(
+                        context,
+                        'Please enter a valid stock amount.',
+                        isError: true,
+                      );
                       return;
                     }
-                    final safeCap = (newCap == null || newCap < newStock) ? newStock : newCap;
+                    final safeCap = (newCap == null || newCap < newStock)
+                        ? newStock
+                        : newCap;
 
-                    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+                    final orderProvider = Provider.of<OrderProvider>(
+                      context,
+                      listen: false,
+                    );
                     orderProvider.setInventoryStockAndCapacity(
                       item['id'] as String,
                       stock: newStock,
@@ -8730,7 +9830,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   },
                   icon: const Icon(Icons.check_rounded, size: 16),
                   label: const Text('Save Stock & Capacity'),
-                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                  ),
                 ),
               ],
             );
@@ -8752,8 +9854,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
       final cap = (item['capacity'] as num).toDouble();
       final price = (item['price'] as num?)?.toDouble() ?? 0.0;
       controllers[id] = {
-        'stock': TextEditingController(text: stock == 0 ? '0' : stock.toStringAsFixed(stock % 1 == 0 ? 0 : 1)),
-        'capacity': TextEditingController(text: cap == 0 ? '100' : cap.toStringAsFixed(0)),
+        'stock': TextEditingController(
+          text: stock == 0
+              ? '0'
+              : stock.toStringAsFixed(stock % 1 == 0 ? 0 : 1),
+        ),
+        'capacity': TextEditingController(
+          text: cap == 0 ? '100' : cap.toStringAsFixed(0),
+        ),
         'price': TextEditingController(text: price.toStringAsFixed(2)),
       };
     }
@@ -8771,7 +9879,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   color: AppTheme.primaryColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.tune_rounded, color: AppTheme.primaryColor, size: 20),
+                child: const Icon(
+                  Icons.tune_rounded,
+                  color: AppTheme.primaryColor,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -8806,17 +9918,56 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: isDark ? Colors.white10 : Colors.grey.shade100,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Row(
                       children: [
-                        Expanded(flex: 3, child: Text('Item Name', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                        Expanded(flex: 2, child: Text('Stock', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                        Expanded(flex: 2, child: Text('Max Cap', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                        Expanded(flex: 2, child: Text('Price (₱)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                        Expanded(
+                          flex: 3,
+                          child: Text(
+                            'Item Name',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 2,
+                          child: Text(
+                            'Stock',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 2,
+                          child: Text(
+                            'Max Cap',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 2,
+                          child: Text(
+                            'Price (₱)',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -8836,8 +9987,22 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                                Text(unit, style: TextStyle(fontSize: 10, color: isDark ? Colors.white54 : Colors.grey)),
+                                Text(
+                                  name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                Text(
+                                  unit,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: isDark
+                                        ? Colors.white54
+                                        : Colors.grey,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -8846,10 +10011,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             flex: 2,
                             child: TextField(
                               controller: ctrls['stock'],
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
                               decoration: const InputDecoration(
                                 isDense: true,
-                                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 8,
+                                ),
                               ),
                             ),
                           ),
@@ -8858,10 +10029,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             flex: 2,
                             child: TextField(
                               controller: ctrls['capacity'],
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
                               decoration: const InputDecoration(
                                 isDense: true,
-                                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 8,
+                                ),
                               ),
                             ),
                           ),
@@ -8870,10 +10047,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             flex: 2,
                             child: TextField(
                               controller: ctrls['price'],
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
                               decoration: const InputDecoration(
                                 isDense: true,
-                                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 8,
+                                ),
                               ),
                             ),
                           ),
@@ -8897,8 +10080,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   final id = item['id'] as String;
                   final ctrls = controllers[id]!;
                   final s = double.tryParse(ctrls['stock']!.text.trim()) ?? 0.0;
-                  final c = double.tryParse(ctrls['capacity']!.text.trim()) ?? s;
-                  final p = double.tryParse(ctrls['price']!.text.trim()) ?? (item['price'] as num).toDouble();
+                  final c =
+                      double.tryParse(ctrls['capacity']!.text.trim()) ?? s;
+                  final p =
+                      double.tryParse(ctrls['price']!.text.trim()) ??
+                      (item['price'] as num).toDouble();
                   updatedList.add({
                     'id': id,
                     'stock': max(0.0, s),
@@ -8910,11 +10096,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 orderProvider.setAllInventoryLevels(updatedList);
 
                 Navigator.of(context).pop();
-                Helpers.showSnackBar(context, 'All inventory stocks updated and saved successfully!');
+                Helpers.showSnackBar(
+                  context,
+                  'All inventory stocks updated and saved successfully!',
+                );
               },
               icon: const Icon(Icons.check_rounded, size: 16),
               label: const Text('Save All Levels'),
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+              ),
             ),
           ],
         );
@@ -8976,15 +10167,24 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ),
                   const SizedBox(height: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.green.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                      border: Border.all(
+                        color: Colors.green.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.trending_up_rounded, size: 16, color: Colors.green),
+                        const Icon(
+                          Icons.trending_up_rounded,
+                          size: 16,
+                          color: Colors.green,
+                        ),
                         const SizedBox(width: 6),
                         Text(
                           'New Stock will be: ${projectedStock.toStringAsFixed(0)} $unit',
@@ -9150,7 +10350,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
       builder: (context) {
         return AlertDialog(
           backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Row(
             children: [
               Container(
@@ -9184,7 +10386,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF8FAFC),
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.05)
+                      : const Color(0xFFF8FAFC),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
                     color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
@@ -9195,7 +10399,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.person_rounded, size: 16, color: AppTheme.primaryColor),
+                        const Icon(
+                          Icons.person_rounded,
+                          size: 16,
+                          color: AppTheme.primaryColor,
+                        ),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
@@ -9203,7 +10411,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
-                              color: isDark ? Colors.white : const Color(0xFF1E293B),
+                              color: isDark
+                                  ? Colors.white
+                                  : const Color(0xFF1E293B),
                             ),
                           ),
                         ),
@@ -9212,23 +10422,34 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        const Icon(Icons.water_drop_rounded, size: 16, color: Colors.cyan),
+                        const Icon(
+                          Icons.water_drop_rounded,
+                          size: 16,
+                          color: Colors.cyan,
+                        ),
                         const SizedBox(width: 6),
                         Text(
                           '$gallonType • Borrowed: $borrowedQty unit(s)',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                            color: isDark
+                                ? Colors.white70
+                                : const Color(0xFF64748B),
                           ),
                         ),
                       ],
                     ),
-                    if (borrow['deliveryAddress'] != null && borrow['deliveryAddress'].toString().isNotEmpty) ...[
+                    if (borrow['deliveryAddress'] != null &&
+                        borrow['deliveryAddress'].toString().isNotEmpty) ...[
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          const Icon(Icons.location_on_rounded, size: 16, color: Colors.amber),
+                          const Icon(
+                            Icons.location_on_rounded,
+                            size: 16,
+                            color: Colors.amber,
+                          ),
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
@@ -9237,7 +10458,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 11,
-                                color: isDark ? Colors.white60 : Colors.grey.shade600,
+                                color: isDark
+                                    ? Colors.white60
+                                    : Colors.grey.shade600,
                               ),
                             ),
                           ),
@@ -9314,11 +10537,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
               child: const Text(
                 'Confirm & Return to Stock',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
@@ -9328,10 +10556,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   // Schedule Weekly Gallon Collection Dialog
-  void _showScheduleCollectionDialog(bool isDark, {Map<String, dynamic>? preselectedBorrow}) {
+  void _showScheduleCollectionDialog(
+    bool isDark, {
+    Map<String, dynamic>? preselectedBorrow,
+  }) {
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
-    final driversList = _allUsers.where((u) => u.role == UserRole.driver).toList();
-    final activeBorrows = orderProvider.customerBorrows.where((b) => b['isReturned'] == false).toList();
+    final driversList = _allUsers
+        .where((u) => u.role == UserRole.driver)
+        .toList();
+    final activeBorrows = orderProvider.customerBorrows
+        .where((b) => b['isReturned'] == false)
+        .toList();
 
     if (driversList.isEmpty) {
       Helpers.showSnackBar(
@@ -9355,8 +10590,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
     int totalSlimAcrossAll = 0;
     int totalRoundAcrossAll = 0;
     for (final b in activeBorrows) {
-      final s = b['gallonType']?.toString().toLowerCase().contains('slim') ?? false;
-      final r = b['gallonType']?.toString().toLowerCase().contains('round') ?? false;
+      final s =
+          b['gallonType']?.toString().toLowerCase().contains('slim') ?? false;
+      final r =
+          b['gallonType']?.toString().toLowerCase().contains('round') ?? false;
       final q = (b['quantity'] as num?)?.toInt() ?? 1;
       if (s) totalSlimAcrossAll += q;
       if (r) totalRoundAcrossAll += q;
@@ -9369,10 +10606,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
     UserModel? selectedDriver = driversList.first;
 
     final isPreSlim = preselectedBorrow != null
-        ? (preselectedBorrow['gallonType']?.toString().toLowerCase().contains('slim') ?? false)
+        ? (preselectedBorrow['gallonType']?.toString().toLowerCase().contains(
+                'slim',
+              ) ??
+              false)
         : false;
     final isPreRound = preselectedBorrow != null
-        ? (preselectedBorrow['gallonType']?.toString().toLowerCase().contains('round') ?? false)
+        ? (preselectedBorrow['gallonType']?.toString().toLowerCase().contains(
+                'round',
+              ) ??
+              false)
         : false;
     final preQty = preselectedBorrow != null
         ? ((preselectedBorrow['quantity'] as num?)?.toInt() ?? 1)
@@ -9412,7 +10655,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
             return AlertDialog(
               backgroundColor: cardBg,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               title: Row(
                 children: [
                   Container(
@@ -9421,7 +10666,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       color: AppTheme.primaryColor.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.assignment_add, color: AppTheme.primaryColor),
+                    child: const Icon(
+                      Icons.assignment_add,
+                      color: AppTheme.primaryColor,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -9460,22 +10708,35 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         children: [
                           Text(
                             'Borrower Customer Selection',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textCol),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: textCol,
+                            ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: isAllSelected
-                                  ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                                  ? const Color(
+                                      0xFF10B981,
+                                    ).withValues(alpha: 0.15)
                                   : Colors.blue.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              isAllSelected ? 'All Borrowers Mode' : 'Single Customer Mode',
+                              isAllSelected
+                                  ? 'All Borrowers Mode'
+                                  : 'Single Customer Mode',
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
-                                color: isAllSelected ? const Color(0xFF047857) : Colors.blue,
+                                color: isAllSelected
+                                    ? const Color(0xFF047857)
+                                    : Colors.blue,
                               ),
                             ),
                           ),
@@ -9486,8 +10747,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: isDark ? Colors.white24 : const Color(0xFFCBD5E1)),
-                          color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF8FAFC),
+                          border: Border.all(
+                            color: isDark
+                                ? Colors.white24
+                                : const Color(0xFFCBD5E1),
+                          ),
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.05)
+                              : const Color(0xFFF8FAFC),
                         ),
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<String>(
@@ -9500,7 +10767,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 value: 'all_borrowers',
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.route_rounded, size: 16, color: Color(0xFF10B981)),
+                                    const Icon(
+                                      Icons.route_rounded,
+                                      size: 16,
+                                      color: Color(0xFF10B981),
+                                    ),
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
@@ -9519,18 +10790,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               ),
                               // INDIVIDUAL BORROWERS
                               ...activeBorrows.map((b) {
-                                final key = '${b['orderId']}_${b['gallonType']}';
-                                final name = b['customerName'] as String? ?? 'Customer';
-                                final gType = b['gallonType'] as String? ?? 'Gallon';
+                                final key =
+                                    '${b['orderId']}_${b['gallonType']}';
+                                final name =
+                                    b['customerName'] as String? ?? 'Customer';
+                                final gType =
+                                    b['gallonType'] as String? ?? 'Gallon';
                                 final qty = b['quantity']?.toString() ?? '1';
-                                final addr = b['deliveryAddress'] as String? ?? '';
+                                final addr =
+                                    b['deliveryAddress'] as String? ?? '';
                                 return DropdownMenuItem<String>(
                                   value: key,
                                   child: Text(
                                     '👤 $name (Owes $qty $gType) • $addr',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(fontSize: 13, color: textCol),
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: textCol,
+                                    ),
                                   ),
                                 );
                               }),
@@ -9541,15 +10819,30 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                   selectedBorrowKey = val;
                                   if (val == 'all_borrowers') {
                                     slimController.text = '$totalSlimAcrossAll';
-                                    roundController.text = '$totalRoundAcrossAll';
+                                    roundController.text =
+                                        '$totalRoundAcrossAll';
                                   } else {
                                     final found = activeBorrows.firstWhere(
-                                      (b) => '${b['orderId']}_${b['gallonType']}' == val,
+                                      (b) =>
+                                          '${b['orderId']}_${b['gallonType']}' ==
+                                          val,
                                       orElse: () => activeBorrows.first,
                                     );
-                                    final s = found['gallonType']?.toString().toLowerCase().contains('slim') ?? false;
-                                    final r = found['gallonType']?.toString().toLowerCase().contains('round') ?? false;
-                                    final q = (found['quantity'] as num?)?.toInt() ?? 1;
+                                    final s =
+                                        found['gallonType']
+                                            ?.toString()
+                                            .toLowerCase()
+                                            .contains('slim') ??
+                                        false;
+                                    final r =
+                                        found['gallonType']
+                                            ?.toString()
+                                            .toLowerCase()
+                                            .contains('round') ??
+                                        false;
+                                    final q =
+                                        (found['quantity'] as num?)?.toInt() ??
+                                        1;
                                     slimController.text = s ? '$q' : '0';
                                     roundController.text = r ? '$q' : '0';
                                   }
@@ -9562,15 +10855,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       if (isAllSelected) ...[
                         const SizedBox(height: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                            color: const Color(
+                              0xFF10B981,
+                            ).withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                            border: Border.all(
+                              color: const Color(
+                                0xFF10B981,
+                              ).withValues(alpha: 0.3),
+                            ),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.alt_route_rounded, size: 16, color: Color(0xFF059669)),
+                              const Icon(
+                                Icons.alt_route_rounded,
+                                size: 16,
+                                color: Color(0xFF059669),
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
@@ -9591,15 +10897,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       // Select Driver
                       Text(
                         'Assign Driver / Rider',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textCol),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: textCol,
+                        ),
                       ),
                       const SizedBox(height: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: isDark ? Colors.white24 : const Color(0xFFCBD5E1)),
-                          color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF8FAFC),
+                          border: Border.all(
+                            color: isDark
+                                ? Colors.white24
+                                : const Color(0xFFCBD5E1),
+                          ),
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.05)
+                              : const Color(0xFFF8FAFC),
                         ),
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<UserModel>(
@@ -9611,11 +10927,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 value: d,
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.delivery_dining_rounded, size: 18, color: AppTheme.primaryColor),
+                                    const Icon(
+                                      Icons.delivery_dining_rounded,
+                                      size: 18,
+                                      color: AppTheme.primaryColor,
+                                    ),
                                     const SizedBox(width: 8),
                                     Text(
                                       '${d.name} (${d.email})',
-                                      style: TextStyle(fontSize: 13, color: textCol),
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: textCol,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -9634,15 +10957,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       // Weekly Schedule Selection
                       Text(
                         'Weekly Schedule / Timing',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textCol),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: textCol,
+                        ),
                       ),
                       const SizedBox(height: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: isDark ? Colors.white24 : const Color(0xFFCBD5E1)),
-                          color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF8FAFC),
+                          border: Border.all(
+                            color: isDark
+                                ? Colors.white24
+                                : const Color(0xFFCBD5E1),
+                          ),
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.05)
+                              : const Color(0xFFF8FAFC),
                         ),
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<String>(
@@ -9654,7 +10987,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 value: opt,
                                 child: Text(
                                   opt,
-                                  style: TextStyle(fontSize: 13, color: textCol),
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: textCol,
+                                  ),
                                 ),
                               );
                             }).toList(),
@@ -9677,7 +11013,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               keyboardType: TextInputType.number,
                               decoration: const InputDecoration(
                                 labelText: 'Slim Gallons Target',
-                                prefixIcon: Icon(Icons.water_drop_rounded, size: 16, color: Colors.blue),
+                                prefixIcon: Icon(
+                                  Icons.water_drop_rounded,
+                                  size: 16,
+                                  color: Colors.blue,
+                                ),
                                 helperText: '5-Gallon Slim count',
                               ),
                             ),
@@ -9689,7 +11029,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               keyboardType: TextInputType.number,
                               decoration: const InputDecoration(
                                 labelText: 'Round Gallons Target',
-                                prefixIcon: Icon(Icons.radio_button_checked_rounded, size: 16, color: Colors.indigo),
+                                prefixIcon: Icon(
+                                  Icons.radio_button_checked_rounded,
+                                  size: 16,
+                                  color: Colors.indigo,
+                                ),
                                 helperText: '5-Gallon Round count',
                               ),
                             ),
@@ -9706,7 +11050,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           hintText: isAllSelected
                               ? 'e.g. Weekly full route collection for all borrowing customers'
                               : 'e.g. Call customer before arrival at Purok 1 gate',
-                          prefixIcon: const Icon(Icons.note_alt_outlined, size: 18),
+                          prefixIcon: const Icon(
+                            Icons.note_alt_outlined,
+                            size: 18,
+                          ),
                         ),
                       ),
                     ],
@@ -9722,24 +11069,42 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   onPressed: () async {
                     if (selectedDriver == null) return;
                     final slim = int.tryParse(slimController.text.trim()) ?? 0;
-                    final round = int.tryParse(roundController.text.trim()) ?? 0;
+                    final round =
+                        int.tryParse(roundController.text.trim()) ?? 0;
                     if (slim <= 0 && round <= 0) {
-                      Helpers.showSnackBar(ctx, 'Please set at least 1 Slim or Round gallon to collect.', isError: true);
+                      Helpers.showSnackBar(
+                        ctx,
+                        'Please set at least 1 Slim or Round gallon to collect.',
+                        isError: true,
+                      );
                       return;
                     }
 
                     if (isAllSelected) {
                       // BATCH ROUTE: Dispatch collection job orders for each active borrower
                       for (final b in activeBorrows) {
-                        final s = b['gallonType']?.toString().toLowerCase().contains('slim') ?? false;
-                        final r = b['gallonType']?.toString().toLowerCase().contains('round') ?? false;
+                        final s =
+                            b['gallonType']?.toString().toLowerCase().contains(
+                              'slim',
+                            ) ??
+                            false;
+                        final r =
+                            b['gallonType']?.toString().toLowerCase().contains(
+                              'round',
+                            ) ??
+                            false;
                         final q = (b['quantity'] as num?)?.toInt() ?? 1;
 
                         await orderProvider.createCollectionJobOrder(
-                          customerId: b['customerId'] as String? ?? 'usr_borrower',
-                          customerName: b['customerName'] as String? ?? 'Customer',
-                          customerPhone: b['customerPhone'] as String? ?? '+63 912 345 6789',
-                          deliveryAddress: b['deliveryAddress'] as String? ?? 'Ligao City',
+                          customerId:
+                              b['customerId'] as String? ?? 'usr_borrower',
+                          customerName:
+                              b['customerName'] as String? ?? 'Customer',
+                          customerPhone:
+                              b['customerPhone'] as String? ??
+                              '+63 912 345 6789',
+                          deliveryAddress:
+                              b['deliveryAddress'] as String? ?? 'Ligao City',
                           driverId: selectedDriver!.id,
                           driverName: selectedDriver!.name,
                           slimCount: s ? q : 0,
@@ -9763,21 +11128,33 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     } else {
                       // SINGLE CUSTOMER SELECTION
                       final selectedBorrow = activeBorrows.firstWhere(
-                        (b) => '${b['orderId']}_${b['gallonType']}' == selectedBorrowKey,
+                        (b) =>
+                            '${b['orderId']}_${b['gallonType']}' ==
+                            selectedBorrowKey,
                         orElse: () => activeBorrows.first,
                       );
 
                       await orderProvider.createCollectionJobOrder(
-                        customerId: selectedBorrow['customerId'] as String? ?? 'usr_borrower',
-                        customerName: selectedBorrow['customerName'] as String? ?? 'Customer',
-                        customerPhone: selectedBorrow['customerPhone'] as String? ?? '+63 912 345 6789',
-                        deliveryAddress: selectedBorrow['deliveryAddress'] as String? ?? 'Ligao City',
+                        customerId:
+                            selectedBorrow['customerId'] as String? ??
+                            'usr_borrower',
+                        customerName:
+                            selectedBorrow['customerName'] as String? ??
+                            'Customer',
+                        customerPhone:
+                            selectedBorrow['customerPhone'] as String? ??
+                            '+63 912 345 6789',
+                        deliveryAddress:
+                            selectedBorrow['deliveryAddress'] as String? ??
+                            'Ligao City',
                         driverId: selectedDriver!.id,
                         driverName: selectedDriver!.name,
                         slimCount: slim,
                         roundCount: round,
                         scheduledDate: selectedSchedule,
-                        notes: notesController.text.trim().isNotEmpty ? notesController.text.trim() : null,
+                        notes: notesController.text.trim().isNotEmpty
+                            ? notesController.text.trim()
+                            : null,
                       );
 
                       if (ctx.mounted) {
@@ -9798,10 +11175,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         : 'Dispatch Task to Driver',
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: isAllSelected ? const Color(0xFF059669) : AppTheme.primaryColor,
+                    backgroundColor: isAllSelected
+                        ? const Color(0xFF059669)
+                        : AppTheme.primaryColor,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
               ],
@@ -9837,7 +11221,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
       selected: isSelected,
       selectedColor: AppTheme.primaryColor,
-      backgroundColor: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF1F5F9),
+      backgroundColor: isDark
+          ? Colors.white.withValues(alpha: 0.05)
+          : const Color(0xFFF1F5F9),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: BorderSide(
@@ -9872,12 +11258,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
     // Gallon Metrics
     final slimRemaining = orderProvider.remainingSlimGallons;
     final slimCap = orderProvider.slimGallonCapacity;
-    final slimRatio = slimCap > 0 ? (slimRemaining / slimCap).clamp(0.0, 1.0) : 0.0;
+    final slimRatio = slimCap > 0
+        ? (slimRemaining / slimCap).clamp(0.0, 1.0)
+        : 0.0;
     final activeSlimBorrows = orderProvider.activeSlimBorrowedGallons;
 
     final roundRemaining = orderProvider.remainingRoundGallons;
     final roundCap = orderProvider.roundGallonCapacity;
-    final roundRatio = roundCap > 0 ? (roundRemaining / roundCap).clamp(0.0, 1.0) : 0.0;
+    final roundRatio = roundCap > 0
+        ? (roundRemaining / roundCap).clamp(0.0, 1.0)
+        : 0.0;
     final activeRoundBorrows = orderProvider.activeRoundBorrowedGallons;
 
     final totalActiveBorrows = orderProvider.totalActiveBorrowedGallons;
@@ -9896,10 +11286,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
     // Filter Borrows tab
     final borrowQuery = _borrowSearchController.text.trim().toLowerCase();
     final filteredBorrows = customerBorrows.where((b) {
-      if (_borrowFilter == 'active' && b['isReturned'] == true) return false;
-      if (_borrowFilter == 'returned' && b['isReturned'] == false) return false;
-      if (_borrowFilter == 'slim' && !(b['gallonType'] as String).toLowerCase().contains('slim')) return false;
-      if (_borrowFilter == 'round' && !(b['gallonType'] as String).toLowerCase().contains('round')) return false;
+      if (_borrowFilter == 'active' && b['isReturned'] == true) {
+        return false;
+      }
+      if (_borrowFilter == 'returned' && b['isReturned'] == false) {
+        return false;
+      }
+      if (_borrowFilter == 'slim' &&
+          !(b['gallonType'] as String).toLowerCase().contains('slim')) {
+        return false;
+      }
+      if (_borrowFilter == 'round' &&
+          !(b['gallonType'] as String).toLowerCase().contains('round')) {
+        return false;
+      }
 
       if (borrowQuery.isNotEmpty) {
         final custName = (b['customerName'] as String? ?? '').toLowerCase();
@@ -9952,10 +11352,21 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   OutlinedButton.icon(
                     onPressed: () => _showSetAllInventoryDialog(isDark),
                     icon: const Icon(Icons.tune_rounded, size: 16),
-                    label: const Text('Set All Stock Levels', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                    label: const Text(
+                      'Set All Stock Levels',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                   ),
                   ElevatedButton.icon(
@@ -10041,7 +11452,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFF10B981).withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
@@ -10052,7 +11466,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.all_inclusive_rounded, size: 15, color: Color(0xFF047857)),
+                      Icon(
+                        Icons.all_inclusive_rounded,
+                        size: 15,
+                        color: Color(0xFF047857),
+                      ),
                       SizedBox(width: 6),
                       Text(
                         'Always Available',
@@ -10099,7 +11517,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         border: Border.all(
                           color: slimRemaining <= 10
                               ? Colors.red.withValues(alpha: 0.5)
-                              : (slimRemaining <= 25 ? Colors.orange.withValues(alpha: 0.5) : borderColor),
+                              : (slimRemaining <= 25
+                                    ? Colors.orange.withValues(alpha: 0.5)
+                                    : borderColor),
                           width: slimRemaining <= 25 ? 1.5 : 1.0,
                         ),
                         boxShadow: [
@@ -10159,24 +11579,34 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 ),
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: (slimRemaining <= 10
-                                          ? Colors.red
-                                          : (slimRemaining <= 25 ? Colors.orange : Colors.green))
-                                      .withValues(alpha: 0.12),
+                                  color:
+                                      (slimRemaining <= 10
+                                              ? Colors.red
+                                              : (slimRemaining <= 25
+                                                    ? Colors.orange
+                                                    : Colors.green))
+                                          .withValues(alpha: 0.12),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
                                   slimRemaining <= 10
                                       ? 'Low Stock'
-                                      : (slimRemaining <= 0 ? 'Out of Stock' : 'In Stock'),
+                                      : (slimRemaining <= 0
+                                            ? 'Out of Stock'
+                                            : 'In Stock'),
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
                                     color: slimRemaining <= 10
                                         ? Colors.red
-                                        : (slimRemaining <= 25 ? Colors.orange : Colors.green),
+                                        : (slimRemaining <= 25
+                                              ? Colors.orange
+                                              : Colors.green),
                                   ),
                                 ),
                               ),
@@ -10191,11 +11621,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 style: TextStyle(
                                   fontSize: 32,
                                   fontWeight: FontWeight.w900,
-                                  color: isDark ? Colors.blueAccent : const Color(0xFF1D4ED8),
+                                  color: isDark
+                                      ? Colors.blueAccent
+                                      : const Color(0xFF1D4ED8),
                                 ),
                               ),
                               Padding(
-                                padding: const EdgeInsets.only(bottom: 6, left: 6),
+                                padding: const EdgeInsets.only(
+                                  bottom: 6,
+                                  left: 6,
+                                ),
                                 child: Text(
                                   '/ ${slimCap.toInt()} Remaining Stock',
                                   style: TextStyle(
@@ -10213,11 +11648,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             child: LinearProgressIndicator(
                               value: slimRatio,
                               minHeight: 8,
-                              backgroundColor: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                              backgroundColor: isDark
+                                  ? Colors.white10
+                                  : const Color(0xFFE2E8F0),
                               valueColor: AlwaysStoppedAnimation<Color>(
                                 slimRemaining <= 10
                                     ? Colors.red
-                                    : (slimRemaining <= 25 ? Colors.orange : Colors.blue),
+                                    : (slimRemaining <= 25
+                                          ? Colors.orange
+                                          : Colors.blue),
                               ),
                             ),
                           ),
@@ -10229,7 +11668,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             runSpacing: 8,
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
                                 decoration: BoxDecoration(
                                   color: Colors.amber.withValues(alpha: 0.12),
                                   borderRadius: BorderRadius.circular(8),
@@ -10237,14 +11679,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.people_alt_rounded, size: 14, color: Colors.amber),
+                                    const Icon(
+                                      Icons.people_alt_rounded,
+                                      size: 14,
+                                      color: Colors.amber,
+                                    ),
                                     const SizedBox(width: 6),
                                     Text(
                                       'Borrowed: $activeSlimBorrows Gallons',
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
-                                        color: isDark ? Colors.amberAccent : const Color(0xFFB45309),
+                                        color: isDark
+                                            ? Colors.amberAccent
+                                            : const Color(0xFFB45309),
                                       ),
                                     ),
                                   ],
@@ -10255,40 +11703,74 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 children: [
                                   TextButton.icon(
                                     style: TextButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
                                       visualDensity: VisualDensity.compact,
-                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      tapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
                                     ),
                                     onPressed: () {
                                       final slimItem = allItems.firstWhere(
-                                        (i) => i['id'] == 'item_slim_gallon' || i['name'].toString().toLowerCase().contains('slim'),
-                                        orElse: () => allItems.isNotEmpty ? allItems.first : <String, dynamic>{},
+                                        (i) =>
+                                            i['id'] == 'item_slim_gallon' ||
+                                            i['name']
+                                                .toString()
+                                                .toLowerCase()
+                                                .contains('slim'),
+                                        orElse: () => allItems.isNotEmpty
+                                            ? allItems.first
+                                            : <String, dynamic>{},
                                       );
                                       if (slimItem.isNotEmpty) {
                                         _showSetStockDialog(isDark, slimItem);
                                       }
                                     },
-                                    icon: const Icon(Icons.tune_rounded, size: 14),
-                                    label: const Text('Set Stock', style: TextStyle(fontSize: 12)),
+                                    icon: const Icon(
+                                      Icons.tune_rounded,
+                                      size: 14,
+                                    ),
+                                    label: const Text(
+                                      'Set Stock',
+                                      style: TextStyle(fontSize: 12),
+                                    ),
                                   ),
                                   const SizedBox(width: 4),
                                   TextButton.icon(
                                     style: TextButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
                                       visualDensity: VisualDensity.compact,
-                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      tapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
                                     ),
                                     onPressed: () {
                                       final slimItem = allItems.firstWhere(
-                                        (i) => i['id'] == 'item_slim_gallon' || i['name'].toString().toLowerCase().contains('slim'),
-                                        orElse: () => allItems.isNotEmpty ? allItems.first : <String, dynamic>{},
+                                        (i) =>
+                                            i['id'] == 'item_slim_gallon' ||
+                                            i['name']
+                                                .toString()
+                                                .toLowerCase()
+                                                .contains('slim'),
+                                        orElse: () => allItems.isNotEmpty
+                                            ? allItems.first
+                                            : <String, dynamic>{},
                                       );
                                       if (slimItem.isNotEmpty) {
                                         _showRestockDialog(isDark, slimItem);
                                       }
                                     },
-                                    icon: const Icon(Icons.add_shopping_cart_rounded, size: 14),
-                                    label: const Text('Restock Slim', style: TextStyle(fontSize: 12)),
+                                    icon: const Icon(
+                                      Icons.add_shopping_cart_rounded,
+                                      size: 14,
+                                    ),
+                                    label: const Text(
+                                      'Restock Slim',
+                                      style: TextStyle(fontSize: 12),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -10298,7 +11780,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       ),
                     ),
                   ),
-                  if (isWide) const SizedBox(width: 16) else const SizedBox(height: 16),
+                  if (isWide)
+                    const SizedBox(width: 16)
+                  else
+                    const SizedBox(height: 16),
 
                   // CARD 2: 5-Gallon Round Container
                   Expanded(
@@ -10311,7 +11796,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         border: Border.all(
                           color: roundRemaining <= 10
                               ? Colors.red.withValues(alpha: 0.5)
-                              : (roundRemaining <= 25 ? Colors.orange.withValues(alpha: 0.5) : borderColor),
+                              : (roundRemaining <= 25
+                                    ? Colors.orange.withValues(alpha: 0.5)
+                                    : borderColor),
                           width: roundRemaining <= 25 ? 1.5 : 1.0,
                         ),
                         boxShadow: [
@@ -10371,24 +11858,34 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 ),
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: (roundRemaining <= 10
-                                          ? Colors.red
-                                          : (roundRemaining <= 25 ? Colors.orange : Colors.green))
-                                      .withValues(alpha: 0.12),
+                                  color:
+                                      (roundRemaining <= 10
+                                              ? Colors.red
+                                              : (roundRemaining <= 25
+                                                    ? Colors.orange
+                                                    : Colors.green))
+                                          .withValues(alpha: 0.12),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
                                   roundRemaining <= 10
                                       ? 'Low Stock'
-                                      : (roundRemaining <= 0 ? 'Out of Stock' : 'In Stock'),
+                                      : (roundRemaining <= 0
+                                            ? 'Out of Stock'
+                                            : 'In Stock'),
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
                                     color: roundRemaining <= 10
                                         ? Colors.red
-                                        : (roundRemaining <= 25 ? Colors.orange : Colors.green),
+                                        : (roundRemaining <= 25
+                                              ? Colors.orange
+                                              : Colors.green),
                                   ),
                                 ),
                               ),
@@ -10403,11 +11900,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 style: TextStyle(
                                   fontSize: 32,
                                   fontWeight: FontWeight.w900,
-                                  color: isDark ? Colors.indigoAccent : const Color(0xFF4338CA),
+                                  color: isDark
+                                      ? Colors.indigoAccent
+                                      : const Color(0xFF4338CA),
                                 ),
                               ),
                               Padding(
-                                padding: const EdgeInsets.only(bottom: 6, left: 6),
+                                padding: const EdgeInsets.only(
+                                  bottom: 6,
+                                  left: 6,
+                                ),
                                 child: Text(
                                   '/ ${roundCap.toInt()} Remaining Stock',
                                   style: TextStyle(
@@ -10425,11 +11927,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             child: LinearProgressIndicator(
                               value: roundRatio,
                               minHeight: 8,
-                              backgroundColor: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                              backgroundColor: isDark
+                                  ? Colors.white10
+                                  : const Color(0xFFE2E8F0),
                               valueColor: AlwaysStoppedAnimation<Color>(
                                 roundRemaining <= 10
                                     ? Colors.red
-                                    : (roundRemaining <= 25 ? Colors.orange : Colors.indigo),
+                                    : (roundRemaining <= 25
+                                          ? Colors.orange
+                                          : Colors.indigo),
                               ),
                             ),
                           ),
@@ -10441,7 +11947,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             runSpacing: 8,
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
                                 decoration: BoxDecoration(
                                   color: Colors.amber.withValues(alpha: 0.12),
                                   borderRadius: BorderRadius.circular(8),
@@ -10449,14 +11958,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.people_alt_rounded, size: 14, color: Colors.amber),
+                                    const Icon(
+                                      Icons.people_alt_rounded,
+                                      size: 14,
+                                      color: Colors.amber,
+                                    ),
                                     const SizedBox(width: 6),
                                     Text(
                                       'Borrowed: $activeRoundBorrows Gallons',
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
-                                        color: isDark ? Colors.amberAccent : const Color(0xFFB45309),
+                                        color: isDark
+                                            ? Colors.amberAccent
+                                            : const Color(0xFFB45309),
                                       ),
                                     ),
                                   ],
@@ -10467,40 +11982,74 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 children: [
                                   TextButton.icon(
                                     style: TextButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
                                       visualDensity: VisualDensity.compact,
-                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      tapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
                                     ),
                                     onPressed: () {
                                       final roundItem = allItems.firstWhere(
-                                        (i) => i['id'] == 'item_round_gallon' || i['name'].toString().toLowerCase().contains('round'),
-                                        orElse: () => allItems.isNotEmpty ? allItems.first : <String, dynamic>{},
+                                        (i) =>
+                                            i['id'] == 'item_round_gallon' ||
+                                            i['name']
+                                                .toString()
+                                                .toLowerCase()
+                                                .contains('round'),
+                                        orElse: () => allItems.isNotEmpty
+                                            ? allItems.first
+                                            : <String, dynamic>{},
                                       );
                                       if (roundItem.isNotEmpty) {
                                         _showSetStockDialog(isDark, roundItem);
                                       }
                                     },
-                                    icon: const Icon(Icons.tune_rounded, size: 14),
-                                    label: const Text('Set Stock', style: TextStyle(fontSize: 12)),
+                                    icon: const Icon(
+                                      Icons.tune_rounded,
+                                      size: 14,
+                                    ),
+                                    label: const Text(
+                                      'Set Stock',
+                                      style: TextStyle(fontSize: 12),
+                                    ),
                                   ),
                                   const SizedBox(width: 4),
                                   TextButton.icon(
                                     style: TextButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
                                       visualDensity: VisualDensity.compact,
-                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      tapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
                                     ),
                                     onPressed: () {
                                       final roundItem = allItems.firstWhere(
-                                        (i) => i['id'] == 'item_round_gallon' || i['name'].toString().toLowerCase().contains('round'),
-                                        orElse: () => allItems.isNotEmpty ? allItems.first : <String, dynamic>{},
+                                        (i) =>
+                                            i['id'] == 'item_round_gallon' ||
+                                            i['name']
+                                                .toString()
+                                                .toLowerCase()
+                                                .contains('round'),
+                                        orElse: () => allItems.isNotEmpty
+                                            ? allItems.first
+                                            : <String, dynamic>{},
                                       );
                                       if (roundItem.isNotEmpty) {
                                         _showRestockDialog(isDark, roundItem);
                                       }
                                     },
-                                    icon: const Icon(Icons.add_shopping_cart_rounded, size: 14),
-                                    label: const Text('Restock Round', style: TextStyle(fontSize: 12)),
+                                    icon: const Icon(
+                                      Icons.add_shopping_cart_rounded,
+                                      size: 14,
+                                    ),
+                                    label: const Text(
+                                      'Restock Round',
+                                      style: TextStyle(fontSize: 12),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -10520,7 +12069,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
           Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF1F5F9),
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : const Color(0xFFF1F5F9),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: borderColor),
             ),
@@ -10554,15 +12105,21 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           Icon(
                             Icons.inventory_2_rounded,
                             size: 16,
-                            color: _inventorySubTab == 0 ? AppTheme.primaryColor : titleTextColor,
+                            color: _inventorySubTab == 0
+                                ? AppTheme.primaryColor
+                                : titleTextColor,
                           ),
                           const SizedBox(width: 8),
                           Text(
                             'Products & Inventory Stock',
                             style: TextStyle(
                               fontSize: 13,
-                              fontWeight: _inventorySubTab == 0 ? FontWeight.bold : FontWeight.w500,
-                              color: _inventorySubTab == 0 ? valueTextColor : titleTextColor,
+                              fontWeight: _inventorySubTab == 0
+                                  ? FontWeight.bold
+                                  : FontWeight.w500,
+                              color: _inventorySubTab == 0
+                                  ? valueTextColor
+                                  : titleTextColor,
                             ),
                           ),
                         ],
@@ -10598,21 +12155,30 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           Icon(
                             Icons.assignment_ind_rounded,
                             size: 16,
-                            color: _inventorySubTab == 1 ? AppTheme.primaryColor : titleTextColor,
+                            color: _inventorySubTab == 1
+                                ? AppTheme.primaryColor
+                                : titleTextColor,
                           ),
                           const SizedBox(width: 8),
                           Text(
                             'Customer Borrowed Gallons Log',
                             style: TextStyle(
                               fontSize: 13,
-                              fontWeight: _inventorySubTab == 1 ? FontWeight.bold : FontWeight.w500,
-                              color: _inventorySubTab == 1 ? valueTextColor : titleTextColor,
+                              fontWeight: _inventorySubTab == 1
+                                  ? FontWeight.bold
+                                  : FontWeight.w500,
+                              color: _inventorySubTab == 1
+                                  ? valueTextColor
+                                  : titleTextColor,
                             ),
                           ),
                           if (totalActiveBorrows > 0) ...[
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.amber,
                                 borderRadius: BorderRadius.circular(10),
@@ -10660,21 +12226,30 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           Icon(
                             Icons.history_rounded,
                             size: 16,
-                            color: _inventorySubTab == 2 ? AppTheme.primaryColor : titleTextColor,
+                            color: _inventorySubTab == 2
+                                ? AppTheme.primaryColor
+                                : titleTextColor,
                           ),
                           const SizedBox(width: 8),
                           Text(
                             'Restock Activity History',
                             style: TextStyle(
                               fontSize: 13,
-                              fontWeight: _inventorySubTab == 2 ? FontWeight.bold : FontWeight.w500,
-                              color: _inventorySubTab == 2 ? valueTextColor : titleTextColor,
+                              fontWeight: _inventorySubTab == 2
+                                  ? FontWeight.bold
+                                  : FontWeight.w500,
+                              color: _inventorySubTab == 2
+                                  ? valueTextColor
+                                  : titleTextColor,
                             ),
                           ),
                           if (orderProvider.restockLogs.isNotEmpty) ...[
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.green,
                                 borderRadius: BorderRadius.circular(10),
@@ -10705,15 +12280,24 @@ class _AdminDashboardState extends State<AdminDashboard> {
             if (orderProvider.restockLogs.isNotEmpty) ...[
               Container(
                 margin: const EdgeInsets.only(bottom: 16),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.green.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: Colors.green.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
+                    const Icon(
+                      Icons.check_circle_rounded,
+                      color: Colors.green,
+                      size: 20,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
@@ -10721,13 +12305,21 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: isDark ? Colors.greenAccent : const Color(0xFF15803D),
+                          color: isDark
+                              ? Colors.greenAccent
+                              : const Color(0xFF15803D),
                         ),
                       ),
                     ),
                     TextButton(
                       onPressed: () => setState(() => _inventorySubTab = 2),
-                      child: const Text('View Full History', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      child: const Text(
+                        'View Full History',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -10750,7 +12342,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     onChanged: (_) => setState(() {}),
                     decoration: InputDecoration(
                       isDense: true,
-                      hintText: 'Search products, refills, containers, or accessories...',
+                      hintText:
+                          'Search products, refills, containers, or accessories...',
                       prefixIcon: const Icon(Icons.search_rounded),
                       suffixIcon: _inventorySearchController.text.isNotEmpty
                           ? IconButton(
@@ -10881,11 +12474,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     statusColor = Colors.orange;
                   }
 
-                  final String category = prod['category'] as String? ?? 'container';
+                  final String category =
+                      prod['category'] as String? ?? 'container';
                   final bool isUnlimitedWater =
                       prod['id'] == 'prod_purified' ||
                       name.toLowerCase() == 'purified water';
-                  final bool isRefillItem = prod['is_refill'] == true ||
+                  final bool isRefillItem =
+                      prod['is_refill'] == true ||
                       (category == 'water' &&
                           (unit.toLowerCase() == 'gallons' ||
                               name.toLowerCase().contains('refill') ||
@@ -10898,8 +12493,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   final String categoryBadgeText = isRefillItem
                       ? 'Water Refill'
                       : (category == 'water'
-                          ? 'Water Product'
-                          : (category == 'accessory' ? 'Accessory' : 'Container'));
+                            ? 'Water Product'
+                            : (category == 'accessory'
+                                  ? 'Accessory'
+                                  : 'Container'));
 
                   return Container(
                     padding: const EdgeInsets.all(16.0),
@@ -10912,7 +12509,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             : (!isUnlimitedWater && isOutOfStock
                                   ? Colors.red.withValues(alpha: 0.4)
                                   : borderColor),
-                        width: (!isUnlimitedWater && (isLowStock || isOutOfStock)) ? 1.5 : 1.0,
+                        width:
+                            (!isUnlimitedWater && (isLowStock || isOutOfStock))
+                            ? 1.5
+                            : 1.0,
                       ),
                     ),
                     child: Column(
@@ -11072,7 +12672,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 ),
                                 IconButton(
                                   tooltip: 'Edit Details',
-                                  icon: const Icon(Icons.edit_outlined, size: 18),
+                                  icon: const Icon(
+                                    Icons.edit_outlined,
+                                    size: 18,
+                                  ),
                                   visualDensity: VisualDensity.compact,
                                   onPressed: () =>
                                       _showAddEditInventoryItemDialog(
@@ -11119,7 +12722,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     onChanged: (_) => setState(() {}),
                     decoration: InputDecoration(
                       isDense: true,
-                      hintText: 'Search borrowers by customer name, phone, address, or order ID...',
+                      hintText:
+                          'Search borrowers by customer name, phone, address, or order ID...',
                       prefixIcon: const Icon(Icons.search_rounded),
                       suffixIcon: _borrowSearchController.text.isNotEmpty
                           ? IconButton(
@@ -11142,15 +12746,40 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       children: [
-                        _buildBorrowFilterChip('All Records', 'all', Icons.list_alt_rounded, isDark),
+                        _buildBorrowFilterChip(
+                          'All Records',
+                          'all',
+                          Icons.list_alt_rounded,
+                          isDark,
+                        ),
                         const SizedBox(width: 8),
-                        _buildBorrowFilterChip('Currently Holding Gallons', 'active', Icons.pending_actions_rounded, isDark),
+                        _buildBorrowFilterChip(
+                          'Currently Holding Gallons',
+                          'active',
+                          Icons.pending_actions_rounded,
+                          isDark,
+                        ),
                         const SizedBox(width: 8),
-                        _buildBorrowFilterChip('Returned Gallons', 'returned', Icons.check_circle_outline_rounded, isDark),
+                        _buildBorrowFilterChip(
+                          'Returned Gallons',
+                          'returned',
+                          Icons.check_circle_outline_rounded,
+                          isDark,
+                        ),
                         const SizedBox(width: 8),
-                        _buildBorrowFilterChip('Slim Gallons', 'slim', Icons.water_drop_rounded, isDark),
+                        _buildBorrowFilterChip(
+                          'Slim Gallons',
+                          'slim',
+                          Icons.water_drop_rounded,
+                          isDark,
+                        ),
                         const SizedBox(width: 8),
-                        _buildBorrowFilterChip('Round Gallons', 'round', Icons.radio_button_checked_rounded, isDark),
+                        _buildBorrowFilterChip(
+                          'Round Gallons',
+                          'round',
+                          Icons.radio_button_checked_rounded,
+                          isDark,
+                        ),
                       ],
                     ),
                   ),
@@ -11189,10 +12818,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     Text(
                       'When customers place orders with gallon containers, their borrowing log will appear here automatically.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: titleTextColor,
-                      ),
+                      style: TextStyle(fontSize: 12, color: titleTextColor),
                     ),
                   ],
                 ),
@@ -11205,30 +12831,42 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 separatorBuilder: (_, _) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
                   final borrow = filteredBorrows[index];
-                  final String phone = borrow['customerPhone'] as String? ?? 'No phone';
-                  String custName = borrow['customerName'] as String? ?? 'Customer';
-                  if (custName.trim().isEmpty || custName.trim().toLowerCase() == 'new user') {
+                  final String phone =
+                      borrow['customerPhone'] as String? ?? 'No phone';
+                  String custName =
+                      borrow['customerName'] as String? ?? 'Customer';
+                  if (custName.trim().isEmpty ||
+                      custName.trim().toLowerCase() == 'new user') {
                     final cid = (borrow['customerId'] ?? '').toString();
                     final match = _allUsers.cast<UserModel?>().firstWhere(
-                      (u) => u != null && u.id == cid && u.name.trim().isNotEmpty && u.name.trim().toLowerCase() != 'new user',
+                      (u) =>
+                          u != null &&
+                          u.id == cid &&
+                          u.name.trim().isNotEmpty &&
+                          u.name.trim().toLowerCase() != 'new user',
                       orElse: () => null,
                     );
                     if (match != null) {
                       custName = match.name.trim();
-                    } else if (phone.isNotEmpty && phone != 'No phone' && phone != '+63 912 345 6789') {
+                    } else if (phone.isNotEmpty &&
+                        phone != 'No phone' &&
+                        phone != '+63 912 345 6789') {
                       custName = 'Customer ($phone)';
                     } else {
                       custName = 'Customer';
                     }
                   }
-                  final String address = borrow['deliveryAddress'] as String? ?? 'No address';
+                  final String address =
+                      borrow['deliveryAddress'] as String? ?? 'No address';
                   final String displayAddress = address
                       .replaceAll(RegExp(r'\[BORROWED_[A-Z]+:\d+\]'), '')
                       .replaceAll('[GALLONS_RETURNED]', '')
                       .trim();
-                  final String gType = borrow['gallonType'] as String? ?? '5-Gallon Container';
+                  final String gType =
+                      borrow['gallonType'] as String? ?? '5-Gallon Container';
                   final int qty = (borrow['quantity'] as num?)?.toInt() ?? 1;
-                  final bool isReturned = borrow['isReturned'] as bool? ?? false;
+                  final bool isReturned =
+                      borrow['isReturned'] as bool? ?? false;
                   final String txn = borrow['txnId'] as String? ?? '';
                   final DateTime? date = borrow['borrowedAt'] as DateTime?;
                   final dateStr = date != null
@@ -11264,7 +12902,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           ),
                           clipBehavior: Clip.antiAlias,
                           child: Image.asset(
-                            isSlim ? 'assets/images/slim_gallon.png' : 'assets/images/round_gallon.png',
+                            isSlim
+                                ? 'assets/images/slim_gallon.png'
+                                : 'assets/images/round_gallon.png',
                             fit: BoxFit.contain,
                             errorBuilder: (_, _, _) => Icon(
                               Icons.water_drop_rounded,
@@ -11292,9 +12932,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                   ),
                                   const SizedBox(width: 8),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: (isSlim ? Colors.blue : Colors.indigo).withValues(alpha: 0.12),
+                                      color:
+                                          (isSlim ? Colors.blue : Colors.indigo)
+                                              .withValues(alpha: 0.12),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
@@ -11302,15 +12947,22 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                       style: TextStyle(
                                         fontSize: 10,
                                         fontWeight: FontWeight.bold,
-                                        color: isSlim ? Colors.blue : Colors.indigo,
+                                        color: isSlim
+                                            ? Colors.blue
+                                            : Colors.indigo,
                                       ),
                                     ),
                                   ),
                                   const SizedBox(width: 6),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: Colors.purple.withValues(alpha: 0.12),
+                                      color: Colors.purple.withValues(
+                                        alpha: 0.12,
+                                      ),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
@@ -11327,21 +12979,37 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               const SizedBox(height: 4),
                               Row(
                                 children: [
-                                  Icon(Icons.phone_rounded, size: 12, color: titleTextColor),
+                                  Icon(
+                                    Icons.phone_rounded,
+                                    size: 12,
+                                    color: titleTextColor,
+                                  ),
                                   const SizedBox(width: 4),
                                   Text(
                                     phone,
-                                    style: TextStyle(fontSize: 12, color: titleTextColor),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: titleTextColor,
+                                    ),
                                   ),
                                   const SizedBox(width: 12),
-                                  Icon(Icons.location_on_rounded, size: 12, color: titleTextColor),
+                                  Icon(
+                                    Icons.location_on_rounded,
+                                    size: 12,
+                                    color: titleTextColor,
+                                  ),
                                   const SizedBox(width: 4),
                                   Expanded(
                                     child: Text(
-                                      displayAddress.isNotEmpty ? displayAddress : address,
+                                      displayAddress.isNotEmpty
+                                          ? displayAddress
+                                          : address,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(fontSize: 12, color: titleTextColor),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: titleTextColor,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -11353,7 +13021,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                     'Order: $txn',
                                     style: TextStyle(
                                       fontSize: 11,
-                                      color: isDark ? Colors.white54 : Colors.grey.shade500,
+                                      color: isDark
+                                          ? Colors.white54
+                                          : Colors.grey.shade500,
                                       fontFamily: 'monospace',
                                     ),
                                   ),
@@ -11362,7 +13032,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                     '• $dateStr',
                                     style: TextStyle(
                                       fontSize: 11,
-                                      color: isDark ? Colors.white54 : Colors.grey.shade500,
+                                      color: isDark
+                                          ? Colors.white54
+                                          : Colors.grey.shade500,
                                     ),
                                   ),
                                 ],
@@ -11377,18 +13049,27 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
-                                color: (isReturned ? Colors.green : Colors.amber).withValues(alpha: 0.12),
+                                color:
+                                    (isReturned ? Colors.green : Colors.amber)
+                                        .withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(
-                                    isReturned ? Icons.check_circle_rounded : Icons.pending_rounded,
+                                    isReturned
+                                        ? Icons.check_circle_rounded
+                                        : Icons.pending_rounded,
                                     size: 13,
-                                    color: isReturned ? Colors.green : Colors.amber.shade800,
+                                    color: isReturned
+                                        ? Colors.green
+                                        : Colors.amber.shade800,
                                   ),
                                   const SizedBox(width: 5),
                                   Text(
@@ -11396,7 +13077,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                     style: TextStyle(
                                       fontSize: 11,
                                       fontWeight: FontWeight.bold,
-                                      color: isReturned ? Colors.green : (isDark ? Colors.amberAccent : Colors.amber.shade900),
+                                      color: isReturned
+                                          ? Colors.green
+                                          : (isDark
+                                                ? Colors.amberAccent
+                                                : Colors.amber.shade900),
                                     ),
                                   ),
                                 ],
@@ -11406,37 +13091,70 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             if (!isReturned) ...[
                               Builder(
                                 builder: (context) {
-                                  final activeCollectionJob = orderProvider.orders.cast<OrderModel?>().firstWhere(
-                                    (o) =>
-                                        o != null &&
-                                        o.isCollectionJob &&
-                                        (o.customerId == (borrow['customerId'] ?? '') ||
-                                         o.customerName.trim().toLowerCase() == custName.trim().toLowerCase()) &&
-                                        o.orderStatus != OrderStatus.cancelled &&
-                                        o.orderStatus != OrderStatus.completed,
-                                    orElse: () => null,
-                                  );
+                                  final activeCollectionJob = orderProvider
+                                      .orders
+                                      .cast<OrderModel?>()
+                                      .firstWhere(
+                                        (o) =>
+                                            o != null &&
+                                            o.isCollectionJob &&
+                                            (o.customerId ==
+                                                    (borrow['customerId'] ??
+                                                        '') ||
+                                                o.customerName
+                                                        .trim()
+                                                        .toLowerCase() ==
+                                                    custName
+                                                        .trim()
+                                                        .toLowerCase()) &&
+                                            o.orderStatus !=
+                                                OrderStatus.cancelled &&
+                                            o.orderStatus !=
+                                                OrderStatus.completed,
+                                        orElse: () => null,
+                                      );
 
                                   return Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
                                       if (activeCollectionJob != null)
                                         Container(
-                                          margin: const EdgeInsets.only(bottom: 6),
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          margin: const EdgeInsets.only(
+                                            bottom: 6,
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 3,
+                                          ),
                                           decoration: BoxDecoration(
-                                            color: Colors.blue.withValues(alpha: 0.12),
-                                            borderRadius: BorderRadius.circular(6),
-                                            border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+                                            color: Colors.blue.withValues(
+                                              alpha: 0.12,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.blue.withValues(
+                                                alpha: 0.3,
+                                              ),
+                                            ),
                                           ),
                                           child: Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
-                                              const Icon(Icons.delivery_dining_rounded, size: 13, color: Colors.blue),
+                                              const Icon(
+                                                Icons.delivery_dining_rounded,
+                                                size: 13,
+                                                color: Colors.blue,
+                                              ),
                                               const SizedBox(width: 4),
                                               Text(
                                                 'Dispatched: ${activeCollectionJob.driverName ?? 'Driver'} (${activeCollectionJob.orderStatus.displayName})',
-                                                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blue),
+                                                style: const TextStyle(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.blue,
+                                                ),
                                               ),
                                             ],
                                           ),
@@ -11447,27 +13165,71 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                         alignment: WrapAlignment.end,
                                         children: [
                                           OutlinedButton.icon(
-                                            onPressed: () => _showScheduleCollectionDialog(isDark, preselectedBorrow: borrow),
-                                            icon: const Icon(Icons.send_rounded, size: 13),
+                                            onPressed: () =>
+                                                _showScheduleCollectionDialog(
+                                                  isDark,
+                                                  preselectedBorrow: borrow,
+                                                ),
+                                            icon: const Icon(
+                                              Icons.send_rounded,
+                                              size: 13,
+                                            ),
                                             label: Text(
-                                              activeCollectionJob != null ? 'Reassign' : 'Dispatch to Driver',
-                                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                              activeCollectionJob != null
+                                                  ? 'Reassign'
+                                                  : 'Dispatch to Driver',
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                              ),
                                             ),
                                             style: OutlinedButton.styleFrom(
-                                              foregroundColor: AppTheme.primaryColor,
-                                              side: const BorderSide(color: AppTheme.primaryColor),
-                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                              foregroundColor:
+                                                  AppTheme.primaryColor,
+                                              side: const BorderSide(
+                                                color: AppTheme.primaryColor,
+                                              ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 10,
+                                                    vertical: 6,
+                                                  ),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
                                             ),
                                           ),
                                           ElevatedButton.icon(
-                                            onPressed: () => _showReturnGallonDialog(isDark, borrow),
-                                            icon: const Icon(Icons.assignment_return_rounded, size: 13, color: Colors.white),
-                                            label: const Text('Return Gallons', style: TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold)),
+                                            onPressed: () =>
+                                                _showReturnGallonDialog(
+                                                  isDark,
+                                                  borrow,
+                                                ),
+                                            icon: const Icon(
+                                              Icons.assignment_return_rounded,
+                                              size: 13,
+                                              color: Colors.white,
+                                            ),
+                                            label: const Text(
+                                              'Return Gallons',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor: Colors.green,
-                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 10,
+                                                    vertical: 6,
+                                                  ),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
                                             ),
                                           ),
                                         ],
@@ -11515,7 +13277,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     ],
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.green.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(20),
@@ -11563,10 +13328,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     Text(
                       'Click "Restock Slim" or "Restock Round" above. Whenever you add containers, they will appear here automatically.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: titleTextColor,
-                      ),
+                      style: TextStyle(fontSize: 12, color: titleTextColor),
                     ),
                   ],
                 ),
@@ -11610,11 +13372,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           width: 44,
                           height: 44,
                           decoration: BoxDecoration(
-                            color: (isReturn ? Colors.blue : Colors.green).withValues(alpha: 0.12),
+                            color: (isReturn ? Colors.blue : Colors.green)
+                                .withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Icon(
-                            isReturn ? Icons.assignment_return_rounded : Icons.add_shopping_cart_rounded,
+                            isReturn
+                                ? Icons.assignment_return_rounded
+                                : Icons.add_shopping_cart_rounded,
                             color: isReturn ? Colors.blue : Colors.green,
                             size: 22,
                           ),
@@ -11636,9 +13401,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                   ),
                                   const SizedBox(width: 8),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: (isReturn ? Colors.blue : Colors.green).withValues(alpha: 0.12),
+                                      color:
+                                          (isReturn
+                                                  ? Colors.blue
+                                                  : Colors.green)
+                                              .withValues(alpha: 0.12),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
@@ -11646,7 +13418,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
-                                        color: isReturn ? Colors.blue : Colors.green,
+                                        color: isReturn
+                                            ? Colors.blue
+                                            : Colors.green,
                                       ),
                                     ),
                                   ),
@@ -11666,7 +13440,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 'By: $by • Notes: $notes',
                                 style: TextStyle(
                                   fontSize: 11,
-                                  color: isDark ? Colors.white54 : Colors.grey.shade500,
+                                  color: isDark
+                                      ? Colors.white54
+                                      : Colors.grey.shade500,
                                 ),
                               ),
                             ],
@@ -11676,9 +13452,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
                               decoration: BoxDecoration(
-                                color: (isReturn ? Colors.blue : Colors.green).withValues(alpha: 0.1),
+                                color: (isReturn ? Colors.blue : Colors.green)
+                                    .withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
@@ -11695,7 +13475,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               dateStr,
                               style: TextStyle(
                                 fontSize: 11,
-                                color: isDark ? Colors.white54 : Colors.grey.shade500,
+                                color: isDark
+                                    ? Colors.white54
+                                    : Colors.grey.shade500,
                               ),
                             ),
                           ],
@@ -11727,7 +13509,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
         decoration: BoxDecoration(
           color: isSelected
               ? AppTheme.primaryColor
-              : (isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF1F5F9)),
+              : (isDark
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : const Color(0xFFF1F5F9)),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected
@@ -11793,7 +13577,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
     // Filter & Search logic
     final query = _paymentsSearchController.text.trim().toLowerCase();
     final filtered = allOrders.where((o) {
-      final matchesQuery = query.isEmpty ||
+      final matchesQuery =
+          query.isEmpty ||
           o.id.toLowerCase().contains(query) ||
           o.txnId.toLowerCase().contains(query) ||
           o.customerName.toLowerCase().contains(query) ||
@@ -11814,9 +13599,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }).toList();
 
     final cardBg = isDark ? AppTheme.darkSurface : Colors.white;
-    final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+    final borderColor = isDark
+        ? const Color(0xFF334155)
+        : const Color(0xFFE2E8F0);
     final titleColor = isDark ? Colors.white : const Color(0xFF0F172A);
-    final subtextColor = isDark ? const Color(0xFF64748B) : const Color(0xFF64748B);
+    final subtextColor = isDark
+        ? const Color(0xFF64748B)
+        : const Color(0xFF64748B);
 
     return Padding(
       padding: const EdgeInsets.all(24.0),
@@ -11842,11 +13631,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       ),
                       const SizedBox(width: 12),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.green.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                          border: Border.all(
+                            color: Colors.green.withValues(alpha: 0.3),
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -11884,14 +13678,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 onPressed: () async {
                   await orderProvider.fetchSupabaseOrders(silent: false);
                   if (!mounted) return;
-                  Helpers.showSnackBar(context, 'Transactions synced with database.');
+                  Helpers.showSnackBar(
+                    context,
+                    'Transactions synced with database.',
+                  );
                 },
                 icon: const Icon(Icons.sync_rounded, size: 16),
                 label: const Text('Refresh Feed'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppTheme.primaryColor,
                   side: const BorderSide(color: AppTheme.primaryColor),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               ),
             ],
@@ -11912,11 +13711,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Total Revenue (Paid)', style: TextStyle(fontSize: 11, color: subtextColor)),
+                      Text(
+                        'Total Revenue (Paid)',
+                        style: TextStyle(fontSize: 11, color: subtextColor),
+                      ),
                       const SizedBox(height: 4),
                       Text(
                         '₱${totalPaidRevenue.toStringAsFixed(2)}',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                        ),
                       ),
                     ],
                   ),
@@ -11945,13 +13751,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             ),
                           ),
                           const SizedBox(width: 6),
-                          Text('GCash Collected', style: TextStyle(fontSize: 11, color: subtextColor)),
+                          Text(
+                            'GCash Collected',
+                            style: TextStyle(fontSize: 11, color: subtextColor),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 4),
                       Text(
                         '₱${totalGcashRevenue.toStringAsFixed(2)} ($gcashPaidCount)',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF007DFE)),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF007DFE),
+                        ),
                       ),
                     ],
                   ),
@@ -11969,11 +13782,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('COD Collected', style: TextStyle(fontSize: 11, color: subtextColor)),
+                      Text(
+                        'COD Collected',
+                        style: TextStyle(fontSize: 11, color: subtextColor),
+                      ),
                       const SizedBox(height: 4),
                       Text(
                         '₱${totalCodRevenue.toStringAsFixed(2)} ($codPaidCount)',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: titleColor),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: titleColor,
+                        ),
                       ),
                     ],
                   ),
@@ -11991,11 +13811,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Pending Settlement', style: TextStyle(fontSize: 11, color: subtextColor)),
+                      Text(
+                        'Pending Settlement',
+                        style: TextStyle(fontSize: 11, color: subtextColor),
+                      ),
                       const SizedBox(height: 4),
                       Text(
                         '$pendingCount orders',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.orange),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange,
+                        ),
                       ),
                     ],
                   ),
@@ -12025,10 +13852,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     decoration: const InputDecoration(
                       isDense: true,
                       hintText: 'Search by Txn Ref, Order #, or Customer...',
-                      hintStyle: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                      hintStyle: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF64748B),
+                      ),
                       prefixIcon: Icon(Icons.search, size: 18),
                       border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                      contentPadding: EdgeInsets.symmetric(
+                        vertical: 10,
+                        horizontal: 12,
+                      ),
                     ),
                   ),
                 ),
@@ -12039,27 +13872,38 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
-                    children: ['All', 'GCash', 'Cash on Delivery', 'Paid', 'Pending'].map((filter) {
-                      final isSel = _paymentsFilter == filter;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: ChoiceChip(
-                          label: Text(filter),
-                          selected: isSel,
-                          selectedColor: AppTheme.primaryColor,
-                          labelStyle: TextStyle(
-                            color: isSel ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11,
-                          ),
-                          onSelected: (val) {
-                            setState(() {
-                              _paymentsFilter = filter;
-                            });
-                          },
-                        ),
-                      );
-                    }).toList(),
+                    children:
+                        [
+                          'All',
+                          'GCash',
+                          'Cash on Delivery',
+                          'Paid',
+                          'Pending',
+                        ].map((filter) {
+                          final isSel = _paymentsFilter == filter;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: ChoiceChip(
+                              label: Text(filter),
+                              selected: isSel,
+                              selectedColor: AppTheme.primaryColor,
+                              labelStyle: TextStyle(
+                                color: isSel
+                                    ? Colors.white
+                                    : (isDark
+                                          ? Colors.white70
+                                          : Colors.black87),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                              ),
+                              onSelected: (val) {
+                                setState(() {
+                                  _paymentsFilter = filter;
+                                });
+                              },
+                            ),
+                          );
+                        }).toList(),
                   ),
                 ),
               ),
@@ -12074,11 +13918,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.receipt_long_outlined, size: 48, color: const Color(0xFF64748B)),
+                        Icon(
+                          Icons.receipt_long_outlined,
+                          size: 48,
+                          color: const Color(0xFF64748B),
+                        ),
                         const SizedBox(height: 12),
                         Text(
                           'No payment transactions match this filter.',
-                          style: TextStyle(fontWeight: FontWeight.bold, color: titleColor),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: titleColor,
+                          ),
                         ),
                       ],
                     ),
@@ -12088,8 +13939,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     itemBuilder: (itemCtx, index) {
                       final pay = filtered[index];
                       final isSuccess = pay.paymentStatus == 'Paid';
-                      final isGcash = pay.paymentMethod.toLowerCase().contains('gcash');
-                      final statusColor = isSuccess ? Colors.green : Colors.amber.shade700;
+                      final isGcash = pay.paymentMethod.toLowerCase().contains(
+                        'gcash',
+                      );
+                      final statusColor = isSuccess
+                          ? Colors.green
+                          : Colors.amber.shade700;
 
                       return Container(
                         margin: const EdgeInsets.only(bottom: 10),
@@ -12112,14 +13967,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               height: 44,
                               decoration: BoxDecoration(
                                 color: isGcash
-                                    ? const Color(0xFF007DFE).withValues(alpha: 0.12)
+                                    ? const Color(
+                                        0xFF007DFE,
+                                      ).withValues(alpha: 0.12)
                                     : Colors.green.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Center(
                                 child: Icon(
-                                  isGcash ? Icons.account_balance_wallet_rounded : Icons.payments_rounded,
-                                  color: isGcash ? const Color(0xFF007DFE) : Colors.green,
+                                  isGcash
+                                      ? Icons.account_balance_wallet_rounded
+                                      : Icons.payments_rounded,
+                                  color: isGcash
+                                      ? const Color(0xFF007DFE)
+                                      : Colors.green,
                                   size: 22,
                                 ),
                               ),
@@ -12143,38 +14004,59 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                       ),
                                       const SizedBox(width: 8),
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
                                         decoration: BoxDecoration(
                                           color: isGcash
-                                              ? const Color(0xFF007DFE).withValues(alpha: 0.12)
-                                              : Colors.grey.withValues(alpha: 0.12),
-                                          borderRadius: BorderRadius.circular(4),
+                                              ? const Color(
+                                                  0xFF007DFE,
+                                                ).withValues(alpha: 0.12)
+                                              : Colors.grey.withValues(
+                                                  alpha: 0.12,
+                                                ),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
                                         ),
                                         child: Text(
                                           pay.paymentMethod,
                                           style: TextStyle(
                                             fontSize: 9,
                                             fontWeight: FontWeight.bold,
-                                            color: isGcash ? const Color(0xFF007DFE) : subtextColor,
+                                            color: isGcash
+                                                ? const Color(0xFF007DFE)
+                                                : subtextColor,
                                           ),
                                         ),
                                       ),
                                       const SizedBox(width: 6),
                                       Text(
                                         '• Order ${pay.id}',
-                                        style: TextStyle(fontSize: 11, color: subtextColor),
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: subtextColor,
+                                        ),
                                       ),
                                     ],
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     '${pay.customerName} (${pay.customerPhone}) • ${pay.itemsSummary}',
-                                    style: TextStyle(fontSize: 12, color: titleColor, fontWeight: FontWeight.w500),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: titleColor,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
                                     'Placed: ${pay.createdAt.toString().split('.')[0]}',
-                                    style: TextStyle(fontSize: 10, color: subtextColor),
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: subtextColor,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -12189,7 +14071,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                   style: TextStyle(
                                     fontWeight: FontWeight.w900,
                                     fontSize: 16,
-                                    color: isGcash ? const Color(0xFF007DFE) : titleColor,
+                                    color: isGcash
+                                        ? const Color(0xFF007DFE)
+                                        : titleColor,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
@@ -12197,17 +14081,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 3,
+                                      ),
                                       decoration: BoxDecoration(
-                                        color: statusColor.withValues(alpha: 0.12),
+                                        color: statusColor.withValues(
+                                          alpha: 0.12,
+                                        ),
                                         borderRadius: BorderRadius.circular(6),
-                                        border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                                        border: Border.all(
+                                          color: statusColor.withValues(
+                                            alpha: 0.3,
+                                          ),
+                                        ),
                                       ),
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Icon(
-                                            isSuccess ? Icons.check_circle_rounded : Icons.hourglass_top_rounded,
+                                            isSuccess
+                                                ? Icons.check_circle_rounded
+                                                : Icons.hourglass_top_rounded,
                                             size: 10,
                                             color: statusColor,
                                           ),
@@ -12227,7 +14122,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                       const SizedBox(width: 6),
                                       InkWell(
                                         onTap: () async {
-                                          await orderProvider.markOrderAsPaid(pay.id);
+                                          await orderProvider.markOrderAsPaid(
+                                            pay.id,
+                                          );
                                           if (!mounted) return;
                                           Helpers.showSnackBar(
                                             context,
@@ -12235,10 +14132,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                           );
                                         },
                                         child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 3,
+                                          ),
                                           decoration: BoxDecoration(
                                             color: Colors.green,
-                                            borderRadius: BorderRadius.circular(6),
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
                                           ),
                                           child: const Text(
                                             'Mark Paid',
@@ -12500,8 +14402,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
 
     final screenWidth = MediaQuery.of(context).size.width;
-    final int metricCrossCount = screenWidth < 550 ? 1 : (screenWidth < 900 ? 2 : 4);
-    final double metricAspectRatio = screenWidth < 550 ? 3.8 : (screenWidth < 900 ? 3.0 : 2.6);
+    final int metricCrossCount = screenWidth < 550
+        ? 1
+        : (screenWidth < 900 ? 2 : 4);
+    final double metricAspectRatio = screenWidth < 550
+        ? 3.8
+        : (screenWidth < 900 ? 3.0 : 2.6);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
@@ -12752,23 +14658,34 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             thumbVisibility: true,
                             child: Builder(
                               builder: (context) {
-                                final Map<String, List<OrderModel>> reportDivisions = {};
+                                final Map<String, List<OrderModel>>
+                                reportDivisions = {};
                                 for (var o in reportOrders) {
                                   final key = _resolveCustomerDisplayName(o);
-                                  reportDivisions.putIfAbsent(key, () => []).add(o);
+                                  reportDivisions
+                                      .putIfAbsent(key, () => [])
+                                      .add(o);
                                 }
 
                                 return ListView(
                                   children: [
-                                    for (var entry in reportDivisions.entries) ...[
+                                    for (var entry
+                                        in reportDivisions.entries) ...[
                                       Container(
-                                        margin: const EdgeInsets.only(top: 8, bottom: 6),
+                                        margin: const EdgeInsets.only(
+                                          top: 8,
+                                          bottom: 6,
+                                        ),
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 12, vertical: 7),
+                                          horizontal: 12,
+                                          vertical: 7,
+                                        ),
                                         decoration: BoxDecoration(
                                           color: AppTheme.primaryColor
                                               .withValues(alpha: 0.08),
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
                                           border: Border.all(
                                             color: AppTheme.primaryColor
                                                 .withValues(alpha: 0.2),
@@ -12804,11 +14721,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                       ),
                                       for (var o in entry.value) ...[
                                         ListTile(
-                                          contentPadding: const EdgeInsets.symmetric(
-                                              horizontal: 4, vertical: 2),
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                                horizontal: 4,
+                                                vertical: 2,
+                                              ),
                                           leading: CircleAvatar(
                                             radius: 16,
-                                            backgroundColor: AppTheme.primaryColor
+                                            backgroundColor: AppTheme
+                                                .primaryColor
                                                 .withValues(alpha: 0.08),
                                             child: const Icon(
                                               Icons.receipt_long_rounded,
@@ -12825,7 +14746,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                           ),
                                           subtitle: Text(
                                             '${o.itemsSummary} • ${o.paymentMethod}\nPlaced at: ${o.createdAt.toString().split('.')[0]}',
-                                            style: const TextStyle(fontSize: 10),
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                            ),
                                           ),
                                           trailing: Text(
                                             o.formattedTotal,
@@ -13086,7 +15009,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
           children: [
             // AquaBot Gradient Header
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20.0,
+                vertical: 16.0,
+              ),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: [AppTheme.navyColor, AppTheme.primaryColor],
@@ -13167,7 +15093,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ),
                   IconButton(
                     tooltip: 'Reset Conversation',
-                    icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 22),
+                    icon: const Icon(
+                      Icons.refresh_rounded,
+                      color: Colors.white70,
+                      size: 22,
+                    ),
                     onPressed: () {
                       setState(() {
                         _supportMessages.clear();
@@ -13187,15 +15117,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
             Container(
               decoration: const BoxDecoration(
                 color: Color(0xFFF8FAFC),
-                border: Border(
-                  bottom: BorderSide(color: Color(0xFFE2E8F0)),
-                ),
+                border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
               ),
               child: Theme(
-                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                data: Theme.of(
+                  context,
+                ).copyWith(dividerColor: Colors.transparent),
                 child: ExpansionTile(
                   initiallyExpanded: false,
-                  tilePadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 0),
+                  tilePadding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 0,
+                  ),
                   childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
                   leading: Container(
                     padding: const EdgeInsets.all(6),
@@ -13219,10 +15152,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ),
                   subtitle: const Text(
                     'Tap to browse 4 administrator topics for instant operational answers',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: Color(0xFF64748B),
-                    ),
+                    style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
                   ),
                   children: [
                     ConstrainedBox(
@@ -13291,7 +15221,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   final msg = _supportMessages[index];
                   final isBot = msg['sender'] == 'AquaBot';
                   return Align(
-                    alignment: isBot ? Alignment.centerLeft : Alignment.centerRight,
+                    alignment: isBot
+                        ? Alignment.centerLeft
+                        : Alignment.centerRight,
                     child: isBot
                         ? Container(
                             margin: const EdgeInsets.only(bottom: 14),
@@ -13311,7 +15243,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFF0284C7).withValues(alpha: 0.06),
+                                  color: const Color(
+                                    0xFF0284C7,
+                                  ).withValues(alpha: 0.06),
                                   blurRadius: 6,
                                   offset: const Offset(0, 2),
                                 ),
@@ -13354,11 +15288,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           )
                         : Container(
                             margin: const EdgeInsets.only(bottom: 14),
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
                             constraints: const BoxConstraints(maxWidth: 620),
                             decoration: const BoxDecoration(
                               gradient: LinearGradient(
-                                colors: [AppTheme.primaryColor, AppTheme.navyColor],
+                                colors: [
+                                  AppTheme.primaryColor,
+                                  AppTheme.navyColor,
+                                ],
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                               ),
@@ -13399,25 +15339,40 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       onSubmitted: _sendSupportMessage,
                       style: const TextStyle(fontSize: 13.5),
                       decoration: InputDecoration(
-                        hintText: 'Type administration request or ask anything...',
-                        hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13.5),
+                        hintText:
+                            'Type administration request or ask anything...',
+                        hintStyle: const TextStyle(
+                          color: Color(0xFF94A3B8),
+                          fontSize: 13.5,
+                        ),
                         filled: true,
                         fillColor: const Color(0xFFF8FAFC),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE2E8F0),
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(color: AppTheme.primaryColor, width: 1.5),
+                          borderSide: const BorderSide(
+                            color: AppTheme.primaryColor,
+                            width: 1.5,
+                          ),
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(width: 10),
                   InkWell(
-                    onTap: _isChatLoading ? null : () => _sendSupportMessage(_supportInputController.text),
+                    onTap: _isChatLoading
+                        ? null
+                        : () =>
+                              _sendSupportMessage(_supportInputController.text),
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
                       padding: const EdgeInsets.all(12),
@@ -13493,7 +15448,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
               borderRadius: BorderRadius.circular(6),
               child: Container(
                 margin: const EdgeInsets.symmetric(vertical: 3),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF0F9FF),
                   borderRadius: BorderRadius.circular(6),
@@ -13534,7 +15492,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   // TAB 3: USER / ROLES & PERMISSIONS TAB
   Widget _buildUsersTab(bool isDark) {
-    final currentAdmin = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    final currentAdmin = Provider.of<AuthProvider>(
+      context,
+      listen: false,
+    ).currentUser;
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Column(
@@ -13621,12 +15582,21 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 icon: const Icon(Icons.person_add_rounded, size: 16),
                 label: const Text(
                   'Create Account',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: Colors.white,
+                  ),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               ),
             ],
@@ -13655,7 +15625,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     itemCount: _filteredUsers.length,
                     itemBuilder: (context, index) {
                       final user = _filteredUsers[index];
-                      final bool isSelfAdmin = user.role == UserRole.admin &&
+                      final bool isSelfAdmin =
+                          user.role == UserRole.admin &&
                           (currentAdmin != null &&
                               (currentAdmin.id == user.id ||
                                   (currentAdmin.email.isNotEmpty &&
@@ -13735,16 +15706,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               const SizedBox(width: 8),
                               if (isSelfAdmin)
                                 Tooltip(
-                                  message: 'Active Admin Account (Protected - Cannot be deleted)',
+                                  message:
+                                      'Active Admin Account (Protected - Cannot be deleted)',
                                   child: Container(
                                     padding: const EdgeInsets.all(6),
                                     decoration: BoxDecoration(
-                                      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade100,
+                                      color: isDark
+                                          ? Colors.white.withValues(alpha: 0.05)
+                                          : Colors.grey.shade100,
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: const Icon(
                                       Icons.lock_rounded,
-   
+
                                       size: 16,
                                       color: Color(0xFF94A3B8),
                                     ),
@@ -13775,7 +15749,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                     }
                                   },
                                   itemBuilder: (context) {
-                                    final List<PopupMenuEntry<String>> items = [];
+                                    final List<PopupMenuEntry<String>> items =
+                                        [];
 
                                     if (user.role == UserRole.customer) {
                                       // Customer: role cannot be changed at all
@@ -13784,7 +15759,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                           enabled: false,
                                           child: Row(
                                             children: [
-                                              Icon(Icons.lock_outline_rounded, size: 16, color: Colors.grey),
+                                              Icon(
+                                                Icons.lock_outline_rounded,
+                                                size: 16,
+                                                color: Colors.grey,
+                                              ),
                                               SizedBox(width: 8),
                                               Text(
                                                 'Customer Role (Fixed)',
@@ -13798,13 +15777,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                           ),
                                         ),
                                       );
-                                      items.add(const PopupMenuDivider(height: 1));
+                                      items.add(
+                                        const PopupMenuDivider(height: 1),
+                                      );
                                       items.add(
                                         const PopupMenuItem<String>(
                                           value: 'delete',
                                           child: Row(
                                             children: [
-                                              Icon(Icons.delete_outline_rounded, size: 16, color: Colors.redAccent),
+                                              Icon(
+                                                Icons.delete_outline_rounded,
+                                                size: 16,
+                                                color: Colors.redAccent,
+                                              ),
                                               SizedBox(width: 8),
                                               Text(
                                                 'Delete Customer Account',
@@ -13824,13 +15809,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                           enabled: false,
                                           child: Row(
                                             children: [
-                                              Icon(Icons.local_shipping_rounded, size: 16, color: AppTheme.secondaryColor),
+                                              Icon(
+                                                Icons.local_shipping_rounded,
+                                                size: 16,
+                                                color: AppTheme.secondaryColor,
+                                              ),
                                               SizedBox(width: 8),
                                               Text(
                                                 'Driver Role (Active)',
                                                 style: TextStyle(
                                                   fontSize: 12,
-                                                  color: AppTheme.secondaryColor,
+                                                  color:
+                                                      AppTheme.secondaryColor,
                                                   fontWeight: FontWeight.w600,
                                                 ),
                                               ),
@@ -13838,13 +15828,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                           ),
                                         ),
                                       );
-                                      items.add(const PopupMenuDivider(height: 1));
+                                      items.add(
+                                        const PopupMenuDivider(height: 1),
+                                      );
                                       items.add(
                                         const PopupMenuItem<String>(
                                           value: 'delete',
                                           child: Row(
                                             children: [
-                                              Icon(Icons.delete_outline_rounded, size: 16, color: Colors.redAccent),
+                                              Icon(
+                                                Icons.delete_outline_rounded,
+                                                size: 16,
+                                                color: Colors.redAccent,
+                                              ),
                                               SizedBox(width: 8),
                                               Text(
                                                 'Delete Driver Account',
@@ -13865,7 +15861,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                           enabled: false,
                                           child: Row(
                                             children: [
-                                              Icon(Icons.admin_panel_settings_rounded, size: 16, color: Color(0xFF6366F1)),
+                                              Icon(
+                                                Icons
+                                                    .admin_panel_settings_rounded,
+                                                size: 16,
+                                                color: Color(0xFF6366F1),
+                                              ),
                                               SizedBox(width: 8),
                                               Text(
                                                 'Admin Role (Fixed)',
@@ -13879,13 +15880,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                           ),
                                         ),
                                       );
-                                      items.add(const PopupMenuDivider(height: 1));
+                                      items.add(
+                                        const PopupMenuDivider(height: 1),
+                                      );
                                       items.add(
                                         const PopupMenuItem<String>(
                                           value: 'delete',
                                           child: Row(
                                             children: [
-                                              Icon(Icons.delete_outline_rounded, size: 16, color: Colors.redAccent),
+                                              Icon(
+                                                Icons.delete_outline_rounded,
+                                                size: 16,
+                                                color: Colors.redAccent,
+                                              ),
                                               SizedBox(width: 8),
                                               Text(
                                                 'Delete Admin Account',
@@ -13941,8 +15948,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
   // Upload / Replace Permit Dialog with Laptop file picker & drag-and-drop
   void _showUploadPermitDialog(CompliancePermitModel permit, bool isDark) {
     LaptopPickedFile? pickedFile;
-    final TextEditingController expiryController =
-        TextEditingController(text: permit.expiryDate);
+    final TextEditingController expiryController = TextEditingController(
+      text: permit.expiryDate,
+    );
 
     showDialog(
       context: context,
@@ -13952,7 +15960,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
             return AlertDialog(
               backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
+                borderRadius: BorderRadius.circular(16),
+              ),
               title: Row(
                 children: [
                   Container(
@@ -13961,8 +15970,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       color: AppTheme.primaryColor.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.upload_file_rounded,
-                        color: AppTheme.primaryColor, size: 22),
+                    child: const Icon(
+                      Icons.upload_file_rounded,
+                      color: AppTheme.primaryColor,
+                      size: 22,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -13974,12 +15986,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               ? 'Replace Permit from Laptop'
                               : 'Upload Permit from Laptop',
                           style: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold),
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         Text(
                           permit.title,
                           style: const TextStyle(
-                              fontSize: 12, color: AppTheme.primaryColor),
+                            fontSize: 12,
+                            color: AppTheme.primaryColor,
+                          ),
                         ),
                       ],
                     ),
@@ -13996,7 +16012,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       Text(
                         'Upload or replace the official certificate for ${permit.category}. Select an image file directly from your laptop.',
                         style: const TextStyle(
-                            fontSize: 12, color: Color(0xFF64748B)),
+                          fontSize: 12,
+                          color: Color(0xFF64748B),
+                        ),
                       ),
                       const SizedBox(height: 14),
 
@@ -14022,8 +16040,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             border: Border.all(
                               color: pickedFile != null
                                   ? const Color(0xFF10B981)
-                                  : AppTheme.primaryColor
-                                      .withValues(alpha: 0.4),
+                                  : AppTheme.primaryColor.withValues(
+                                      alpha: 0.4,
+                                    ),
                               width: 1.5,
                             ),
                           ),
@@ -14043,9 +16062,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                       mainAxisAlignment:
                                           MainAxisAlignment.center,
                                       children: [
-                                        const Icon(Icons.check_circle_rounded,
-                                            size: 16,
-                                            color: Color(0xFF10B981)),
+                                        const Icon(
+                                          Icons.check_circle_rounded,
+                                          size: 16,
+                                          color: Color(0xFF10B981),
+                                        ),
                                         const SizedBox(width: 6),
                                         Flexible(
                                           child: Text(
@@ -14064,77 +16085,87 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                     const Text(
                                       'Click to choose another image',
                                       style: TextStyle(
-                                          fontSize: 11,
-                                          color: Color(0xFF64748B)),
+                                        fontSize: 11,
+                                        color: Color(0xFF64748B),
+                                      ),
                                     ),
                                   ],
                                 )
                               : (permit.imageData != null &&
-                                      permit.imageData!.isNotEmpty
-                                  ? Column(
-                                      children: [
-                                        ClipRRect(
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                          child: Image.memory(
-                                            base64Decode(permit.imageData!
-                                                    .contains(',')
-                                                ? permit.imageData!
-                                                    .split(',')[1]
-                                                : permit.imageData!),
-                                            height: 150,
-                                            fit: BoxFit.contain,
-                                            errorBuilder: (context, error, stackTrace) =>
-                                                const Icon(
+                                        permit.imageData!.isNotEmpty
+                                    ? Column(
+                                        children: [
+                                          ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            child: Image.memory(
+                                              base64Decode(
+                                                permit.imageData!.contains(',')
+                                                    ? permit.imageData!.split(
+                                                        ',',
+                                                      )[1]
+                                                    : permit.imageData!,
+                                              ),
+                                              height: 150,
+                                              fit: BoxFit.contain,
+                                              errorBuilder:
+                                                  (
+                                                    context,
+                                                    error,
+                                                    stackTrace,
+                                                  ) => const Icon(
                                                     Icons.image_not_supported,
-                                                    size: 40),
+                                                    size: 40,
+                                                  ),
+                                            ),
                                           ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          'Current Image: ${permit.fileName}',
-                                          style: const TextStyle(
-                                            fontSize: 11.5,
-                                            fontWeight: FontWeight.w600,
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            'Current Image: ${permit.fileName}',
+                                            style: const TextStyle(
+                                              fontSize: 11.5,
+                                              fontWeight: FontWeight.w600,
+                                            ),
                                           ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        const Text(
-                                          'Click here to select a new image from your laptop to replace it',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: AppTheme.primaryColor,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    )
-                                  : Column(
-                                      children: [
-                                        Icon(
-                                          Icons.cloud_upload_rounded,
-                                          size: 42,
-                                          color: AppTheme.primaryColor
-                                              .withValues(alpha: 0.8),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        const Text(
-                                          'Browse Image from Laptop',
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.bold,
-                                            color: AppTheme.primaryColor,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        const Text(
-                                          'Supports PNG, JPG, JPEG, and WebP (up to 5MB)',
-                                          style: TextStyle(
+                                          const SizedBox(height: 4),
+                                          const Text(
+                                            'Click here to select a new image from your laptop to replace it',
+                                            style: TextStyle(
                                               fontSize: 11,
-                                              color: Color(0xFF64748B)),
-                                        ),
-                                      ],
-                                    )),
+                                              color: AppTheme.primaryColor,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                    : Column(
+                                        children: [
+                                          Icon(
+                                            Icons.cloud_upload_rounded,
+                                            size: 42,
+                                            color: AppTheme.primaryColor
+                                                .withValues(alpha: 0.8),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          const Text(
+                                            'Browse Image from Laptop',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppTheme.primaryColor,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          const Text(
+                                            'Supports PNG, JPG, JPEG, and WebP (up to 5MB)',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: Color(0xFF64748B),
+                                            ),
+                                          ),
+                                        ],
+                                      )),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -14143,7 +16174,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       const Text(
                         'Permit Expiry Date',
                         style: TextStyle(
-                            fontSize: 12, fontWeight: FontWeight.bold),
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 6),
                       TextField(
@@ -14153,16 +16186,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           final now = DateTime.now();
                           final picked = await showDatePicker(
                             context: context,
-                            initialDate: DateTime.tryParse(
-                                    expiryController.text) ??
+                            initialDate:
+                                DateTime.tryParse(expiryController.text) ??
                                 now.add(const Duration(days: 365)),
                             firstDate: now.subtract(const Duration(days: 365)),
                             lastDate: now.add(const Duration(days: 365 * 10)),
                           );
                           if (picked != null) {
                             setModalState(() {
-                              expiryController.text =
-                                  picked.toIso8601String().split('T')[0];
+                              expiryController.text = picked
+                                  .toIso8601String()
+                                  .split('T')[0];
                             });
                           }
                         },
@@ -14171,11 +16205,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           hintText: 'YYYY-MM-DD',
                           isDense: true,
                           contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 10),
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
                           border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8)),
-                          prefixIcon: const Icon(Icons.calendar_today_rounded,
-                              size: 16),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          prefixIcon: const Icon(
+                            Icons.calendar_today_rounded,
+                            size: 16,
+                          ),
                           suffixIcon: const Icon(Icons.arrow_drop_down_rounded),
                         ),
                       ),
@@ -14231,8 +16270,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     foregroundColor: Colors.white,
                   ),
                   icon: const Icon(Icons.check_circle_rounded, size: 16),
-                  label: const Text('Save & Certify Permit',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  label: const Text(
+                    'Save & Certify Permit',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ],
             );
@@ -14249,8 +16290,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
       builder: (ctx) {
         return AlertDialog(
           backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Row(
             children: [
               Container(
@@ -14259,15 +16301,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   color: Colors.green.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.verified_rounded,
-                    color: Colors.green, size: 22),
+                child: const Icon(
+                  Icons.verified_rounded,
+                  color: Colors.green,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   permit.title,
                   style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
@@ -14291,18 +16338,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             : const Color(0xFFF1F5F9),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                            color: Colors.green.withValues(alpha: 0.3)),
+                          color: Colors.green.withValues(alpha: 0.3),
+                        ),
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: Image.memory(
-                          base64Decode(permit.imageData!.contains(',')
-                              ? permit.imageData!.split(',')[1]
-                              : permit.imageData!),
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) => const Center(
-                            child: Icon(Icons.image_not_supported, size: 40),
+                          base64Decode(
+                            permit.imageData!.contains(',')
+                                ? permit.imageData!.split(',')[1]
+                                : permit.imageData!,
                           ),
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Center(
+                                child: Icon(
+                                  Icons.image_not_supported,
+                                  size: 40,
+                                ),
+                              ),
                         ),
                       ),
                     ),
@@ -14317,7 +16371,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           : const Color(0xFFF8FAFC),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                          color: isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+                        color: isDark
+                            ? Colors.white12
+                            : const Color(0xFFE2E8F0),
+                      ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -14331,8 +16388,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         _buildSettingRow('Valid Until', permit.expiryDate),
                         const SizedBox(height: 6),
                         _buildSettingRow(
-                            'Status', 'CERTIFIED ACTIVE & COMPLIANT',
-                            isSuccess: true),
+                          'Status',
+                          'CERTIFIED ACTIVE & COMPLIANT',
+                          isSuccess: true,
+                        ),
                       ],
                     ),
                   ),
@@ -14352,10 +16411,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ElevatedButton(
               onPressed: () => Navigator.of(ctx).pop(),
               style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor),
-              child: const Text('Close',
-                  style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold)),
+                backgroundColor: AppTheme.primaryColor,
+              ),
+              child: const Text(
+                'Close',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         );
@@ -14365,14 +16429,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   // Confirmation warning dialog before permanently erasing a compliance document
   Future<void> _confirmDeletePermit(
-      CompliancePermitModel permit, bool isDark) async {
+    CompliancePermitModel permit,
+    bool isDark,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogCtx) {
         return AlertDialog(
           backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Row(
             children: [
               Container(
@@ -14381,8 +16448,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   color: Colors.red.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.delete_forever_rounded,
-                    color: Colors.red, size: 22),
+                child: const Icon(
+                  Icons.delete_forever_rounded,
+                  color: Colors.red,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 12),
               const Text(
@@ -14419,11 +16489,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Document: ${permit.fileName}',
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      'Document: ${permit.fileName}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     const SizedBox(height: 4),
-                    Text('Category: ${permit.category}',
-                        style: const TextStyle(fontSize: 11)),
+                    Text(
+                      'Category: ${permit.category}',
+                      style: const TextStyle(fontSize: 11),
+                    ),
                   ],
                 ),
               ),
@@ -14431,9 +16505,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
               const Text(
                 '⚠️ Warning: This compliance document is legally required for station operation. Erasing it will mark this requirement as Missing.',
                 style: TextStyle(
-                    fontSize: 11.5,
-                    color: Colors.redAccent,
-                    fontWeight: FontWeight.w600),
+                  fontSize: 11.5,
+                  color: Colors.redAccent,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
@@ -14448,11 +16523,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 backgroundColor: Colors.red,
                 foregroundColor: Colors.white,
               ),
-              icon: const Icon(Icons.delete_outline_rounded,
-                  size: 16, color: Colors.white),
-              label: const Text('Erase Document',
-                  style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold)),
+              icon: const Icon(
+                Icons.delete_outline_rounded,
+                size: 16,
+                color: Colors.white,
+              ),
+              label: const Text(
+                'Erase Document',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         );
@@ -14527,9 +16609,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Admin Full Name',
-                              style: TextStyle(
-                                  fontSize: 12, fontWeight: FontWeight.bold)),
+                          const Text(
+                            'Admin Full Name',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                           const SizedBox(height: 6),
                           TextField(
                             controller: _adminNameController,
@@ -14537,9 +16623,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             decoration: InputDecoration(
                               isDense: true,
                               contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 10),
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
                               border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8)),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
                           ),
                         ],
@@ -14550,9 +16639,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Admin Contact Phone',
-                              style: TextStyle(
-                                  fontSize: 12, fontWeight: FontWeight.bold)),
+                          const Text(
+                            'Admin Contact Phone',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                           const SizedBox(height: 6),
                           TextField(
                             controller: _adminPhoneController,
@@ -14560,9 +16653,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             decoration: InputDecoration(
                               isDense: true,
                               contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 10),
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
                               border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8)),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
                           ),
                         ],
@@ -14573,9 +16669,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Station Email Address',
-                              style: TextStyle(
-                                  fontSize: 12, fontWeight: FontWeight.bold)),
+                          const Text(
+                            'Station Email Address',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                           const SizedBox(height: 6),
                           TextField(
                             controller: _adminEmailController,
@@ -14583,9 +16683,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             decoration: InputDecoration(
                               isDense: true,
                               contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 10),
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
                               border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8)),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
                           ),
                         ],
@@ -14600,20 +16703,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     color: AppTheme.primaryColor.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                        color: AppTheme.primaryColor.withValues(alpha: 0.15)),
+                      color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                    ),
                   ),
                   child: Row(
                     children: const [
-                      Icon(Icons.place_rounded,
-                          size: 18, color: AppTheme.primaryColor),
+                      Icon(
+                        Icons.place_rounded,
+                        size: 18,
+                        color: AppTheme.primaryColor,
+                      ),
                       SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           'Business Scope: Albay 1st District Exclusively (Tabaco City, Bacacay, Malilipot, Malinao, Santo Domingo, Tiwi)',
                           style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.navyColor),
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.navyColor,
+                          ),
                         ),
                       ),
                     ],
@@ -14633,13 +16741,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       backgroundColor: AppTheme.primaryColor,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 10),
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                     icon: const Icon(Icons.save_rounded, size: 16),
-                    label: const Text('Save Profile Changes',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    label: const Text(
+                      'Save Profile Changes',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               ],
@@ -14720,33 +16833,45 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                   ClipRRect(
                                     borderRadius: BorderRadius.circular(8),
                                     child: Image.memory(
-                                      base64Decode(permit.imageData!.contains(',')
-                                          ? permit.imageData!.split(',')[1]
-                                          : permit.imageData!),
+                                      base64Decode(
+                                        permit.imageData!.contains(',')
+                                            ? permit.imageData!.split(',')[1]
+                                            : permit.imageData!,
+                                      ),
                                       width: 44,
                                       height: 44,
                                       fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) => Container(
-                                        width: 44,
-                                        height: 44,
-                                        color: Colors.grey.shade200,
-                                        child: const Icon(Icons.description, size: 22),
-                                      ),
+                                      errorBuilder:
+                                          (context, error, stackTrace) =>
+                                              Container(
+                                                width: 44,
+                                                height: 44,
+                                                color: Colors.grey.shade200,
+                                                child: const Icon(
+                                                  Icons.description,
+                                                  size: 22,
+                                                ),
+                                              ),
                                     ),
                                   ),
                                 ] else ...[
                                   Container(
                                     padding: const EdgeInsets.all(10),
                                     decoration: BoxDecoration(
-                                      color: (isUploaded ? Colors.green : Colors.red)
-                                          .withValues(alpha: 0.1),
+                                      color:
+                                          (isUploaded
+                                                  ? Colors.green
+                                                  : Colors.red)
+                                              .withValues(alpha: 0.1),
                                       shape: BoxShape.circle,
                                     ),
                                     child: Icon(
                                       isUploaded
                                           ? Icons.verified_user_rounded
                                           : Icons.warning_amber_rounded,
-                                      color: isUploaded ? Colors.green : Colors.red,
+                                      color: isUploaded
+                                          ? Colors.green
+                                          : Colors.red,
                                       size: 20,
                                     ),
                                   ),
@@ -14790,10 +16915,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               children: [
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: (isUploaded ? Colors.green : Colors.red)
-                                        .withValues(alpha: 0.1),
+                                    color:
+                                        (isUploaded ? Colors.green : Colors.red)
+                                            .withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
@@ -14801,8 +16929,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                     style: TextStyle(
                                       fontSize: 10.5,
                                       fontWeight: FontWeight.bold,
-                                      color:
-                                          isUploaded ? Colors.green : Colors.red,
+                                      color: isUploaded
+                                          ? Colors.green
+                                          : Colors.red,
                                     ),
                                   ),
                                 ),
@@ -14811,29 +16940,45 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                   OutlinedButton.icon(
                                     onPressed: () =>
                                         _showViewPermitDialog(permit, isDark),
-                                    icon: const Icon(Icons.visibility_rounded,
-                                        size: 14),
-                                    label: const Text('View',
-                                        style: TextStyle(fontSize: 11)),
+                                    icon: const Icon(
+                                      Icons.visibility_rounded,
+                                      size: 14,
+                                    ),
+                                    label: const Text(
+                                      'View',
+                                      style: TextStyle(fontSize: 11),
+                                    ),
                                     style: OutlinedButton.styleFrom(
                                       padding: const EdgeInsets.symmetric(
-                                          horizontal: 10, vertical: 6),
+                                        horizontal: 10,
+                                        vertical: 6,
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(width: 6),
                                   OutlinedButton.icon(
                                     onPressed: () =>
                                         _confirmDeletePermit(permit, isDark),
-                                    icon: const Icon(Icons.delete_outline_rounded,
-                                        size: 14, color: Colors.redAccent),
-                                    label: const Text('Erase',
-                                        style: TextStyle(
-                                            fontSize: 11, color: Colors.redAccent)),
+                                    icon: const Icon(
+                                      Icons.delete_outline_rounded,
+                                      size: 14,
+                                      color: Colors.redAccent,
+                                    ),
+                                    label: const Text(
+                                      'Erase',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.redAccent,
+                                      ),
+                                    ),
                                     style: OutlinedButton.styleFrom(
                                       side: const BorderSide(
-                                          color: Colors.redAccent),
+                                        color: Colors.redAccent,
+                                      ),
                                       padding: const EdgeInsets.symmetric(
-                                          horizontal: 10, vertical: 6),
+                                        horizontal: 10,
+                                        vertical: 6,
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(width: 6),
@@ -14841,19 +16986,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 ElevatedButton.icon(
                                   onPressed: () =>
                                       _showUploadPermitDialog(permit, isDark),
-                                  icon: const Icon(Icons.upload_file_rounded,
-                                      size: 14, color: Colors.white),
+                                  icon: const Icon(
+                                    Icons.upload_file_rounded,
+                                    size: 14,
+                                    color: Colors.white,
+                                  ),
                                   label: Text(
                                     isUploaded ? 'Replace' : 'Upload',
                                     style: const TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold),
+                                      fontSize: 11,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: AppTheme.primaryColor,
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 8),
+                                      horizontal: 12,
+                                      vertical: 8,
+                                    ),
                                   ),
                                 ),
                               ],
