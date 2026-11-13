@@ -5679,6 +5679,15 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                                       'What are the customer service hotlines?',
                                     ],
                                   ),
+                                  _buildInquiryCategoryTile(
+                                    title: '🛡️ Defect Swaps, Permits & Roles',
+                                    color: const Color(0xFF7C3AED),
+                                    questions: [
+                                      'How do I report a damaged gallon with photo evidence and get a free swap?',
+                                      'How can I verify your station sanitary & safety permits?',
+                                      'What can Customer, Driver, and Admin roles do in the system?',
+                                    ],
+                                  ),
                                 ],
                               ),
                             ),

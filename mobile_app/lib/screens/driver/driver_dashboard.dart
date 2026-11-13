@@ -3603,6 +3603,15 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                   'How do I switch between Available and On Delivery status?',
                                 ],
                               ),
+                              _buildInquiryCategoryTile(
+                                title: '🛡️ Defect Swaps, Routes & Roles',
+                                color: const Color(0xFF7C3AED),
+                                questions: [
+                                  'Optimize route sequence for my active deliveries',
+                                  'How do customer defect photo claims and free gallon swaps work?',
+                                  'What can Driver, Admin, and Customer roles do in the system?',
+                                ],
+                              ),
                             ],
                           ),
                         ),

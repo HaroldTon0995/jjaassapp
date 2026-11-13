@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import '../core/constants/app_constants.dart';
 import '../models/order_model.dart';
 import '../providers/order_provider.dart';
+import 'compliance_permit_service.dart';
+import 'delivery_issue_service.dart';
 
 class AiSupportService {
   static const List<String> _geminiModels = [
@@ -36,7 +38,7 @@ class AiSupportService {
   }
 
   /// Fetches response from Gemini AI support engine.
-  /// Falls back to an enhanced conversational engine if Gemini API key is not yet set or network fails.
+  /// Falls back to a comprehensive omniscient role-aware engine if Gemini API key is not set or network fails.
   static Future<String> getChatResponse({
     required String query,
     required bool isDriver,
@@ -49,21 +51,24 @@ class AiSupportService {
     final cleanQuery = trimmed.toLowerCase();
 
     // Allow setting Gemini API key directly in chat by pasting an AIza... key
-    final apiKeyMatch = RegExp(r'(AIza[0-9A-Za-z\-_]{31,45})').firstMatch(trimmed);
+    final apiKeyMatch =
+        RegExp(r'(AIza[0-9A-Za-z\-_]{31,45})').firstMatch(trimmed);
     if (apiKeyMatch != null) {
       final extractedKey = apiKeyMatch.group(1)!;
       setApiKey(extractedKey);
-      return "✅ **Gemini AI Key Activated!**\n\nAquaBot is now connected to **Google Gemini (`gemini-2.5-flash`)** for live AI chat support. Ask me anything about your orders, water products, deliveries, or JJAASS Water Market!";
+      return "✅ **Gemini AI Key Activated!**\n\nAquaBot is now connected to **Google Gemini (`gemini-2.5-flash`)** with full live knowledge of **Admin, Driver, and Customer** workflows. Ask me anything about orders, inventory, deliveries, defect claims, permits, or station operations!";
     }
 
-    // Quick intercept for route optimization if requested by driver
-    if (isDriver &&
-        (cleanQuery.contains('route') ||
-            cleanQuery.contains('optimize') ||
-            cleanQuery.contains('path') ||
-            cleanQuery.contains('plan') ||
-            cleanQuery.contains('sequence'))) {
-      await Future.delayed(const Duration(milliseconds: 500));
+    // Quick intercept for route optimization if requested by driver or admin
+    if ((isDriver || isAdmin) &&
+        (cleanQuery.contains('optimize route') ||
+            cleanQuery.contains('optimal route') ||
+            cleanQuery.contains('route sequence') ||
+            (isDriver &&
+                (cleanQuery == 'route' ||
+                    cleanQuery.contains('optimize') ||
+                    cleanQuery.contains('sequence'))))) {
+      await Future.delayed(const Duration(milliseconds: 400));
       return _optimizeRouteResponse(userId, orderProvider);
     }
 
@@ -78,13 +83,15 @@ class AiSupportService {
           orderProvider: orderProvider,
         );
       } catch (e) {
-        debugPrint('Gemini API request failed, falling back to local engine: $e');
+        debugPrint(
+          'Gemini API request failed, falling back to omniscient local engine: $e',
+        );
       }
     }
 
-    await Future.delayed(const Duration(milliseconds: 600));
+    await Future.delayed(const Duration(milliseconds: 450));
 
-    // Enhanced Conversational Local Engine
+    // Unified Omniscient Cross-Role Local Engine
     return _getLocalFallbackResponse(
       query: cleanQuery,
       rawQuery: trimmed,
@@ -96,7 +103,7 @@ class AiSupportService {
     );
   }
 
-  /// Builds context payload & requests Google Gemini API with automatic model fallback
+  /// Builds full cross-role context payload & requests Google Gemini API with automatic model fallback
   static Future<String> _getGeminiResponse({
     required String query,
     required bool isDriver,
@@ -113,26 +120,30 @@ class AiSupportService {
       orderProvider: orderProvider,
     );
 
-    final roleLabel = isDriver ? 'Driver' : isAdmin ? 'Admin' : 'Customer';
+    final roleLabel = isDriver
+        ? 'Driver'
+        : isAdmin
+            ? 'Admin'
+            : 'Customer';
     final sessionKey = '${roleLabel}_$userId';
     final history = _conversationHistory.putIfAbsent(sessionKey, () => []);
 
     final String systemInstructions =
-        "You are AquaBot 💧, the friendly, intelligent AI support assistant for 'JJAASS Water Market' (JJAASSApp).\n"
-        "Store Location: $marketAddress.\n"
+        "You are AquaBot 💧, the omniscient, friendly AI support assistant for 'JJAASS Water Market' (JJAASSApp).\n"
+        "Store Location: $marketAddress (serving Albay 1st District: Tabaco City, Bacacay, Malilipot, Malinao, Santo Domingo, Tiwi).\n"
         "Operating Hours: Monday to Sunday, 7:00 AM – 7:00 PM.\n"
-        "AvailableJug Types: 5-Gallon Slim (with faucet & handle) and 5-Gallon Round (for water dispensers).\n"
+        "Available Jug Types: 5-Gallon Slim (with faucet & handle) and 5-Gallon Round (for water dispensers).\n"
         "Available Payment Methods: Cash on Delivery (COD) and GCash Mobile Payment (via PayMongo).\n"
-        "You are currently assisting '$userName' (Role: $roleLabel).\n\n"
-        "LIVE APPLICATION DATA:\n"
+        "You are currently assisting '$userName' (Current Role: $roleLabel).\n"
+        "You know EVERYTHING about all three roles (Admin, Driver, and Customer), their screens, features, and live system data.\n\n"
+        "LIVE APPLICATION DATA & ROLE MANUALS:\n"
         "$contextData\n\n"
         "GUIDELINES:\n"
-        "- Answer natural questions conversationally, accurately, and concisely using the live application data above.\n"
+        "- Answer any question about Admin, Driver, or Customer features accurately, conversationally, and concisely using the live data and role manuals above.\n"
         "- Format currency in Philippine Pesos (₱).\n"
-        "- Use clean formatting (bullet points and bold text for key details).\n"
+        "- Use clean Markdown formatting (bullet points and bold text for key details).\n"
         "- Never invent fake order IDs that are not in the live data.";
 
-    // Build multi-turn contents (keep last 6 turns for fast context)
     final List<Map<String, dynamic>> contents = [
       ...history.skip(max(0, history.length - 6)),
       {
@@ -163,8 +174,8 @@ class AiSupportService {
                 },
                 "contents": contents,
                 "generationConfig": {
-                  "temperature": 0.4,
-                  "maxOutputTokens": 600,
+                  "temperature": 0.35,
+                  "maxOutputTokens": 700,
                 },
               }),
             )
@@ -173,7 +184,9 @@ class AiSupportService {
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
           final text =
-              data['candidates']?[0]?['content']?['parts']?[0]?['text'] ?? '';
+              data['candidates']?[0]?['content']?[0]?['text'] ??
+              data['candidates']?[0]?['content']?['parts']?[0]?['text'] ??
+              '';
           final reply = text.toString().trim();
           if (reply.isNotEmpty) {
             history.add({
@@ -203,7 +216,7 @@ class AiSupportService {
     throw lastError ?? Exception('All Gemini models failed.');
   }
 
-  /// Smart conversational fallback referencing live provider data
+  /// Omniscient cross-role conversational engine referencing live OrderProvider, DeliveryIssueService, and CompliancePermitService data
   static String _getLocalFallbackResponse({
     required String query,
     required String rawQuery,
@@ -213,292 +226,460 @@ class AiSupportService {
     required String userName,
     required OrderProvider orderProvider,
   }) {
-    // 1. Greetings & small talk
-    if (RegExp(r'^(hi|hello|hey|good morning|good afternoon|good evening|kumusta|kamusta)\b')
-        .hasMatch(query)) {
+    final issueService = DeliveryIssueService.instance;
+    final permitService = CompliancePermitService.instance;
+
+    // 0. Specific Order ID Lookup (e.g. ORD-008447, #ORD-003796)
+    final ordMatch = RegExp(r'ord[-_]?\d+', caseSensitive: false).firstMatch(rawQuery);
+    if (ordMatch != null) {
+      final token = ordMatch.group(0)!.toUpperCase().replaceAll('_', '-');
+      final matched = orderProvider.orders.where(
+        (o) => o.id.toUpperCase().contains(token),
+      );
+      if (matched.isNotEmpty) {
+        final o = matched.first;
+        final claim = issueService.getIssueByOrderId(o.id);
+        return "📦 **Live Order Details (${o.id})**\n\n"
+            "- **Customer**: ${o.customerName} (${o.customerPhone})\n"
+            "- **Items**: ${o.itemsSummary}\n"
+            "- **Total Amount**: **${o.formattedTotal}**\n"
+            "- **Status**: **${o.orderStatus.displayName}**\n"
+            "- **Assigned Driver**: ${o.driverName ?? 'Unassigned'}\n"
+            "- **Payment**: ${o.paymentMethod} (${o.paymentStatus})\n"
+            "- **Delivery Address**: ${o.deliveryAddress}\n"
+            "${claim != null ? '- **Defect Claim (${claim.id})**: ${claim.status.toUpperCase()} (${claim.affectedGallons} gallon(s) • ${claim.issueType})' : '- **Defect Claim**: None reported'}";
+      }
+    }
+
+    // 1. Greetings & Role-Aware Welcome
+    if (RegExp(
+      r'^(hi|hello|hey|good morning|good afternoon|good evening|kumusta|kamusta)\b',
+    ).hasMatch(query)) {
       if (isAdmin) {
-        return "Hello Admin **$userName**! 👋 I'm **AquaBot 💧**, your JJAASS Water Market operations assistant.\n\nHere is a quick live snapshot:\n- **Total Revenue**: ₱${orderProvider.getTotalRevenue().toStringAsFixed(2)}\n- **Pending Orders**: ${orderProvider.getPendingCount()}\n- **Active Deliveries**: ${orderProvider.getActiveDeliveriesCount()}\n\nAsk me about **sales**, **inventory stock**, **pending orders**, or paste a **Gemini API Key** anytime!";
+        return "Hello Admin **$userName**! 👋 I'm **AquaBot 💧**, your omniscient JJAASS Water Market assistant.\n\n"
+            "📊 **Live Station Snapshot**:\n"
+            "- **Total Revenue**: ₱${orderProvider.getTotalRevenue().toStringAsFixed(2)}\n"
+            "- **Orders**: ${orderProvider.getPendingCount()} Pending • ${orderProvider.getActiveDeliveriesCount()} Active • ${orderProvider.getCompletedCount()} Completed\n"
+            "- **Bulk Reservoir**: ${orderProvider.waterReservoirLiters.toInt()}L / ${orderProvider.waterReservoirCapacity.toInt()}L (${orderProvider.availableRefillsCount} refills available)\n"
+            "- **Active Defect Claims**: ${issueService.activeCount} (${issueService.pendingCount} pending review)\n\n"
+            "Ask me anything about **Admin**, **Driver**, or **Customer** workflows!";
       }
       if (isDriver) {
-        final activeJob = orderProvider.getActiveDriverJob(userId);
-        return "Hello Driver **$userName**! 🚚 I'm **AquaBot 💧**, your dispatch assistant.\n\n- **Active Delivery**: ${activeJob != null ? '${activeJob.id} (${activeJob.customerName})' : 'None right now'}\n- **Available Earnings**: ₱${orderProvider.getDriverEarnings(userId).toStringAsFixed(2)}\n\nAsk me to **optimize route**, check your **active job**, or view your **earnings**!";
+        final activeJob = orderProvider.getActiveDriverJob(
+          userId,
+          driverName: userName,
+        );
+        final available = orderProvider.getAvailableDriverJobs(
+          userId,
+          driverName: userName,
+        );
+        return "Hello Driver **$userName**! 🚚 I'm **AquaBot 💧**, your dispatch & operations assistant.\n\n"
+            "- **Active Delivery**: ${activeJob != null ? '${activeJob.id} (${activeJob.customerName} • ${activeJob.formattedTotal})' : 'None right now'}\n"
+            "- **Available Jobs in Queue**: ${available.length}\n\n"
+            "Ask me about **dispatch & GPS navigation**, **borrowed gallon returns**, **COD/GCash verification**, **defect swaps**, or how **Admin & Customer** features work!";
       }
-      return "Hello **$userName**! 👋 Welcome to **JJAASS Water Market** 💧\n\nI can help you with:\n- 💧 **Water Types & Prices** (19L Purified Refill ₱30, 19L Set A with New Container ₱230)\n- 🏺 **Jug Types** (5-Gallon Slim with Faucet & 5-Gallon Round)\n- 📦 **Order Tracking & Delivery Status**\n- 💳 **GCash & COD Payments**\n- 📍 **Store Location & Hours**\n\nWhat would you like to know?";
+      final swapCredits = issueService.getCustomerApprovedSwapGallons(
+        userId,
+        userName,
+      );
+      return "Hello **$userName**! 👋 Welcome to **JJAASS Water Market** 💧\n\n"
+          "I know everything across our **Customer, Driver, and Station Admin** systems! I can help you with:\n"
+          "- 💧 **Water Products & Prices** (Refill ₱30 vs Set A ₱230, Slim & Round Jugs)\n"
+          "- 📦 **Live Order Tracking & Pinned GPS Delivery**\n"
+          "- 📸 **Reporting Delivery Defects** (with Camera/Gallery photo evidence)${swapCredits > 0 ? '\n- ✅ **You have $swapCredits Approved Free Swap Gallon(s) ready to redeem!**' : ''}\n"
+          "- 🛡️ **Station Safety & Compliance Permits**\n"
+          "- 💳 **GCash (PayMongo) & Cash on Delivery (COD)**\n\n"
+          "What would you like to ask?";
     }
 
     // 2. Gratitude / Closing
-    if (query.contains('thank') || query.contains('salamat') || query.contains('thanks')) {
-      return "You're very welcome, **$userName**! 💧 Thank you for choosing **JJAASS Water Market**. Stay hydrated and let me know if you need anything else!";
+    if (query.contains('thank') ||
+        query.contains('salamat') ||
+        query.contains('thanks')) {
+      return "You're very welcome, **$userName**! 💧 Thank you for using **JJAASS Water Market**. Ask me anytime if you need help with Customer, Driver, or Admin operations!";
     }
 
     // 3. Gemini API setup instructions
-    if (query.contains('gemini') || query.contains('api key') || query.contains('apikey')) {
+    if (query.contains('gemini') ||
+        query.contains('api key') ||
+        query.contains('apikey')) {
       return "🔑 **How to Enable Live Google Gemini AI**\n\n"
-          "1. Get a free API key from Google AI Studio: https://aistudio.google.com/app/apikey\n"
-          "2. Simply **paste your `AIza...` key right here in the chat** (or tap the 🔑 key icon in the top bar), or set `geminiApiKey` in `app_constants.dart`.\n\n"
-          "Current status: **${hasConfiguredApiKey ? 'Connected to Gemini 2.5 Flash ✅' : 'Smart Built-in Mode (No API key set yet)'}**";
+          "1. Get an API key from Google AI Studio: https://aistudio.google.com/app/apikey\n"
+          "2. Paste your `AIza...` key directly here in the chat, or set `geminiApiKey` in `app_constants.dart`.\n\n"
+          "Current status: **${hasConfiguredApiKey ? 'Connected to Gemini 2.5 Flash ✅' : 'Omniscient Built-in Mode (All Admin, Driver & Customer data active ✅)'}**";
     }
 
-    // 4. Specific Refill vs Set A query
+    // 4. Cross-Role Overview ("all roles", "what can admin/driver/customer do", "roles")
+    if (query.contains('all role') ||
+        query.contains('each role') ||
+        query.contains('every role') ||
+        query.contains('three role') ||
+        (query.contains('what can') &&
+            (query.contains('admin') ||
+                query.contains('driver') ||
+                query.contains('customer')))) {
+      return "👥 **Complete JJAASS Water Market Role Guide**\n\n"
+          "1. **Station Admin (Web Admin Panel)**:\n"
+          "   - **Dashboard & Orders**: Monitor live orders, assign drivers, and update statuses.\n"
+          "   - **Defect & Swap Claims**: Inspect customer photo evidence, approve/decline swap claims, and click **Complete Transaction & Dismiss** (or let completed orders auto-dismiss).\n"
+          "   - **Inventory & 10,000L Reservoir**: Manage water stock, Slim/Round containers, and track **Customer Borrowed Gallons**.\n"
+          "   - **Deliveries, Payments & Reports**: Track live driver GPS fleet, verify GCash/COD payments, and export **CSV / PDF** reports.\n"
+          "   - **Settings & Compliance Permits**: Upload/replace Mayor's Permit, DOH Sanitary Permit, Lab Tests, DTI, and FSIC directly from a laptop.\n\n"
+          "2. **Delivery Driver (Mobile App)**:\n"
+          "   - **Job Invitations**: Accept single jobs or tap **Accept All** to accept all pending dispatches with real-time order prices.\n"
+          "   - **Live GPS Navigation**: View customer pinned coordinates, optimize multi-stop routes, and progress status (`Assigned` → `Out for Delivery` → `Delivered`).\n"
+          "   - **Gallon Returns & Payments**: Log returned Slim/Round borrowed gallons, verify GCash/COD, and message Customer or **Station Admin Desk**.\n\n"
+          "3. **Customer (Mobile App)**:\n"
+          "   - **Order Water**: Order Refills (₱30) or Set A w/ New Jug (₱230), choose 5-Gallon Slim or Round, pin house GPS, and pay via **GCash (PayMongo)** or **COD**.\n"
+          "   - **Track & Chat**: Track the rider on the live map and chat with the Driver or Station Admin.\n"
+          "   - **Defect Claims & Permits**: Submit defect claims with **Camera/Gallery photo evidence**, redeem approved free swaps, and view official **Station Safety Permits**.";
+    }
+
+    // 5. Delivery Defect & Swap Claims (Admin, Driver, and Customer)
+    if (query.contains('defect') ||
+        query.contains('claim') ||
+        query.contains('swap') ||
+        query.contains('damaged') ||
+        query.contains('broken seal') ||
+        query.contains('leak') ||
+        query.contains('murky') ||
+        query.contains('evidence') ||
+        query.contains('replace')) {
+      final activeClaims = issueService.activeCount;
+      final pendingClaims = issueService.pendingCount;
+      final approvedClaims = issueService.activeIssues.where((i) => i.isApproved).length;
+      final custSwapCredits = issueService.getCustomerApprovedSwapGallons(
+        userId,
+        userName,
+      );
+
+      return "🔄 **Delivery Defect & Gallon Swap Claims (Real-Time)**\n\n"
+          "📊 **Live Claims Status**:\n"
+          "- **Active Unresolved Claims**: **$activeClaims** ($pendingClaims Pending Review • $approvedClaims Swap Approved)\n"
+          "${!isAdmin && !isDriver ? '- **Your Approved Free Swap Credits**: **$custSwapCredits gallon(s)**\n' : ''}\n"
+          "📸 **How It Works Across Roles**:\n"
+          "- **For Customers**: On any **Completed** order, tap **Report Issue / Request Swap**, select the defect type (*Seal Damaged, Container Leak, Murky Water, Broken Cap*), take a photo using **Take Photo (Camera)** or **From Gallery** (required evidence), and submit.\n"
+          "- **For Admins**: Go to **Orders → Delivery Defect & Swap Claims**. Inspect the customer's uploaded photo, then click **Approve Swap** or **Decline**. Once the replacement transaction is done, it automatically moves to **Done & History** (or click **Complete Transaction & Dismiss**).\n"
+          "- **For Drivers & Next Delivery**: When a customer toggles **Redeem Free Replacement Swap** on their next order, the replacement gallon(s) are priced at **₱0** and tagged on the driver's delivery note for free container swap.";
+    }
+
+    // 6. Station Compliance & Safety Permits (Admin & Customer)
+    if (query.contains('permit') ||
+        query.contains('sanitary') ||
+        query.contains('doh') ||
+        query.contains('potability') ||
+        query.contains('lab test') ||
+        query.contains('mayor') ||
+        query.contains('dti') ||
+        query.contains('fsic') ||
+        query.contains('fire safety') ||
+        query.contains('certificate') ||
+        query.contains('compliance')) {
+      final permits = permitService.permits;
+      final permitLines = permits
+          .map(
+            (p) =>
+                "- **${p.title}**: ${p.isUploaded ? '✅ ${p.status}' : '⚠️ Not Uploaded'} *(Expires: ${p.expiryDate})*",
+          )
+          .join('\n');
+      return "🛡️ **Station Safety & Regulatory Compliance Permits**\n\n"
+          "$permitLines\n\n"
+          "- **How Customers View Permits**: On the Customer Dashboard, scroll to **Verified Station Compliance & Permits** and tap any document to inspect the high-resolution certificate.\n"
+          "- **How Admins Replace Permits (Laptop/Desktop)**: Go to **Settings → Station Compliance & Regulatory Permits**, click **Replace / Upload**, drag-and-drop or browse an image (`.png`, `.jpg`, `.webp`) from your laptop, set the expiry date, and save.";
+    }
+
+    // 7. 10,000L Bulk Water Reservoir & Depletion
+    if (query.contains('reservoir') ||
+        query.contains('10,000') ||
+        query.contains('10000') ||
+        query.contains('deplete') ||
+        query.contains('bulk water') ||
+        query.contains('tank')) {
+      final currentLiters = orderProvider.waterReservoirLiters.toInt();
+      final maxLiters = orderProvider.waterReservoirCapacity.toInt();
+      final availableRefills = orderProvider.availableRefillsCount;
+      return "💧 **10,000L Bulk Water Reservoir & Refill Depletion**\n\n"
+          "- **Current Reservoir Level**: **$currentLiters L / $maxLiters L**\n"
+          "- **Available 5-Gallon Refills**: **$availableRefills jugs** *(19 Liters per 5-gallon jug)*\n\n"
+          "**How Depletion Works**:\n"
+          "1. Every time a 5-gallon (19L) water refill order is placed, **19 Liters** are automatically deducted from the **10,000L Bulk Water Reservoir**.\n"
+          "2. If an order is cancelled, the 19L per jug is refunded back to the reservoir.\n"
+          "3. **How Admin Refills the Tank**: Open **Inventory → Bulk Water Reservoir** card and click **Refill Tank** to replenish the water volume back up to 10,000L.";
+    }
+
+    // 8. Borrowed Gallons, Returns, Collection & Partial Returns (Admin, Driver, Customer)
+    if (query.contains('borrow') ||
+        query.contains('unreturned') ||
+        query.contains('return gallon') ||
+        query.contains('returned slim') ||
+        query.contains('collected borrowed') ||
+        query.contains('3 out of 5') ||
+        query.contains('partial return') ||
+        query.contains('empty container')) {
+      final totalActive = orderProvider.totalActiveBorrowedGallons;
+      final activeSlim = orderProvider.activeSlimBorrowedGallons;
+      final activeRound = orderProvider.activeRoundBorrowedGallons;
+      return "🔄 **Borrowed Gallons Tracking, Collection & Auto-Restock**\n\n"
+          "📊 **Live Borrowed Containers**:\n"
+          "- **Total Active Borrowed**: **$totalActive gallons** (*$activeSlim Slim* • *$activeRound Round*)\n"
+          "- **Station Empty Reserves**: ${orderProvider.emptyContainerStocks} jugs\n\n"
+          "📋 **How It Works Across All Roles**:\n"
+          "- **For Customers**: When ordering a ₱30 refill without your own jug, you can borrow station **5-Gallon Slim** or **Round** containers. They are logged under your account until returned.\n"
+          "- **For Drivers (Logging Returns & Partial Returns)**: In the Driver App, tap **Log Return / Collect Gallons** on the customer's record. If a customer only returns **3 out of 5 borrowed gallons**, enter `3`—the system automatically deducts 3 and keeps the remaining **2 gallons** marked as **Active Borrowed**.\n"
+          "- **Auto-Restocking**: Returned Slim and Round containers are automatically added back to the station's physical container inventory (`+${orderProvider.remainingSlimGallons.toInt()} Slim / ${orderProvider.remainingRoundGallons.toInt()} Round` available).\n"
+          "- **For Admins**: Go to **Inventory → Customer Borrowed Gallons Log** to filter by *Active, Returned, Slim, or Round*, mark gallons as returned, or click **Schedule Collection** to dispatch a driver.";
+    }
+
+    // 9. Restocking Physical Slim & Round Container Inventory
+    if (query.contains('restock') ||
+        query.contains('inventory') ||
+        query.contains('stock') ||
+        query.contains('capacity') ||
+        query.contains('vehicle gallon')) {
+      final productsInfo = orderProvider.waterProducts.map((p) {
+        return "- **${p['name']}**: ${(p['stock'] as num).toInt()} / ${(p['capacity'] as num).toInt()} units (**₱${(p['price'] as num).toStringAsFixed(2)}**)";
+      }).join('\n');
+      return "📦 **Live Inventory & Physical Container Stock Levels**\n\n"
+          "$productsInfo\n"
+          "- **Available Slim Containers**: **${orderProvider.remainingSlimGallons.toInt()} / ${orderProvider.slimGallonCapacity.toInt()}**\n"
+          "- **Available Round Containers**: **${orderProvider.remainingRoundGallons.toInt()} / ${orderProvider.roundGallonCapacity.toInt()}**\n"
+          "- **Refilled Reserves**: ${orderProvider.refilledContainerStocks} • **Empty Reserves**: ${orderProvider.emptyContainerStocks}\n\n"
+          "**How to Manage Inventory**:\n"
+          "- **Admin Restocking**: Open the **Inventory** tab, click **Restock** or **Set Stock** on any item (or **Set All Inventory** in the top bar) to update quantities, capacities, or prices in real time.\n"
+          "- **Driver Vehicle Capacity**: Standard delivery tricycles/vans load up to **20–30 5-gallon jugs** per trip. Drivers can check assigned job quantities on the **Driver Dispatch Dashboard** before departing.";
+    }
+
+    // 10. Driver Dispatch, Assigning Orders, GPS Navigation, & Customer Not Home
+    if (query.contains('assign') ||
+        query.contains('out for delivery') ||
+        query.contains('pinned gps') ||
+        query.contains('permanent gps') ||
+        query.contains('not at the delivery') ||
+        query.contains('not home') ||
+        query.contains('accept all') ||
+        query.contains('switch between available') ||
+        query.contains('driver status')) {
+      final activeJob = orderProvider.getActiveDriverJob(
+        userId,
+        driverName: userName,
+      );
+      final availableJobs = orderProvider.getAvailableDriverJobs(
+        userId,
+        driverName: userName,
+      );
+      return "🚚 **Dispatch, Live GPS Navigation & Delivery Guide**\n\n"
+          "📊 **Live Dispatch Queue**:\n"
+          "- **Pending Unassigned Orders**: ${orderProvider.getPendingCount()}\n"
+          "- **Active Deliveries in Transit**: ${orderProvider.getActiveDeliveriesCount()}\n"
+          "${isDriver ? '- **Your Active Job**: ${activeJob?.id ?? "None"} • **Your Queue**: ${availableJobs.length} job(s)\n' : ''}\n"
+          "🧭 **Step-by-Step Workflows**:\n"
+          "- **Admin — Assigning a Driver**: Go to **Orders** or **Deliveries Fleet**, click **Assign Driver** on a pending order, and pick an available rider.\n"
+          "- **Driver — Accepting Jobs & Marking Out for Delivery**: On the **Driver Dashboard**, tap **Accept Job** on an individual card or tap **Accept All** to accept all job invitations at once. Tap **Start Delivery / Out for Delivery** when departing.\n"
+          "- **Driver — Navigating with Pinned GPS**: Tap the **Live Map / Navigate** button on the active order card to follow the route to the customer's exact pinned GPS coordinates.\n"
+          "- **Customer — Permanent GPS Pin**: When ordering in **Order Water**, tap the map pin to lock your exact house coordinates so drivers always have turn-by-turn directions to your doorstep.\n"
+          "- **What if the Customer is Not at the Delivery Address?**: Open the order's **Delivery Chat** or call the customer's phone number listed on the job card, and use the **Message Admin (Station Admin Desk)** quick action to coordinate rescheduling.\n"
+          "- **Switching Driver Status**: Your status automatically switches to **On Delivery** when you have an active in-transit order and returns to **Available** once all active deliveries are marked **Delivered**.";
+    }
+
+    // 11. Refill (₱30) vs Set A (₱230), Slim vs Round, Max Quantity, & Product Prices
     if (query.contains('set a') ||
-        (query.contains('refill') && (query.contains('set') || query.contains('230') || query.contains('difference')))) {
-      return "💧 **Refill (₱30) vs Set A with New Container (₱230)**\n\n"
-          "Here is the detailed breakdown of each product option:\n\n"
-          "1. **19L Purified Water Refill (₱30.00)**:\n"
-          "   • **What it is**: 19 Liters of pure multi-stage filtered drinking water for customers who already own a 5-gallon jug.\n"
-          "   • **How it works**: Our delivery rider arrives with a sanitized, sealed 19L bottle and exchanges it for your empty container.\n"
-          "   • **Best for**: Routine weekly household replenishment at the most affordable price.\n\n"
-          "2. **19L Water + New Container Set A (₱230.00)**:\n"
-          "   • **What it is**: A complete starter set including a **brand-new BPA-free 5-gallon jug** filled with freshly purified drinking water.\n"
-          "   • **How it works**: You purchase and own the brand new container outright. **No empty container exchange is required**!\n"
-          "   • **Best for**: First-time customers, new homes, offices, or adding extra backup containers to your household.\n\n"
-          "💡 **Step-by-Step Ordering Guide**:\n"
-          "1. Open the **Order Water** tab.\n"
-          "2. Tap either **19L Purified Water** (₱30) or **Set A** (₱230).\n"
-          "3. Select your preferred container style: **5-Gallon Slim** (with faucet) or **5-Gallon Round** (for dispenser) using the quantity steppers!";
+        query.contains('230') ||
+        query.contains('difference between refill') ||
+        query.contains('slim or 5-gallon round') ||
+        query.contains('slim or round') ||
+        query.contains('slim') ||
+        query.contains('round') ||
+        query.contains('jug') ||
+        query.contains('maximum quantity') ||
+        query.contains('max quantity') ||
+        query.contains('price') ||
+        query.contains('magkano') ||
+        query.contains('how much') ||
+        query.contains('product')) {
+      final list = orderProvider.inventoryItems.map((p) {
+        return "- **${p['name']}**: **₱${(p['price'] as num).toStringAsFixed(2)}** *(Stock: ${(p['stock'] as num).toInt()})*";
+      }).join('\n');
+      return "💧 **Products, Pricing, Jug Types & Order Limits**\n\n"
+          "**Live Catalog & Prices**:\n$list\n\n"
+          "🏺 **Key Comparisons**:\n"
+          "- **Water Refill (₱30) vs. Set A (₱230)**:\n"
+          "  - **Purified Water Refill (₱30)**: Refills an existing 5-gallon (19L) container (either your own jug or a borrowed station jug).\n"
+          "  - **Set A — Brand-New Container + Water (₱230)**: Includes **1 brand-new 5-Gallon container (₱200)** + **19L Purified Water Refill (₱30)** that you own permanently.\n"
+          "- **5-Gallon Slim vs. 5-Gallon Round**:\n"
+          "  - **5-Gallon Slim**: Rectangular container with a **built-in bottom faucet** and top carry handle—ideal for tabletops and kitchens without a dispenser.\n"
+          "  - **5-Gallon Round**: Standard cylindrical bottle without a side faucet—designed specifically to sit upside-down on **hot & cold water dispensers**.\n"
+          "- **Maximum Quantity per Order**: Customers can order up to **50 jugs per single order** (subject to live reservoir & container stock).";
     }
 
-    // 5. Store Location / Address / Hours / Contact
+    // 12. Revenue, Sales, Liters Dispensed, GCash vs COD, & Reports (CSV/PDF)
+    if (query.contains('revenue') ||
+        query.contains('sales') ||
+        query.contains('liters') ||
+        query.contains('dispensed') ||
+        query.contains('gcash') ||
+        query.contains('paymongo') ||
+        query.contains('cod') ||
+        query.contains('cash on delivery') ||
+        query.contains('payment') ||
+        query.contains('report') ||
+        query.contains('csv') ||
+        query.contains('pdf')) {
+      final completedOrders = orderProvider.orders
+          .where((o) => o.orderStatus == OrderStatus.completed)
+          .toList();
+      final totalRev = orderProvider.getTotalRevenue();
+      final gcashRev = completedOrders
+          .where((o) => o.paymentMethod.toLowerCase().contains('gcash'))
+          .fold<double>(0.0, (s, o) => s + o.totalAmount);
+      final codRev = completedOrders
+          .where((o) => !o.paymentMethod.toLowerCase().contains('gcash'))
+          .fold<double>(0.0, (s, o) => s + o.totalAmount);
+      final totalGallons = completedOrders.fold<int>(
+        0,
+        (s, o) => s + (o.quantity > 0 ? o.quantity : 1),
+      );
+      final totalLiters = totalGallons * 19;
+
+      return "💰 **Payments, Revenue Analytics & Water Volume Dispensed**\n\n"
+          "📊 **Live Financial & Volume Metrics**:\n"
+          "- **Total Completed Revenue**: **₱${totalRev.toStringAsFixed(2)}** (${completedOrders.length} completed orders)\n"
+          "- **GCash (PayMongo) Revenue**: **₱${gcashRev.toStringAsFixed(2)}**\n"
+          "- **Cash on Delivery (COD) Revenue**: **₱${codRev.toStringAsFixed(2)}**\n"
+          "- **Total Water Dispensed**: **$totalLiters Liters** ($totalGallons × 19L 5-gallon jugs)\n\n"
+          "💳 **Payment & Verification Guidelines**:\n"
+          "- **Customer — Paying via GCash (PayMongo)**: Select **GCash** at checkout to complete instant digital payment, or pay via **Cash on Delivery (COD)** when the driver arrives.\n"
+          "- **Driver — Verifying COD vs. GCash**: Check the order badge on your Driver Dashboard—online GCash orders show **Paid (GCash)**, while **COD (Pending)** orders require collecting exact cash upon delivery and tapping **Mark as Delivered & Paid**.\n"
+          "- **Admin — Reports & Exports**: Open **Payments** to filter by *GCash, COD, Paid, or Pending*, or open **Reports** to filter by *Daily, Weekly, Monthly, or Annually* and click **Export CSV** or **Download PDF**.";
+    }
+
+    // 13. Accounts, Roles, Security Lockout & Password Reset
+    if (query.contains('account') ||
+        query.contains('create user') ||
+        query.contains('manage driver') ||
+        query.contains('lockout') ||
+        query.contains('5-attempt') ||
+        query.contains('password') ||
+        query.contains('security') ||
+        query.contains('permission')) {
+      return "🔐 **User Accounts, Role Permissions & Security Protection**\n\n"
+          "- **Creating & Managing Accounts (Admin)**: Go to **User / Roles & Permissions** in the Admin Panel. Click **+ Create User** to register a new **Customer, Driver, or Admin**, or use the role dropdown on any user row to update their role or delete inactive accounts.\n"
+          "- **5-Attempt Security Lockout**: To prevent brute-force attacks, after **5 consecutive failed login attempts**, the account is temporarily locked for security cooldown.\n"
+          "- **OTP Password Reset**: Users can tap **Forgot Password?** on the login screen to receive a One-Time Password (OTP) via their registered email/phone to securely set a new bcrypt-hashed password.\n"
+          "- **Audit-Locked Chats**: Once an order reaches **Completed**, its delivery chat channel automatically locks into **Read-Only** mode for tamper-proof audit retention.";
+    }
+
+    // 14. Store Location, Hours, & Customer Service Hotlines
     if (query.contains('address') ||
         query.contains('location') ||
         query.contains('located') ||
+        query.contains('where is jjaass') ||
         query.contains('where are you') ||
         query.contains('store') ||
-        query.contains('shop') ||
-        query.contains('visit') ||
-        query.contains('pickup') ||
-        query.contains('pick up') ||
         query.contains('hours') ||
         query.contains('open') ||
-        query.contains('contact') ||
         query.contains('hotline') ||
-        query.contains('market')) {
-      return "📍 **JJAASS Water Market Store Details & Hours**\n\n"
-          "• **Physical Station**: **$marketAddress**\n"
-          "• **Operating Hours**: Monday – Sunday, **7:00 AM to 7:00 PM**\n"
-          "• **Delivery Cut-off**: Orders placed before 6:30 PM are delivered same-day.\n"
-          "• **Customer Service Hotline**: **+63 912 345 6789** / **(052) 742-1234**\n"
-          "• **Services Available**: Fast home delivery, walk-in jug refills, and spare dispenser accessories.";
+        query.contains('contact') ||
+        query.contains('phone')) {
+      return "📍 **JJAASS Water Market Location, Hours & Hotlines**\n\n"
+          "- **Station Address**: **$marketAddress**\n"
+          "- **Service Coverage**: Albay 1st District (*Bacacay, Tabaco City, Malilipot, Malinao, Santo Domingo, Tiwi*)\n"
+          "- **Operating Hours**: Monday – Sunday, **7:00 AM to 7:00 PM**\n"
+          "- **Station Hotline / Admin Desk**: **+63 995 113 3652** (`admin@jjaasswater.com`)\n"
+          "- **In-App Direct Support**: Customers and Drivers can also message the dispatcher directly anytime using the **Message Station Admin** tab!";
     }
 
-    // 6. Jug / Container Types (Slim vs Round)
-    if (query.contains('jug') ||
-        query.contains('slim') ||
-        query.contains('round') ||
-        query.contains('container') ||
-        query.contains('gallon')) {
-      return "🏺 **5-Gallon Slim vs 5-Gallon Round Jugs Comparison**\n\n"
-          "Both containers hold 19 Liters (5 Gallons) of fresh purified water. Choose the best design for your home or office:\n\n"
-          "1. **5-Gallon Slim Container** (Tabletop & Standalone):\n"
-          "   • **Design**: Space-saving rectangular profile with built-in side carrying handle.\n"
-          "   • **Dispensing**: Includes an integrated front twist faucet for easy direct pouring.\n"
-          "   • **Ideal for**: Kitchen countertops, refrigerators, study tables, or camping without needing an external dispenser.\n\n"
-          "2. **5-Gallon Round Container** (Inverted Dispenser):\n"
-          "   • **Design**: Heavy-duty cylindrical body with non-spill bottle cap.\n"
-          "   • **Dispensing**: Designed specifically to be inverted upside-down on hot/cold water dispensers or electric pumps.\n"
-          "   • **Ideal for**: Offices, homes with stand-up hot & cold dispensers, and high-volume usage.\n\n"
-          "💡 **Pro Tip**: You can order **both types at the same time** by simply setting the quantity on each jug card in the Order Water tab!";
+    // 15. Order Status & Tracking ("where is my order", "orders", "how to order")
+    if (query.contains('how to order') ||
+        query.contains('place order') ||
+        query.contains('buy water')) {
+      return "🛒 **How to Order Water in JJAASSApp**\n\n"
+          "1. Open the **Order Water** tab.\n"
+          "2. Choose **Purified Water Refill (₱30)** or **Set A w/ Brand-New Jug (₱230)** (or add standalone containers/caps).\n"
+          "3. Select your container type (**5-Gallon Slim** or **5-Gallon Round**) and quantity.\n"
+          "4. If you have an **Approved Defect Swap**, toggle the green **Redeem Free Replacement Swap** switch.\n"
+          "5. Confirm your **Delivery Address & Pinned GPS Location**, choose **Cash on Delivery (COD)** or **GCash**, and tap **Confirm Order**!";
     }
 
-    // 7. Permanent GPS Location Pin Guide
-    if (query.contains('pin') ||
-        query.contains('gps') ||
-        query.contains('permanent') ||
-        query.contains('map')) {
-      return "📍 **How Permanent GPS Location Pinning Works**\n\n"
-          "Our system saves your exact GPS coordinates so our delivery riders can navigate straight to your doorstep without phone calls or delays:\n\n"
-          "• **Step-by-Step Guide**:\n"
-          "  1. Go to the **Order Water** tab or **Profile Settings**.\n"
-          "  2. Tap the green **Edit Pin** button to launch the Google Map.\n"
-          "  3. Drag the map until the red delivery marker is positioned directly over your house or gate.\n"
-          "  4. Tap **Confirm & Save Pin**.\n\n"
-          "• **Key Benefits**:\n"
-          "  • **Permanently Saved**: Your coordinates are saved to your account and automatically pre-filled for every future order.\n"
-          "  • **No Typing Required**: You never have to re-enter long province/city/barangay dropdowns!\n"
-          "  • **Fully Editable**: Moving or ordering to another location? Simply tap **Edit Pin** anytime to update your saved spot!";
-    }
-
-    // 8. Maximum Quantity Limit
-    if (query.contains('max') ||
-        query.contains('limit') ||
-        query.contains('how many jugs')) {
-      return "📦 **Order Quantity & Limits**\n\n"
-          "• **Maximum Per Item**: Up to **150 jugs/items each** per order (e.g., up to 150 Slim, 150 Round, and 150 per accessory, capped by available inventory stock).\n"
-          "• **Bulk Orders (>20 Jugs)**: For large volume orders exceeding 20 jugs, our dispatch console automatically coordinates multi-rider batches or dedicated delivery vehicles for seamless turnaround across Tabaco City.\n"
-          "• **Quick Quantity Input**: You can tap any quantity number in the Order Water tab to directly type large numbers (like 25, 50, 100, or 150) instantly!";
-    }
-
-    // 6. Water Types comparison (Purified vs Alkaline vs Mineral)
-    if (query.contains('purified') ||
-        query.contains('alkaline') ||
-        query.contains('mineral') ||
-        query.contains('difference') ||
-        query.contains('water type') ||
-        query.contains('best water')) {
-      final list = orderProvider.waterProducts.map((p) {
-        final desc = (p['description'] as String?) ?? '';
-        return "- **${p['name']}** (**₱${(p['price'] as num).toStringAsFixed(2)}**): $desc *(Stock: ${(p['stock'] as num).toInt()} jugs)*";
-      }).join('\n');
-      return "💧 **JJAASS Water Types & Benefits**\n\n$list\n\n"
-          "All options are available in **5-Gallon Slim** or **5-Gallon Round** jugs!";
-    }
-
-    if (isAdmin) {
-      if (query.contains('revenue') ||
-          query.contains('sales') ||
-          query.contains('earn') ||
-          query.contains('income')) {
-        return "💰 **Live Revenue Report**\n\n"
-            "- **Total Completed Revenue**: **₱${orderProvider.getTotalRevenue().toStringAsFixed(2)}**\n"
-            "- **Completed Orders**: ${orderProvider.getCompletedCount()}\n"
-            "- **Pending Orders**: ${orderProvider.getPendingCount()}";
-      }
-      if (query.contains('order') ||
-          query.contains('stat') ||
-          query.contains('pending') ||
-          query.contains('summary')) {
-        return "📊 **Live Order Statistics**\n\n"
+    if (query.contains('where') ||
+        query.contains('track') ||
+        query.contains('status') ||
+        query.contains('order') ||
+        query.contains('delivery') ||
+        query.contains('active') ||
+        query.contains('job')) {
+      if (isAdmin) {
+        final recent = orderProvider.orders.take(3).map((o) {
+          return "- **${o.id}** (${o.customerName}): ${o.itemsSummary} • **${o.formattedTotal}** • *${o.orderStatus.displayName}*";
+        }).join('\n');
+        return "📊 **Live System Orders Overview**\n\n"
             "- **Pending Orders**: ${orderProvider.getPendingCount()}\n"
             "- **Active Deliveries**: ${orderProvider.getActiveDeliveriesCount()}\n"
             "- **Completed Orders**: ${orderProvider.getCompletedCount()}\n"
-            "- **Total System Orders**: ${orderProvider.orders.length}";
+            "- **Total Orders**: ${orderProvider.orders.length}\n\n"
+            "**Latest Orders**:\n$recent";
       }
-      if (query.contains('stock') ||
-          query.contains('product') ||
-          query.contains('inventory')) {
-        final productsInfo = orderProvider.waterProducts.map((p) {
-          return "- **${p['name']}**: ${(p['stock'] as num).toInt()} / ${(p['capacity'] as num).toInt()} gallons (₱${(p['price'] as num).toStringAsFixed(2)})";
-        }).join('\n');
-        return "💧 **Inventory Stock Levels**\n\n$productsInfo\n- **Refilled Reserves**: ${orderProvider.refilledContainerStocks}\n- **Empty Containers**: ${orderProvider.emptyContainerStocks}";
-      }
-      return "Hello Admin **$userName**! 💧 Here is what I can check for you right now:\n"
-          "- **'revenue'** – Total sales & completed order revenue\n"
-          "- **'orders'** – Live pending, active, and completed order counts\n"
-          "- **'inventory'** – Current water stock & container reserves\n"
-          "- Or paste a **Gemini API Key** (`AIza...`) to enable full generative AI analysis!";
-    }
-
-    if (isDriver) {
-      if (query.contains('earn') ||
-          query.contains('payout') ||
-          query.contains('cash') ||
-          query.contains('salary') ||
-          query.contains('income')) {
-        final earnings = orderProvider.getDriverEarnings(userId);
-        final completed = orderProvider.getDriverCompletedJobs(userId).length;
-        return "💳 **Driver Earnings & GCash Payout**\n\n"
-            "- **Withdrawable Balance**: **₱${earnings.toStringAsFixed(2)}**\n"
-            "- **Completed Trips**: $completed\n\n"
-            "You earn **50% commission** per completed delivery. Go to the **Dashboard** and tap **Cash Out Earnings** to transfer to GCash.";
-      }
-      if (query.contains('active') ||
-          query.contains('job') ||
-          query.contains('delivery') ||
-          query.contains('queue') ||
-          query.contains('assign') ||
-          query.contains('customer')) {
-        final activeJob = orderProvider.getActiveDriverJob(userId);
-        final available = orderProvider.getAvailableDriverJobs(userId);
+      if (isDriver) {
+        final activeJob = orderProvider.getActiveDriverJob(
+          userId,
+          driverName: userName,
+        );
+        final available = orderProvider.getAvailableDriverJobs(
+          userId,
+          driverName: userName,
+        );
         if (activeJob == null) {
-          return "🚚 **Dispatch Status**\n\nYou have **no active delivery** right now.\n- **Available Jobs in Queue**: **${available.length}**\n\nOpen the **Dashboard** tab and tap **Accept Job** to start delivering!";
+          return "🚚 **Driver Dispatch Status**\n\n"
+              "- **Active Delivery**: None right now\n"
+              "- **Available Jobs in Queue**: **${available.length}**\n\n"
+              "Go to the **Driver Dashboard** and tap **Accept Job** or **Accept All** to start delivering!";
         }
-        return "🚚 **Current Active Delivery (${activeJob.id})**\n\n"
+        return "🚚 **Your Current Active Delivery (${activeJob.id})**\n\n"
             "- **Customer**: ${activeJob.customerName} (${activeJob.customerPhone})\n"
             "- **Address**: ${activeJob.deliveryAddress}\n"
-            "- **Order**: ${activeJob.itemsSummary}\n"
-            "- **Total**: ${activeJob.formattedTotal} (${activeJob.paymentMethod} • ${activeJob.paymentStatus})\n"
-            "${activeJob.deliveryNote != null ? '- **Note**: ${activeJob.deliveryNote}\n' : ''}"
-            "\nOpen **Deliveries Map** to navigate or mark as **Delivered**!";
+            "- **Items**: ${activeJob.itemsSummary}\n"
+            "- **Total**: **${activeJob.formattedTotal}** (${activeJob.paymentMethod} • ${activeJob.paymentStatus})\n"
+            "${activeJob.deliveryNote != null && activeJob.deliveryNote!.isNotEmpty ? '- **Note**: ${activeJob.deliveryNote}\n' : ''}";
       }
-      return "Hello Driver **$userName**! 🚚 I can help you with:\n"
-          "- **'optimize route'** – Calculate the fastest delivery sequence\n"
-          "- **'active job'** – View your current customer address & order details\n"
-          "- **'earnings'** – Check your commission balance & GCash cashout";
-    }
-
-    // Customer inquiries
-    if (query.contains('how to order') ||
-        query.contains('place order') ||
-        query.contains('how do i order') ||
-        query.contains('buy water')) {
-      return "🛒 **How to Order Fresh Water**\n\n"
-          "1. Open the **Order Water** tab from the menu.\n"
-          "2. Select your **Product / Order Type** (*19L Purified Water Refill ₱30* or *19L Water + New Container Set A ₱230*).\n"
-          "3. Choose your **Jug Type** (*5-Gallon Slim* or *5-Gallon Round*).\n"
-          "4. Set the **quantity**, select your **Province, City/Municipality, & Barangay**, and optionally pin your exact house on the map.\n"
-          "5. Choose **Cash on Delivery (COD)** or **GCash**, then tap **Confirm Order Delivery**!";
-    }
-
-    if (query.contains('status') ||
-        query.contains('where') ||
-        query.contains('track') ||
-        query.contains('order') ||
-        query.contains('delivery')) {
-      final orders = orderProvider.getCustomerOrders(userId);
-      if (orders.isEmpty) {
-        return "📦 You haven't placed any orders yet! Open the **Order Water** tab to choose your water type and jug type.";
+      final custOrders = orderProvider.getCustomerOrders(userId);
+      if (custOrders.isEmpty) {
+        return "📦 You don't have any orders yet! Open the **Order Water** tab to place your first water refill or container order.";
       }
-      final latest = orders.first;
-      return "📦 **Latest Order Status (${latest.id})**\n\n"
+      final latest = custOrders.first;
+      return "📦 **Your Latest Order (${latest.id})**\n\n"
           "- **Items**: ${latest.itemsSummary}\n"
           "- **Total**: **${latest.formattedTotal}**\n"
           "- **Status**: **${latest.orderStatus.displayName}**\n"
-          "- **Driver**: ${latest.driverName ?? 'Assigning soon'}\n"
+          "- **Driver**: ${latest.driverName ?? 'Assigning station driver soon'}\n"
           "- **Payment**: ${latest.paymentMethod} (${latest.paymentStatus})\n"
           "- **Delivery Address**: ${latest.deliveryAddress}";
     }
 
-    if (query.contains('price') ||
-        query.contains('product') ||
-        query.contains('catalog') ||
-        query.contains('cost') ||
-        query.contains('how much') ||
-        query.contains('magkano')) {
-      final list = orderProvider.waterProducts.map((p) {
-        return "- **${p['name']}**: **₱${(p['price'] as num).toStringAsFixed(2)}** per 5-Gallon jug *(${(p['stock'] as num).toInt()} in stock)*";
-      }).join('\n');
-      return "💧 **JJAASS Water Market Price List**\n\n$list\n\n"
-          "Available in **5-Gallon Slim** (with faucet) or **5-Gallon Round** (dispenser) jugs!";
+    // 16. Loyalty Rewards Points
+    if (query.contains('point') ||
+        query.contains('reward') ||
+        query.contains('loyalty')) {
+      final pts = orderProvider.getCustomerRewardPoints(userId);
+      return "⭐ **AquaLoyalty Rewards**\n\n"
+          "- **Current Points**: **$pts pts** (+10 points earned per completed 5-gallon jug).\n"
+          "- Keep ordering refills to accumulate points toward loyalty perks!";
     }
 
-    if (query.contains('gcash') || query.contains('paymongo')) {
-      return "💳 **How to Pay with GCash (Step-by-Step Guide)**\n\n"
-          "1. **Select Payment**: On checkout, select **GCash Mobile Payment**.\n"
-          "2. **Confirm Order**: Tap **Confirm Order Delivery**.\n"
-          "3. **PayMongo Portal**: The official, secure PayMongo checkout dialog will appear.\n"
-          "4. **Complete Payment**: Scan the GCash QR code or enter your GCash mobile number and MPIN.\n"
-          "5. **Instant Sync**: Your order immediately flags as **Paid**, and dispatch begins!\n\n"
-          "💡 **Missed Paying?**: Open the **Track Deliveries** tab anytime to tap the **Pay Now (GCash)** button.";
-    }
-
-    if (query.contains('payment') ||
-        query.contains('pay') ||
-        query.contains('cod') ||
-        query.contains('cash')) {
-      return "💵 **Payment Methods & Guidelines**\n\n"
-          "1. **Cash on Delivery (COD)**:\n"
-          "   • Pay our rider directly upon physical delivery at your door.\n"
-          "   • Digital proof of transaction is recorded instantly on the driver's app.\n"
-          "   • *Tip*: Preparing exact change speeds up the delivery process!\n\n"
-          "2. **GCash Mobile Payment (PayMongo)**:\n"
-          "   • Secure cashless instant checkout.\n"
-          "   • Real-time payment confirmation and zero contact required.";
-    }
-
-    final orders = orderProvider.getCustomerOrders(userId);
-    final latestInfo = orders.isNotEmpty
-        ? "\n\n📦 *Your latest order **${orders.first.id}** (${orders.first.itemsSummary}) is currently **${orders.first.orderStatus.displayName}**.*"
-        : "";
-
-    return "Hello **$userName**! 💧 I'm **AquaBot**, your JJAASS Water Market assistant.$latestInfo\n\n"
-        "You can ask me:\n"
-        "- **'What are your water prices?'** (19L Purified Refill ₱30, 19L Set A with New Container ₱230)\n"
-        "- **'What jug types do you have?'** (5-Gallon Slim & Round)\n"
-        "- **'Where is my order?'** to track your delivery\n"
-        "- **'Where is your store located?'** ($marketAddress)";
+    // 17. Smart Role-Aware Default Summary (with Cross-Role Prompt Suggestions)
+    final roleTitle = isAdmin
+        ? 'Admin'
+        : isDriver
+            ? 'Driver'
+            : 'Customer';
+    return "Hello $roleTitle **$userName**! 💧 I'm **AquaBot**, and I have complete live access to **Admin, Driver, and Customer** data.\n\n"
+        "Here are topics you can ask me right now:\n"
+        "- 📦 **Orders & Tracking**: *'Where is my order?'*, *'Show pending orders'*, or type any order ID like *'#ORD-008447'*\n"
+        "- 💧 **Products, Reservoir & Stock**: *'Refill vs Set A'*, *'Slim vs Round jug'*, or *'How does the 10,000L reservoir deplete?'*\n"
+        "- 🔄 **Borrowed Gallons & Defect Swaps**: *'How do I report a damaged gallon with photo evidence?'* or *'How many active borrowed gallons?'*\n"
+        "- 🚚 **Driver Dispatch & GPS**: *'Optimize route'*, *'How do drivers accept all jobs?'*, or *'What if the customer is not home?'*\n"
+        "- 🛡️ **Permits, Payments & Security**: *'Show station permits'*, *'GCash vs COD revenue'*, or *'What can Admin, Driver, and Customer do?'*";
   }
 
-  /// Formats all system details into a prompt-friendly string
+  /// Formats all live system details and complete role manuals into a prompt-friendly context string for Gemini
   static String _gatherSystemContext({
     required bool isDriver,
     required bool isAdmin,
@@ -506,55 +687,118 @@ class AiSupportService {
     required String userName,
     required OrderProvider orderProvider,
   }) {
+    final issueService = DeliveryIssueService.instance;
+    final permitService = CompliancePermitService.instance;
     final buffer = StringBuffer();
-    buffer.writeln("=== BUSINESS INFORMATION ===");
+
+    buffer.writeln("=== BUSINESS & STATION INFORMATION ===");
     buffer.writeln("Business Name: JJAASS Water Market");
     buffer.writeln("Address: $marketAddress");
-    buffer.writeln("Jug Types Available: 5-Gallon Slim (with Faucet & Handle), 5-Gallon Round (for Dispenser)");
+    buffer.writeln(
+      "Service Areas: Albay 1st District (Tabaco City, Bacacay, Malilipot, Malinao, Santo Domingo, Tiwi)",
+    );
+    buffer.writeln("Operating Hours: Monday to Sunday, 7:00 AM – 7:00 PM");
+    buffer.writeln("Station Hotline: +63 995 113 3652 | Email: admin@jjaasswater.com");
+    buffer.writeln(
+      "Jug Types: 5-Gallon Slim (with built-in faucet & carry handle) and 5-Gallon Round (for hot/cold dispensers)",
+    );
+    buffer.writeln(
+      "Pricing Key: Purified Refill = ₱30 (19L), Set A = ₱230 (Brand-new 5-gallon jug ₱200 + 19L water refill ₱30). Max 50 jugs/order.",
+    );
+
+    buffer.writeln("\n=== COMPLETE CROSS-ROLE WORKFLOW MANUAL ===");
+    buffer.writeln(
+      "1. ADMIN ROLE: Manages Dashboard KPIs, Orders Log, Delivery Defect & Swap Claims (inspects customer photo evidence, approves/declines swaps, clicks 'Complete Transaction & Dismiss' or lets completed orders auto-archive to 'Done & History'), Deliveries Fleet GPS map, User/Roles & Permissions (Admin, Driver, Customer), Inventory & 10,000L Bulk Water Reservoir (deducts 19L per 5-gallon refill) + Customer Borrowed Gallons Log, Payments (GCash/COD), Analytics & Reports (Export CSV & Download PDF), and Settings (Laptop drag-and-drop Compliance Permit upload/replacement).",
+    );
+    buffer.writeln(
+      "2. DRIVER ROLE: Uses Driver Dispatch Dashboard to accept single jobs or 'Accept All' invitations with real-time order prices, navigates via Live GPS to customer pinned coordinates, optimizes multi-stop delivery sequences, updates order status (Assigned -> Out for Delivery -> Delivered), logs returned Slim/Round borrowed gallons (supports partial returns like 3 of 5), verifies GCash Paid vs COD collection, and messages Customer or Station Admin Desk.",
+    );
+    buffer.writeln(
+      "3. CUSTOMER ROLE: Orders water refills or Set A containers in 'Order Water', pins exact house GPS location, pays via GCash (PayMongo) or Cash on Delivery (COD), tracks driver live on map, chats with Driver or Station Admin, reports Delivery Defect Claims on completed orders with required Camera/Gallery photo evidence, toggles 'Redeem Free Replacement Swap' on next order when approved, and views high-res Station Safety Permits.",
+    );
+
+    buffer.writeln("\n=== LIVE SYSTEM ANALYTICS & INVENTORY ===");
+    buffer.writeln(
+      "Total Completed Revenue: ₱${orderProvider.getTotalRevenue().toStringAsFixed(2)}",
+    );
+    buffer.writeln(
+      "Order Counts: ${orderProvider.getPendingCount()} Pending, ${orderProvider.getActiveDeliveriesCount()} Active Deliveries, ${orderProvider.getCompletedCount()} Completed (Total: ${orderProvider.orders.length})",
+    );
+    buffer.writeln(
+      "Bulk Water Reservoir: ${orderProvider.waterReservoirLiters.toInt()}L / ${orderProvider.waterReservoirCapacity.toInt()}L (${orderProvider.availableRefillsCount} 5-gallon refills available)",
+    );
+    buffer.writeln(
+      "Container Stocks: Slim ${orderProvider.remainingSlimGallons.toInt()}/${orderProvider.slimGallonCapacity.toInt()}, Round ${orderProvider.remainingRoundGallons.toInt()}/${orderProvider.roundGallonCapacity.toInt()}, Refilled Reserves: ${orderProvider.refilledContainerStocks}, Empty Reserves: ${orderProvider.emptyContainerStocks}",
+    );
+    buffer.writeln(
+      "Active Borrowed Gallons by Customers: ${orderProvider.totalActiveBorrowedGallons} total (${orderProvider.activeSlimBorrowedGallons} Slim, ${orderProvider.activeRoundBorrowedGallons} Round)",
+    );
+    for (var p in orderProvider.inventoryItems) {
+      buffer.writeln(
+        "- Item: ${p['name']}, Price: ₱${p['price']}, Stock: ${p['stock']}/${p['capacity']}",
+      );
+    }
+
+    buffer.writeln("\n=== LIVE DELIVERY DEFECT & SWAP CLAIMS ===");
+    buffer.writeln(
+      "Active Claims: ${issueService.activeCount} (Pending: ${issueService.pendingCount}, Approved: ${issueService.activeIssues.where((i) => i.isApproved).length}, Completed/Archived: ${issueService.completedIssues.length})",
+    );
+    for (var c in issueService.activeIssues.take(5)) {
+      buffer.writeln(
+        "- Claim ${c.id} (Order ${c.orderId}, Customer: ${c.customerName}): ${c.issueType}, ${c.affectedGallons} gallon(s), Status: ${c.status}",
+      );
+    }
+
+    buffer.writeln("\n=== LIVE STATION COMPLIANCE PERMITS ===");
+    for (var permit in permitService.permits) {
+      buffer.writeln(
+        "- ${permit.title}: ${permit.status} (Expires: ${permit.expiryDate})",
+      );
+    }
+
+    buffer.writeln("\n=== CURRENT USER SESSION CONTEXT ===");
     if (isAdmin) {
-      buffer.writeln("=== SYSTEM ANALYTICS ===");
-      buffer.writeln("Total System Revenue: ₱${orderProvider.getTotalRevenue().toStringAsFixed(2)}");
-      buffer.writeln("Completed Orders: ${orderProvider.getCompletedCount()}");
-      buffer.writeln("Pending Orders: ${orderProvider.getPendingCount()}");
-      buffer.writeln("Active Deliveries: ${orderProvider.getActiveDeliveriesCount()}");
-      buffer.writeln("=== WATER PRODUCTS ===");
-      for (var p in orderProvider.waterProducts) {
-        buffer.writeln("- Product: ${p['name']}, Price: ₱${p['price']}, Stock: ${p['stock']}/${p['capacity']}, Description: ${p['description'] ?? ''}");
-      }
+      buffer.writeln("Current User: Admin '$userName' (ID: $userId)");
     } else if (isDriver) {
-      buffer.writeln("=== DRIVER INFORMATION ===");
-      buffer.writeln("Driver ID: $userId");
-      buffer.writeln("Driver Name: $userName");
-      buffer.writeln("Uncashed Earnings: ₱${orderProvider.getDriverEarnings(userId).toStringAsFixed(2)}");
-
-      final activeJob = orderProvider.getActiveDriverJob(userId);
+      buffer.writeln("Current User: Driver '$userName' (ID: $userId)");
+      final activeJob = orderProvider.getActiveDriverJob(
+        userId,
+        driverName: userName,
+      );
       if (activeJob != null) {
-        buffer.writeln("Active Job: ${activeJob.id}, Customer: ${activeJob.customerName}, Phone: ${activeJob.customerPhone}, Address: ${activeJob.deliveryAddress}, Items: ${activeJob.itemsSummary}, Distance: ${activeJob.distance}");
+        buffer.writeln(
+          "Driver Active Job: ${activeJob.id}, Customer: ${activeJob.customerName}, Phone: ${activeJob.customerPhone}, Address: ${activeJob.deliveryAddress}, Items: ${activeJob.itemsSummary}, Total: ${activeJob.formattedTotal} (${activeJob.paymentMethod} • ${activeJob.paymentStatus})",
+        );
       } else {
-        buffer.writeln("Active Job: None");
+        buffer.writeln("Driver Active Job: None");
       }
-
-      final available = orderProvider.getAvailableDriverJobs(userId);
-      buffer.writeln("Assigned Queue Count: ${available.length}");
-      for (var job in available) {
-        buffer.writeln("- Queue Job: ${job.id}, Customer: ${job.customerName}, Address: ${job.deliveryAddress}, Items: ${job.itemsSummary}");
+      final available = orderProvider.getAvailableDriverJobs(
+        userId,
+        driverName: userName,
+      );
+      buffer.writeln("Driver Available Queue Count: ${available.length}");
+      for (var job in available.take(5)) {
+        buffer.writeln(
+          "- Queue Job ${job.id}: Customer ${job.customerName}, Address: ${job.deliveryAddress}, Items: ${job.itemsSummary}, Total: ${job.formattedTotal}",
+        );
       }
     } else {
-      buffer.writeln("=== CUSTOMER PROFILE ===");
-      buffer.writeln("Customer ID: $userId");
-      buffer.writeln("Customer Name: $userName");
-      buffer.writeln("Loyalty Rewards Points: ${orderProvider.getCustomerRewardPoints(userId)}");
-
+      buffer.writeln("Current User: Customer '$userName' (ID: $userId)");
+      buffer.writeln(
+        "Customer Loyalty Points: ${orderProvider.getCustomerRewardPoints(userId)}",
+      );
+      buffer.writeln(
+        "Customer Approved Free Swap Credits: ${issueService.getCustomerApprovedSwapGallons(userId, userName)} gallon(s)",
+      );
       final customerOrders = orderProvider.getCustomerOrders(userId);
-      buffer.writeln("Order History Count: ${customerOrders.length}");
+      buffer.writeln("Customer Order Count: ${customerOrders.length}");
       for (var o in customerOrders.take(5)) {
-        buffer.writeln("- Order ${o.id}: Items: ${o.itemsSummary}, Total: ${o.formattedTotal}, Status: ${o.orderStatus.displayName}, Payment: ${o.paymentMethod} (${o.paymentStatus}), Address: ${o.deliveryAddress}, Date: ${o.createdAt}");
-      }
-      buffer.writeln("=== PRODUCT CATALOG ===");
-      for (var p in orderProvider.waterProducts) {
-        buffer.writeln("- ${p['name']}: ₱${p['price']} (Available Stock: ${p['stock']}, Description: ${p['description'] ?? ''})");
+        buffer.writeln(
+          "- Order ${o.id}: ${o.itemsSummary}, Total: ${o.formattedTotal}, Status: ${o.orderStatus.displayName}, Driver: ${o.driverName ?? 'Unassigned'}, Payment: ${o.paymentMethod} (${o.paymentStatus}), Address: ${o.deliveryAddress}",
+        );
       }
     }
+
     return buffer.toString();
   }
 
@@ -582,13 +826,13 @@ class AiSupportService {
     OrderProvider orderProvider,
   ) {
     final List<OrderModel> jobs = orderProvider.orders.where((o) {
-      return o.driverId == driverId &&
+      return (o.driverId == driverId || driverId.isEmpty) &&
           (o.orderStatus == OrderStatus.onDelivery ||
               o.orderStatus == OrderStatus.assigned);
     }).toList();
 
     if (jobs.isEmpty) {
-      return "⚠️ **Route Optimization Notice**\n\nYou do not have any pending or active delivery jobs assigned. Please accept jobs from your dashboard before optimizing.";
+      return "⚠️ **Route Optimization Notice**\n\nThere are currently no assigned or active delivery jobs to optimize. Accept jobs from the dispatch queue first!";
     }
 
     final List<Map<String, dynamic>> stops = [];
@@ -677,7 +921,7 @@ class AiSupportService {
         "\n➡️ **${i + 2}. Stop: Customer ${order.customerName}** (Order: ${order.id})",
       );
       buffer.writeln("   - **Address**: ${order.deliveryAddress}");
-      buffer.writeln("   - **Quantity**: ${order.itemsSummary}");
+      buffer.writeln("   - **Quantity**: ${order.itemsSummary} (${order.formattedTotal})");
       buffer.writeln(
         "   - **Distance from previous point**: ${distPrev.toStringAsFixed(2)} km",
       );

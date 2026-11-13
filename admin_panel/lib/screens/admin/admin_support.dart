@@ -167,7 +167,7 @@ extension _AdminSupport on _AdminDashboardState {
                     ),
                   ),
                   subtitle: const Text(
-                    'Tap to browse 4 administrator topics for instant operational answers',
+                    'Tap to browse 5 administrator & cross-role topics for instant operational answers',
                     style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
                   ),
                   children: [
@@ -215,6 +215,15 @@ extension _AdminSupport on _AdminDashboardState {
                                 questions: [
                                   'How do I create or manage Driver and Customer accounts?',
                                   'How does the 5-attempt security lockout and password reset work?',
+                                ],
+                              ),
+                              _buildInquiryCategoryTile(
+                                title: '🛡️ Defect Claims, Permits & All Roles',
+                                color: const Color(0xFF7C3AED),
+                                questions: [
+                                  'How do I review customer defect photo evidence and approve swap claims?',
+                                  'How do I replace station compliance permits from my laptop?',
+                                  'What can Admin, Driver, and Customer roles do across the system?',
                                 ],
                               ),
                             ],
