@@ -6547,100 +6547,43 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
               );
             }),
           ),
-          const SizedBox(height: 16),
-
-          // Rider info card
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Row(
-              children: [
-                const CircleAvatar(
-                  radius: 19,
-                  backgroundColor: Color(0xFF1D63B8),
-                  child: Icon(
-                    Icons.two_wheeler_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        activeDelivery.driverName?.isNotEmpty == true
-                            ? activeDelivery.driverName!
-                            : 'Assigning Delivery Rider...',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13,
-                          color: Color(0xFF0F172A),
-                        ),
-                      ),
-                      Text(
-                        activeDelivery.itemsSummary,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          color: Color(0xFF64748B),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (activeDelivery.latitude != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0FDF4),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: const Color(0xFF86EFAC)),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.pin_drop_rounded, size: 12, color: Color(0xFF15803D)),
-                        SizedBox(width: 4),
-                        Text(
-                          'Pin Set',
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF15803D),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ),
           const SizedBox(height: 14),
 
-          // Live Google Map Widget with OSRM road polyline & live ETA
+          // Foodpanda-Style Live Order Tracker (Street Polyline + Floating ETA Ring + Rider Chat Card)
           Container(
-            height: 220,
+            height: 390,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(color: const Color(0xFFCBD5E1)),
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
               child: GoogleMapWidget(
                 destinationLat: activeDelivery.latitude,
                 destinationLng: activeDelivery.longitude,
                 destinationAddress: activeDelivery.deliveryAddress,
+                customerName: activeDelivery.customerName,
+                customerPhone: activeDelivery.customerPhone,
+                driverName: activeDelivery.driverName,
+                itemsSummary: activeDelivery.itemsSummary,
+                statusTitle: activeDelivery.orderStatus == OrderStatus.assigned
+                    ? 'Rider assigned'
+                    : 'On the way',
                 isDriverView: false,
                 orderId: activeDelivery.id,
+                onChatTap: () {
+                  RealtimeChatModal.show(
+                    context,
+                    initialConversationId: 'order_${activeDelivery.id}',
+                    initialOrderId: activeDelivery.id,
+                  );
+                },
+                onHelpTap: () {
+                  setState(() {
+                    _selectedTab = 4;
+                    _activeSidebarMenu = 4;
+                  });
+                },
               ),
             ),
           ),

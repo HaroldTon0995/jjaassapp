@@ -642,6 +642,8 @@ class LiveFleetGpsMapWidget extends StatefulWidget {
   final List<UserModel> drivers;
   final OrderModel? selectedOrder;
   final ValueChanged<OrderModel>? onSelectOrder;
+  final VoidCallback? onChatTap;
+  final VoidCallback? onHelpTap;
   final bool isDark;
   final bool satelliteMode;
 
@@ -651,6 +653,8 @@ class LiveFleetGpsMapWidget extends StatefulWidget {
     required this.drivers,
     this.selectedOrder,
     this.onSelectOrder,
+    this.onChatTap,
+    this.onHelpTap,
     this.isDark = false,
     this.satelliteMode = false,
   });
@@ -676,18 +680,26 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget> {
     return LatLng(_stationHQ.latitude + latOffset, _stationHQ.longitude + lngOffset);
   }
 
+  /// Generates a street-following multi-turn route (Foodpanda avenue/cross-street style)
+  List<LatLng> _buildStreetRouteWaypoints(LatLng start, LatLng end) {
+    final dLat = end.latitude - start.latitude;
+    final dLng = end.longitude - start.longitude;
+    return [
+      start,
+      LatLng(start.latitude + dLat * 0.32, start.longitude + dLng * 0.12),
+      LatLng(start.latitude + dLat * 0.72, start.longitude + dLng * 0.28),
+      LatLng(start.latitude + dLat * 0.88, start.longitude + dLng * 0.68),
+      LatLng(start.latitude + dLat * 1.04, start.longitude + dLng * 0.94),
+      end,
+    ];
+  }
+
   LatLng _getDriverCoord(OrderModel order, LatLng destCoord) {
-    // Rider midway or near destination if active
+    final pts = _buildStreetRouteWaypoints(_stationHQ, destCoord);
     if (order.orderStatus == OrderStatus.onDelivery) {
-      return LatLng(
-        _stationHQ.latitude + (destCoord.latitude - _stationHQ.latitude) * 0.65,
-        _stationHQ.longitude + (destCoord.longitude - _stationHQ.longitude) * 0.65,
-      );
+      return pts[3]; // 68% along the street-turning route
     } else if (order.orderStatus == OrderStatus.assigned) {
-      return LatLng(
-        _stationHQ.latitude + (destCoord.latitude - _stationHQ.latitude) * 0.25,
-        _stationHQ.longitude + (destCoord.longitude - _stationHQ.longitude) * 0.25,
-      );
+      return pts[1]; // 28% along the street-turning route
     }
     return _stationHQ;
   }
@@ -725,8 +737,13 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget> {
   Widget build(BuildContext context) {
     final isDark = widget.isDark;
     final activeOrders = widget.orders.where((o) => !o.isWalkIn).toList();
+    final activeDispatches = activeOrders
+        .where((o) => o.orderStatus == OrderStatus.onDelivery || o.orderStatus == OrderStatus.assigned)
+        .toList();
+    final OrderModel? trackedOrder = widget.selectedOrder ??
+        (activeDispatches.isNotEmpty ? activeDispatches.first : null);
 
-    // Build real Google Map Markers
+    // Build real Google Map Markers & Street-Routed Polylines
     final Set<Marker> markers = {};
     final Set<Polyline> polylines = {};
 
@@ -746,15 +763,14 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget> {
     // 2. Customer Delivery Pins & Active Riders
     for (int i = 0; i < activeOrders.length; i++) {
       final o = activeOrders[i];
-      final isSelected = widget.selectedOrder?.id == o.id;
+      final isSelected = trackedOrder?.id == o.id;
       final destCoord = _getOrderCoord(o, i);
       final driverCoord = _getDriverCoord(o, destCoord);
       final isActive = o.orderStatus == OrderStatus.onDelivery || o.orderStatus == OrderStatus.assigned;
       final isCompleted = o.orderStatus == OrderStatus.completed;
 
-      // Customer Marker
       final double markerHue = isSelected
-          ? BitmapDescriptor.hueMagenta
+          ? BitmapDescriptor.hueAzure
           : (isCompleted
               ? BitmapDescriptor.hueGreen
               : (o.isCollectionJob
@@ -779,7 +795,7 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget> {
         ),
       );
 
-      // Rider Marker (if active delivery or collection)
+      // Rider Marker & Multi-Turn Street Polyline
       if (isActive && o.driverName != null) {
         markers.add(
           Marker(
@@ -796,21 +812,33 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget> {
           ),
         );
 
-        // Route Polyline from Station to Driver to Customer
+        final streetWaypoints = _buildStreetRouteWaypoints(_stationHQ, destCoord);
         polylines.add(
           Polyline(
             polylineId: PolylineId('route_${o.id}'),
-            points: [_stationHQ, driverCoord, destCoord],
+            points: streetWaypoints,
             color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF38BDF8),
             width: isSelected ? 5 : 3,
-            patterns: [PatternItem.dash(15), PatternItem.gap(8)],
+            jointType: JointType.round,
+            startCap: Cap.roundCap,
+            endCap: Cap.roundCap,
           ),
         );
       }
     }
 
+    final double routeProgress = trackedOrder == null
+        ? 0.0
+        : (trackedOrder.orderStatus == OrderStatus.completed
+            ? 1.0
+            : (trackedOrder.orderStatus == OrderStatus.onDelivery ? 0.68 : 0.32));
+    final String driverLabel =
+        (trackedOrder?.driverName != null && trackedOrder!.driverName!.trim().isNotEmpty)
+            ? trackedOrder.driverName!.trim()
+            : 'Assigned JJAASS Rider';
+
     return Container(
-      height: 420,
+      height: 460,
       width: double.infinity,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
@@ -851,9 +879,9 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: isDark
-                    ? const Color(0xFF0F172A).withValues(alpha: 0.88)
-                    : Colors.white.withValues(alpha: 0.94),
-                borderRadius: BorderRadius.circular(10),
+                    ? const Color(0xFF0F172A).withValues(alpha: 0.90)
+                    : Colors.white.withValues(alpha: 0.95),
+                borderRadius: BorderRadius.circular(18),
                 border: Border.all(
                   color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
                 ),
@@ -869,8 +897,8 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    width: 10,
-                    height: 10,
+                    width: 9,
+                    height: 9,
                     decoration: const BoxDecoration(
                       color: Color(0xFF10B981),
                       shape: BoxShape.circle,
@@ -878,22 +906,22 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'Live Fleet Map • Albay 1st District Hub',
+                    'Live Fleet GPS • Albay 1st District',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: isDark ? Colors.white : const Color(0xFF1E293B),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                     decoration: BoxDecoration(
                       color: AppTheme.primaryColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
-                      '${activeOrders.where((o) => o.orderStatus == OrderStatus.onDelivery || o.orderStatus == OrderStatus.assigned).length} Active Dispatches',
+                      '${activeDispatches.length} Active Dispatches',
                       style: const TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w800,
@@ -906,7 +934,39 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget> {
             ),
           ),
 
-          // Map Control Floating Action Buttons (Zoom / Center)
+          // Top-Right "Help" Pill Button (Foodpanda Style)
+          Positioned(
+            top: 14,
+            right: 56,
+            child: Material(
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              elevation: 2,
+              borderRadius: BorderRadius.circular(18),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(18),
+                onTap: widget.onHelpTap,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: isDark ? Colors.white24 : const Color(0xFF94A3B8),
+                    ),
+                  ),
+                  child: Text(
+                    'Help',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Map Control Floating Action Buttons (Zoom / Recenter 🎯)
           Positioned(
             top: 14,
             right: 14,
@@ -927,8 +987,8 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget> {
                 ),
                 const SizedBox(height: 6),
                 _buildMapButton(
-                  icon: Icons.my_location_rounded,
-                  tooltip: 'Reset to Station Hub',
+                  icon: Icons.gps_fixed_rounded,
+                  tooltip: 'Recenter Route',
                   isDark: isDark,
                   onTap: _resetView,
                 ),
@@ -936,142 +996,230 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget> {
             ),
           ),
 
-          // Selected Delivery Telemetry Card (Bottom Drawer on Map)
-          if (widget.selectedOrder != null)
+          // Foodpanda-Style 2-Card Live Tracker Overlay (Floating ETA Ring + Rider Chat Card)
+          if (trackedOrder != null)
             Positioned(
               left: 14,
               right: 14,
-              bottom: 14,
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFF0F172A).withValues(alpha: 0.94)
-                      : Colors.white.withValues(alpha: 0.96),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.4),
-                    width: 1.5,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.12),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: (widget.selectedOrder!.isCollectionJob
-                                ? const Color(0xFF10B981)
-                                : AppTheme.primaryColor)
-                            .withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
+              bottom: 12,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Part 2: Floating Live ETA Range & Circular Progress Ring Card
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? const Color(0xFF0F172A).withValues(alpha: 0.96)
+                          : Colors.white.withValues(alpha: 0.98),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
                       ),
-                      child: Icon(
-                        widget.selectedOrder!.isCollectionJob
-                            ? Icons.assignment_return_rounded
-                            : Icons.delivery_dining_rounded,
-                        color: widget.selectedOrder!.isCollectionJob
-                            ? const Color(0xFF059669)
-                            : AppTheme.primaryColor,
-                        size: 22,
-                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.12),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Row(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    trackedOrder.orderStatus == OrderStatus.completed
+                                        ? 'Delivered'
+                                        : '5 – 10 mins',
+                                    style: TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w900,
+                                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                      letterSpacing: -0.5,
+                                      height: 1.1,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.primaryColor.withValues(alpha: 0.14),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      trackedOrder.id,
+                                      style: const TextStyle(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppTheme.primaryColor,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
                               Text(
-                                widget.selectedOrder!.id,
+                                trackedOrder.isCollectionJob
+                                    ? 'Collecting empty gallons'
+                                    : (trackedOrder.orderStatus == OrderStatus.assigned
+                                        ? 'Rider assigned & preparing'
+                                        : 'On the way'),
                                 style: TextStyle(
-                                  fontWeight: FontWeight.bold,
                                   fontSize: 13,
-                                  color: isDark ? Colors.white : const Color(0xFF1E293B),
+                                  fontWeight: FontWeight.w800,
+                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: (widget.selectedOrder!.isCollectionJob
-                                          ? const Color(0xFF10B981)
-                                          : widget.selectedOrder!.orderStatus.color)
-                                      .withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(4),
+                              Text(
+                                'Rider $driverLabel is heading to ${trackedOrder.customerName} (${trackedOrder.deliveryAddress})',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                                  fontWeight: FontWeight.w500,
                                 ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        SizedBox(
+                          width: 60,
+                          height: 60,
+                          child: CustomPaint(
+                            painter: _AdminTrackerRingPainter(progress: routeProgress),
+                            child: Center(
+                              child: Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFF0284C7), Color(0xFF1D63B8)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(9),
+                                ),
+                                child: const Icon(
+                                  Icons.water_drop_rounded,
+                                  color: Colors.white,
+                                  size: 18,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Part 3: Bottom Rider Motorbike Info & Interactive Chat Action Card
+                  Container(
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? const Color(0xFF0F172A).withValues(alpha: 0.96)
+                          : Colors.white.withValues(alpha: 0.98),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.10),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 34,
+                                height: 34,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFE0F2FE),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.sports_motorsports_rounded,
+                                  color: Color(0xFF0284C7),
+                                  size: 19,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
                                 child: Text(
-                                  widget.selectedOrder!.isCollectionJob
-                                      ? (widget.selectedOrder!.orderStatus == OrderStatus.completed
-                                          ? 'Collected'
-                                          : 'Collecting Empties')
-                                      : widget.selectedOrder!.orderStatus.displayName,
+                                  'The rider ($driverLabel) will deliver ${trackedOrder.itemsSummary} to ${trackedOrder.customerName} by motorbike',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: widget.selectedOrder!.isCollectionJob
-                                        ? const Color(0xFF059669)
-                                        : widget.selectedOrder!.orderStatus.color,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: isDark ? Colors.white : const Color(0xFF1E293B),
                                   ),
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            widget.selectedOrder!.isCollectionJob
-                                ? 'Borrower: ${widget.selectedOrder!.customerName} • ${widget.selectedOrder!.deliveryAddress}'
-                                : 'To: ${widget.selectedOrder!.customerName} • ${widget.selectedOrder!.deliveryAddress}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: isDark ? Colors.white70 : Colors.grey.shade600,
+                        ),
+                        Divider(
+                          height: 1,
+                          color: isDark ? Colors.white10 : const Color(0xFFF1F5F9),
+                        ),
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: const BorderRadius.vertical(
+                              bottom: Radius.circular(16),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.speed_rounded, size: 14, color: Colors.cyan),
-                            const SizedBox(width: 4),
-                            Text(
-                              '28 km/h',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? Colors.white : const Color(0xFF1E293B),
+                            onTap: widget.onChatTap,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.chat_bubble_outline_rounded,
+                                    size: 16,
+                                    color: isDark ? Colors.white70 : const Color(0xFF334155),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      'Chat with rider or customer (${trackedOrder.id})',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                  ),
+                                  Icon(
+                                    Icons.chevron_right_rounded,
+                                    size: 18,
+                                    color: isDark ? Colors.white54 : const Color(0xFF64748B),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'ETA: ~8 mins (${widget.selectedOrder!.distance})',
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF10B981),
                           ),
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
         ],
@@ -1110,4 +1258,41 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget> {
       ),
     );
   }
+}
+
+class _AdminTrackerRingPainter extends CustomPainter {
+  final double progress;
+  const _AdminTrackerRingPainter({required this.progress});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final stroke = size.width * 0.135;
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.width - stroke) / 2;
+
+    final trackPaint = Paint()
+      ..color = const Color(0xFFD1FAE5)
+      ..strokeWidth = stroke
+      ..style = PaintingStyle.stroke;
+    canvas.drawCircle(center, radius, trackPaint);
+
+    final arcPaint = Paint()
+      ..color = const Color(0xFF10B981)
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+
+    final sweep = 2 * pi * progress.clamp(0.18, 0.98);
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -pi / 2,
+      sweep,
+      false,
+      arcPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _AdminTrackerRingPainter oldDelegate) =>
+      oldDelegate.progress != progress;
 }

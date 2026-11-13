@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
 import '../core/theme/app_theme.dart';
 import '../services/tracking_service.dart';
 
@@ -12,11 +14,17 @@ class GoogleMapWidget extends StatefulWidget {
   final String destinationAddress;
   final String? customerName;
   final String? customerPhone;
+  final String? driverName;
+  final String? itemsSummary;
+  final String? statusTitle;
   final bool isDriverView;
   final bool isCollectionJob;
   final String orderId;
   final List<dynamic>? otherActiveOrders;
   final ValueChanged<String>? onOrderPinTapped;
+  final VoidCallback? onChatTap;
+  final VoidCallback? onHelpTap;
+  final bool showTrackerCards;
 
   const GoogleMapWidget({
     super.key,
@@ -25,11 +33,17 @@ class GoogleMapWidget extends StatefulWidget {
     required this.destinationAddress,
     this.customerName,
     this.customerPhone,
+    this.driverName,
+    this.itemsSummary,
+    this.statusTitle,
     required this.isDriverView,
     this.isCollectionJob = false,
     required this.orderId,
     this.otherActiveOrders,
     this.onOrderPinTapped,
+    this.onChatTap,
+    this.onHelpTap,
+    this.showTrackerCards = true,
   });
 
   @override
@@ -67,21 +81,32 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
     );
   }
 
+  late LatLng _originCoord;
   late LatLng _driverCoord;
   late LatLng _mapCenter;
-  int _zoom = 14;
+  List<LatLng> _routePoints = [];
+  double _routeProgress = 0.42;
+  int _zoom = 15;
   bool _isLoadingLocation = false;
   Timer? _mockMovementTimer;
 
   @override
   void initState() {
     super.initState();
+    _setupRouteAndTracking();
+  }
+
+  void _setupRouteAndTracking() {
     final dest = _destinationCoord;
-    _driverCoord = LatLng(dest.latitude - 0.008, dest.longitude - 0.008);
+    _originCoord = LatLng(dest.latitude - 0.0075, dest.longitude - 0.0065);
+    _routePoints = _buildStreetGridFallbackRoute(_originCoord, dest);
+    _routeProgress = 0.42;
+    _driverCoord = _interpolateAlongRoute(_routePoints, _routeProgress);
     _mapCenter = LatLng(
-      (dest.latitude + _driverCoord.latitude) / 2.0,
+      (dest.latitude + _driverCoord.latitude) / 2.0 - 0.0012,
       (dest.longitude + _driverCoord.longitude) / 2.0,
     );
+    _fetchOsrmStreetRoute(_originCoord, dest);
     _initLocationTracking();
   }
 
@@ -93,8 +118,12 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
         oldWidget.destinationLat != widget.destinationLat ||
         oldWidget.destinationLng != widget.destinationLng) {
       final dest = _destinationCoord;
-      _driverCoord = LatLng(dest.latitude - 0.008, dest.longitude - 0.008);
+      _originCoord = LatLng(dest.latitude - 0.0075, dest.longitude - 0.0065);
+      _routePoints = _buildStreetGridFallbackRoute(_originCoord, dest);
+      _routeProgress = 0.42;
+      _driverCoord = _interpolateAlongRoute(_routePoints, _routeProgress);
       _zoomToFitMarkers();
+      _fetchOsrmStreetRoute(_originCoord, dest);
     }
   }
 
@@ -104,6 +133,103 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
     _positionStreamSub?.cancel();
     _mockMovementTimer?.cancel();
     super.dispose();
+  }
+
+  /// Generates a realistic street-grid route with crisp avenue & cross-street turns
+  /// (like the Foodpanda Malugay/Buendia tracker view) before OSRM responds or if offline.
+  List<LatLng> _buildStreetGridFallbackRoute(LatLng start, LatLng end) {
+    final dLat = end.latitude - start.latitude;
+    final dLng = end.longitude - start.longitude;
+    // Rotate street grid slightly (~22 degrees) to match Philippine coastal highway & municipal blocks
+    final p1 = LatLng(
+      start.latitude + dLat * 0.32,
+      start.longitude + dLng * 0.12,
+    );
+    final p2 = LatLng(
+      start.latitude + dLat * 0.72,
+      start.longitude + dLng * 0.28,
+    );
+    final p3 = LatLng(
+      start.latitude + dLat * 0.88,
+      start.longitude + dLng * 0.68,
+    );
+    final p4 = LatLng(
+      start.latitude + dLat * 1.04,
+      start.longitude + dLng * 0.94,
+    );
+    final p5 = LatLng(
+      end.latitude + dLat * 0.04,
+      end.longitude + dLng * 0.06,
+    );
+    return [start, p1, p2, p3, p4, p5, end];
+  }
+
+  Future<void> _fetchOsrmStreetRoute(LatLng start, LatLng end) async {
+    try {
+      final url = Uri.parse(
+        'https://router.project-osrm.org/route/v1/driving/'
+        '${start.longitude},${start.latitude};${end.longitude},${end.latitude}'
+        '?overview=full&geometries=geojson',
+      );
+      final response = await http.get(url).timeout(const Duration(seconds: 4));
+      if (response.statusCode == 200 && mounted) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final routes = data['routes'] as List<dynamic>?;
+        if (routes != null && routes.isNotEmpty) {
+          final geometry = routes.first['geometry'] as Map<String, dynamic>?;
+          final coords = geometry?['coordinates'] as List<dynamic>?;
+          if (coords != null && coords.length >= 3) {
+            final parsed = coords.map((c) {
+              final pair = c as List<dynamic>;
+              return LatLng(
+                (pair[1] as num).toDouble(),
+                (pair[0] as num).toDouble(),
+              );
+            }).toList();
+            setState(() {
+              _routePoints = parsed;
+              if (!_hasRealLocation) {
+                _driverCoord = _interpolateAlongRoute(_routePoints, _routeProgress);
+              }
+            });
+          }
+        }
+      }
+    } catch (_) {
+      // Keep the multi-turn street-grid fallback route when offline
+    }
+  }
+
+  LatLng _interpolateAlongRoute(List<LatLng> points, double t) {
+    if (points.isEmpty) return _destinationCoord;
+    if (points.length == 1) return points.first;
+    final clamped = t.clamp(0.0, 1.0);
+
+    double totalDist = 0.0;
+    final segLengths = <double>[];
+    for (int i = 0; i < points.length - 1; i++) {
+      final d = _calculateDistanceKm(points[i], points[i + 1]);
+      segLengths.add(d);
+      totalDist += d;
+    }
+    if (totalDist <= 0.00001) return points.last;
+
+    final targetDist = totalDist * clamped;
+    double accum = 0.0;
+    for (int i = 0; i < segLengths.length; i++) {
+      final seg = segLengths[i];
+      if (accum + seg >= targetDist || i == segLengths.length - 1) {
+        final localT = seg > 0 ? ((targetDist - accum) / seg).clamp(0.0, 1.0) : 0.0;
+        final a = points[i];
+        final b = points[i + 1];
+        return LatLng(
+          a.latitude + (b.latitude - a.latitude) * localT,
+          a.longitude + (b.longitude - a.longitude) * localT,
+        );
+      }
+      accum += seg;
+    }
+    return points.last;
   }
 
   static double _lngToWorldX(double lng, int zoom) {
@@ -138,8 +264,12 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
         if (mounted) {
           _hasRealLocation = true;
           _mockMovementTimer?.cancel();
+          final dest = _destinationCoord;
+          final totalDist = max(0.2, _calculateDistanceKm(_originCoord, dest));
+          final remDist = _calculateDistanceKm(loc.position, dest);
           setState(() {
             _driverCoord = loc.position;
+            _routeProgress = (1.0 - (remDist / totalDist)).clamp(0.15, 0.95);
             _isLoadingLocation = false;
           });
           _zoomToFitMarkers();
@@ -187,6 +317,8 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
         setState(() {
           if (useReal) {
             _driverCoord = LatLng(pos.latitude, pos.longitude);
+            _originCoord = _driverCoord;
+            _fetchOsrmStreetRoute(_originCoord, _destinationCoord);
           }
           _isLoadingLocation = false;
         });
@@ -210,8 +342,13 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
         ),
       ).listen((Position position) {
         if (mounted && _isWithinAlbayArea(position.latitude, position.longitude)) {
+          final dest = _destinationCoord;
+          final totalDist = max(0.2, _calculateDistanceKm(_originCoord, dest));
+          final newPos = LatLng(position.latitude, position.longitude);
+          final remDist = _calculateDistanceKm(newPos, dest);
           setState(() {
-            _driverCoord = LatLng(position.latitude, position.longitude);
+            _driverCoord = newPos;
+            _routeProgress = (1.0 - (remDist / totalDist)).clamp(0.15, 0.95);
           });
           TrackingService.publish(
             orderId: widget.orderId,
@@ -228,22 +365,14 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
 
   void _startMockDriverMovement() {
     _mockMovementTimer?.cancel();
-    double progress = 0.0;
-    final LatLng start = _driverCoord;
-    final LatLng end = _destinationCoord;
-
-    _mockMovementTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
+    _mockMovementTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
       if (!mounted) return;
-      progress += 0.05;
-      if (progress >= 0.88) {
-        progress = 0.25;
-      }
-
       setState(() {
-        _driverCoord = LatLng(
-          start.latitude + (end.latitude - start.latitude) * progress,
-          start.longitude + (end.longitude - start.longitude) * progress,
-        );
+        _routeProgress += 0.04;
+        if (_routeProgress >= 0.90) {
+          _routeProgress = 0.28;
+        }
+        _driverCoord = _interpolateAlongRoute(_routePoints, _routeProgress);
       });
     });
   }
@@ -253,13 +382,13 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
     final dest = _destinationCoord;
     setState(() {
       _mapCenter = LatLng(
-        (dest.latitude + _driverCoord.latitude) / 2.0,
+        (dest.latitude + _driverCoord.latitude) / 2.0 - 0.0012,
         (dest.longitude + _driverCoord.longitude) / 2.0,
       );
       final latSpan = (dest.latitude - _driverCoord.latitude).abs();
       final lngSpan = (dest.longitude - _driverCoord.longitude).abs();
       final maxSpan = max(latSpan, lngSpan);
-      if (maxSpan < 0.008) {
+      if (maxSpan < 0.009) {
         _zoom = 15;
       } else if (maxSpan < 0.025) {
         _zoom = 14;
@@ -293,16 +422,37 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
 
     final dest = _destinationCoord;
     final distKm = _calculateDistanceKm(_driverCoord, dest);
-    final etaMins = max(2, (distKm * 3.5).round());
+    final baseEta = max(3, (distKm * 4.2).round());
+    final minEta = max(2, baseEta - 2);
+    final maxEta = minEta + 5;
+
+    final driverLabel = (widget.driverName != null && widget.driverName!.trim().isNotEmpty)
+        ? widget.driverName!.trim()
+        : 'JJAASS Express Rider';
+    final customerLabel = (widget.customerName != null && widget.customerName!.trim().isNotEmpty)
+        ? widget.customerName!.trim()
+        : 'Customer';
+    final statusHeadline = widget.statusTitle ??
+        (widget.isCollectionJob ? 'Collecting gallons' : 'On the way');
+    final statusSubtitle = widget.isDriverView
+        ? (widget.isCollectionJob
+            ? 'Heading to $customerLabel for gallon pickup'
+            : 'Heading to $customerLabel')
+        : 'The rider is heading to you';
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth > 0 ? constraints.maxWidth : 360.0;
-        final height = constraints.maxHeight > 0 ? constraints.maxHeight : 260.0;
+        final height = constraints.maxHeight > 0 ? constraints.maxHeight : 360.0;
+        final isCompactHeight = height < 320;
+        final showCards = widget.showTrackerCards && height >= 210;
+
+        // Shift map projection slightly upward when bottom tracker cards are visible
+        final mapViewportHeight = showCards ? max(130.0, height * 0.58) : height;
         final centerWx = _lngToWorldX(_mapCenter.longitude, _zoom);
         final centerWy = _latToWorldY(_mapCenter.latitude, _zoom);
         final leftWx = centerWx - width / 2.0;
-        final topWy = centerWy - height / 2.0;
+        final topWy = centerWy - mapViewportHeight / 2.0;
 
         final maxTile = (1 << _zoom) - 1;
         final minTx = (leftWx / 256.0).floor().clamp(0, maxTile);
@@ -348,6 +498,13 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
         final destX = _lngToWorldX(dest.longitude, _zoom) - leftWx;
         final destY = _latToWorldY(dest.latitude, _zoom) - topWy;
 
+        final routeScreenPoints = _routePoints.map((pt) {
+          return Offset(
+            _lngToWorldX(pt.longitude, _zoom) - leftWx,
+            _latToWorldY(pt.latitude, _zoom) - topWy,
+          );
+        }).toList();
+
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
           onScaleStart: (_) {},
@@ -369,34 +526,37 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
               Container(color: const Color(0xFFE8EEF5)),
               ...tiles,
 
-              // Route Polyline Overlay
+              // Street-Turn Route Polyline Overlay (Foodpanda style)
               Positioned.fill(
                 child: IgnorePointer(
                   child: CustomPaint(
                     painter: _RouteLinePainter(
-                      start: Offset(driverX, driverY),
-                      end: Offset(destX, destY),
+                      routePoints: routeScreenPoints,
+                      driverPoint: Offset(driverX, driverY),
+                      destPoint: Offset(destX, destY),
+                      progress: _routeProgress,
                     ),
                   ),
                 ),
               ),
 
-              // Destination Marker (Customer Address)
+              // Customer Destination Pin (Foodpanda Black Circular Pin + Pointer + Address Tag)
               Positioned(
-                left: destX - 65,
-                top: destY - 54,
-                width: 130,
+                left: destX - 68,
+                top: destY - 58,
+                width: 136,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0F172A),
-                        borderRadius: BorderRadius.circular(6),
+                        color: Colors.white.withValues(alpha: 0.95),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFCBD5E1)),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.2),
+                            color: Colors.black.withValues(alpha: 0.12),
                             blurRadius: 4,
                           ),
                         ],
@@ -404,91 +564,113 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
                       child: Text(
                         widget.destinationAddress.isNotEmpty
                             ? widget.destinationAddress
-                            : 'Customer Location',
+                            : customerLabel,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const Icon(
-                      Icons.location_on_rounded,
-                      color: Color(0xFFEF4444),
-                      size: 34,
-                    ),
-                  ],
-                ),
-              ),
-
-              // Driver Live Marker
-              Positioned(
-                left: driverX - 55,
-                top: driverY - 50,
-                width: 110,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryColor,
-                        borderRadius: BorderRadius.circular(6),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.2),
-                            blurRadius: 4,
-                          ),
-                        ],
-                      ),
-                      child: Text(
-                        widget.isDriverView ? 'Your Rider GPS' : 'Delivery Rider',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                     ),
                     const SizedBox(height: 2),
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryColor,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2.5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.primaryColor.withValues(alpha: 0.4),
-                            blurRadius: 8,
+                    Stack(
+                      alignment: Alignment.topCenter,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(top: 26),
+                          child: CustomPaint(
+                            size: const Size(12, 8),
+                            painter: _PinPointerPainter(color: const Color(0xFF0F172A)),
                           ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.local_shipping_rounded,
-                        color: Colors.white,
-                        size: 16,
-                      ),
+                        ),
+                        Container(
+                          width: 30,
+                          height: 30,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0F172A),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.28),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.water_drop_rounded,
+                            color: Colors.white,
+                            size: 15,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
 
-              // Top Live Status Pill
+              // Moving Rider Pin (Foodpanda Circular Badge on Street Line)
               Positioned(
-                left: 12,
-                top: 12,
+                left: driverX - 24,
+                top: driverY - 40,
+                width: 48,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Stack(
+                      alignment: Alignment.topCenter,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(top: 30),
+                          child: CustomPaint(
+                            size: const Size(12, 8),
+                            painter: _PinPointerPainter(color: const Color(0xFF0284C7)),
+                          ),
+                        ),
+                        Container(
+                          width: 34,
+                          height: 34,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF0284C7), Color(0xFF1D63B8)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2.5),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF0284C7).withValues(alpha: 0.45),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.two_wheeler_rounded,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Top-Left Order / District Status Pill
+              Positioned(
+                left: 10,
+                top: 10,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.94),
-                    borderRadius: BorderRadius.circular(10),
+                    color: Colors.white.withValues(alpha: 0.95),
+                    borderRadius: BorderRadius.circular(18),
                     border: Border.all(color: const Color(0xFFE2E8F0)),
                     boxShadow: [
                       BoxShadow(
@@ -501,8 +683,8 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        width: 8,
-                        height: 8,
+                        width: 7,
+                        height: 7,
                         decoration: const BoxDecoration(
                           color: Color(0xFF10B981),
                           shape: BoxShape.circle,
@@ -510,10 +692,10 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        'Albay 1st District • ${distKm.toStringAsFixed(1)} km (~$etaMins min)',
+                        'Live GPS • ${distKm.toStringAsFixed(1)} km',
                         style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w800,
                           color: Color(0xFF0F172A),
                         ),
                       ),
@@ -522,10 +704,51 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
                 ),
               ),
 
-              // Zoom & Center Controls
+              // Top-Right "Help" Pill Button (Foodpanda Style)
               Positioned(
-                right: 12,
-                bottom: 12,
+                right: 10,
+                top: 10,
+                child: Material(
+                  color: Colors.white,
+                  elevation: 2,
+                  borderRadius: BorderRadius.circular(18),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(18),
+                    onTap: widget.onHelpTap ??
+                        () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Need help with this delivery? Open AquaBot AI Support or Chat below!',
+                              ),
+                              behavior: SnackBarBehavior.floating,
+                              duration: Duration(seconds: 3),
+                            ),
+                          );
+                        },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0xFF94A3B8)),
+                      ),
+                      child: const Text(
+                        'Help',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // Map Recenter (🎯) & Zoom Controls
+              Positioned(
+                right: 10,
+                bottom: showCards ? (isCompactHeight ? 132 : 172) : 12,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -535,22 +758,215 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
                         if (_zoom < 18) setState(() => _zoom++);
                       },
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 5),
                     _buildZoomBtn(
                       icon: Icons.remove_rounded,
                       onTap: () {
                         if (_zoom > 11) setState(() => _zoom--);
                       },
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 5),
                     _buildZoomBtn(
-                      icon: Icons.center_focus_strong_rounded,
+                      icon: Icons.gps_fixed_rounded,
                       onTap: _zoomToFitMarkers,
-                      isPrimary: true,
+                      isRound: true,
                     ),
                   ],
                 ),
               ),
+
+              // Part 2 & Part 3: Foodpanda-Style Floating ETA Progress Ring Card + Bottom Rider Chat Card
+              if (showCards)
+                Positioned(
+                  left: 10,
+                  right: 10,
+                  bottom: 8,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Part 2: Floating ETA Range & Circular Progress Ring Card
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: isCompactHeight ? 8 : 11,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.10),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '$minEta – $maxEta mins',
+                                    style: TextStyle(
+                                      fontSize: isCompactHeight ? 18 : 22,
+                                      fontWeight: FontWeight.w900,
+                                      color: const Color(0xFF0F172A),
+                                      letterSpacing: -0.5,
+                                      height: 1.1,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    statusHeadline,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: isCompactHeight ? 11.5 : 13,
+                                      fontWeight: FontWeight.w800,
+                                      color: const Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                  Text(
+                                    statusSubtitle,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: isCompactHeight ? 10.5 : 11.5,
+                                      color: const Color(0xFF64748B),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            // Circular Progress Ring with Water Delivery Bag/Gallon Badge Inside
+                            SizedBox(
+                              width: isCompactHeight ? 50 : 62,
+                              height: isCompactHeight ? 50 : 62,
+                              child: CustomPaint(
+                                painter: _TrackerProgressRingPainter(
+                                  progress: _routeProgress,
+                                ),
+                                child: Center(
+                                  child: _WaterDeliveryBagBadge(
+                                    size: isCompactHeight ? 26 : 32,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: isCompactHeight ? 5 : 7),
+
+                      // Part 3: Bottom Rider Motorbike Info & Interactive Chat Action Card
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.09),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: isCompactHeight ? 6 : 9,
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: isCompactHeight ? 28 : 34,
+                                    height: isCompactHeight ? 28 : 34,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFE0F2FE),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.sports_motorsports_rounded,
+                                      color: const Color(0xFF0284C7),
+                                      size: isCompactHeight ? 16 : 19,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      widget.isDriverView
+                                          ? 'Delivering ${widget.itemsSummary ?? "water order"} to $customerLabel'
+                                          : 'The rider ($driverLabel) will deliver your order by motorbike',
+                                      maxLines: isCompactHeight ? 1 : 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: isCompactHeight ? 10.5 : 11.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF1E293B),
+                                        height: 1.25,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: const BorderRadius.vertical(
+                                  bottom: Radius.circular(16),
+                                ),
+                                onTap: widget.onChatTap,
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: isCompactHeight ? 6 : 8,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.chat_bubble_outline_rounded,
+                                        size: 16,
+                                        color: Color(0xFF334155),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          widget.isDriverView
+                                              ? 'Chat with customer'
+                                              : 'Chat with your rider',
+                                          style: TextStyle(
+                                            fontSize: isCompactHeight ? 11 : 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: const Color(0xFF0F172A),
+                                          ),
+                                        ),
+                                      ),
+                                      const Icon(
+                                        Icons.chevron_right_rounded,
+                                        size: 18,
+                                        color: Color(0xFF64748B),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
             ],
           ),
         );
@@ -561,22 +977,26 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
   Widget _buildZoomBtn({
     required IconData icon,
     required VoidCallback onTap,
-    bool isPrimary = false,
+    bool isRound = false,
   }) {
     return Material(
-      color: isPrimary ? AppTheme.primaryColor : Colors.white,
+      color: Colors.white,
       elevation: 3,
-      borderRadius: BorderRadius.circular(8),
+      shape: isRound
+          ? const CircleBorder()
+          : RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
+        customBorder: isRound
+            ? const CircleBorder()
+            : RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         child: SizedBox(
-          width: 34,
-          height: 34,
+          width: 30,
+          height: 30,
           child: Icon(
             icon,
-            size: 18,
-            color: isPrimary ? Colors.white : const Color(0xFF1E293B),
+            size: 16,
+            color: const Color(0xFF0F172A),
           ),
         ),
       ),
@@ -584,37 +1004,176 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
   }
 }
 
+/// Custom painter that draws the Foodpanda-style street-following route polyline
+/// with a crisp white casing, completed trail, and bold JJAASS Blue active road path.
 class _RouteLinePainter extends CustomPainter {
-  final Offset start;
-  final Offset end;
+  final List<Offset> routePoints;
+  final Offset driverPoint;
+  final Offset destPoint;
+  final double progress;
 
-  const _RouteLinePainter({required this.start, required this.end});
+  const _RouteLinePainter({
+    required this.routePoints,
+    required this.driverPoint,
+    required this.destPoint,
+    required this.progress,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final shadowPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.85)
-      ..strokeWidth = 7.0
+    final pts = routePoints.length >= 2 ? routePoints : [driverPoint, destPoint];
+
+    final casingPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.92)
+      ..strokeWidth = 8.0
       ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
       ..style = PaintingStyle.stroke;
 
-    final routePaint = Paint()
-      ..color = AppTheme.primaryColor
-      ..strokeWidth = 4.0
+    final completedPaint = Paint()
+      ..color = const Color(0xFF93C5FD)
+      ..strokeWidth = 4.5
       ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
       ..style = PaintingStyle.stroke;
 
-    final path = Path()
-      ..moveTo(start.dx, start.dy)
-      ..lineTo(end.dx, end.dy);
+    final activeRoutePaint = Paint()
+      ..color = const Color(0xFF0284C7)
+      ..strokeWidth = 5.0
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..style = PaintingStyle.stroke;
 
-    canvas.drawPath(path, shadowPaint);
-    canvas.drawPath(path, routePaint);
+    final fullPath = Path()..moveTo(pts.first.dx, pts.first.dy);
+    for (int i = 1; i < pts.length; i++) {
+      fullPath.lineTo(pts[i].dx, pts[i].dy);
+    }
+    canvas.drawPath(fullPath, casingPaint);
+    canvas.drawPath(fullPath, completedPaint);
+
+    // Draw bold active road path from Rider's current street position to Customer Destination
+    final splitIdx = ((pts.length - 1) * progress).floor().clamp(0, pts.length - 1);
+    final activePath = Path()..moveTo(driverPoint.dx, driverPoint.dy);
+    for (int i = splitIdx + 1; i < pts.length; i++) {
+      activePath.lineTo(pts[i].dx, pts[i].dy);
+    }
+    canvas.drawPath(activePath, activeRoutePaint);
   }
 
   @override
   bool shouldRepaint(covariant _RouteLinePainter oldDelegate) {
-    return oldDelegate.start != start || oldDelegate.end != end;
+    return oldDelegate.driverPoint != driverPoint ||
+        oldDelegate.destPoint != destPoint ||
+        oldDelegate.progress != progress ||
+        oldDelegate.routePoints.length != routePoints.length;
+  }
+}
+
+class _PinPointerPainter extends CustomPainter {
+  final Color color;
+  const _PinPointerPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    final path = Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width / 2, size.height)
+      ..lineTo(size.width, 0)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _PinPointerPainter oldDelegate) =>
+      oldDelegate.color != color;
+}
+
+/// Draws the Foodpanda-style thick emerald circular progress ring on the right of the ETA card.
+class _TrackerProgressRingPainter extends CustomPainter {
+  final double progress;
+  const _TrackerProgressRingPainter({required this.progress});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final stroke = size.width * 0.135;
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.width - stroke) / 2;
+
+    final trackPaint = Paint()
+      ..color = const Color(0xFFD1FAE5)
+      ..strokeWidth = stroke
+      ..style = PaintingStyle.stroke;
+
+    canvas.drawCircle(center, radius, trackPaint);
+
+    final arcPaint = Paint()
+      ..color = const Color(0xFF10B981)
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+
+    final sweep = 2 * pi * progress.clamp(0.18, 0.95);
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -pi / 2,
+      sweep,
+      false,
+      arcPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _TrackerProgressRingPainter oldDelegate) =>
+      oldDelegate.progress != progress;
+}
+
+/// Custom JJAASS Water Delivery Carrier / Gallon Bag badge inside the circular progress ring.
+class _WaterDeliveryBagBadge extends StatelessWidget {
+  final double size;
+  const _WaterDeliveryBagBadge({required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0284C7), Color(0xFF1D63B8)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(size * 0.28),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0284C7).withValues(alpha: 0.28),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Icon(
+            Icons.shopping_bag_rounded,
+            color: Colors.white,
+            size: size * 0.68,
+          ),
+          Padding(
+            padding: EdgeInsets.only(top: size * 0.14),
+            child: Icon(
+              Icons.water_drop_rounded,
+              color: const Color(0xFF38BDF8),
+              size: size * 0.30,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -640,8 +1199,16 @@ class _FallbackTrackTilePainter extends CustomPainter {
     final road = Paint()
       ..color = Colors.white
       ..strokeWidth = 5.0;
-    canvas.drawLine(Offset(0, size.height * 0.45), Offset(size.width, size.height * 0.55), road);
-    canvas.drawLine(Offset(size.width * 0.35, 0), Offset(size.width * 0.65, size.height), road);
+    canvas.drawLine(
+      Offset(0, size.height * 0.45),
+      Offset(size.width, size.height * 0.55),
+      road,
+    );
+    canvas.drawLine(
+      Offset(size.width * 0.35, 0),
+      Offset(size.width * 0.65, size.height),
+      road,
+    );
   }
 
   @override

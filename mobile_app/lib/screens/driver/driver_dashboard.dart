@@ -1978,6 +1978,11 @@ class _DriverDashboardState extends State<DriverDashboard> {
                   destinationAddress: focusedJob.deliveryAddress,
                   customerName: focusedJob.customerName,
                   customerPhone: focusedJob.customerPhone,
+                  driverName: focusedJob.driverName,
+                  itemsSummary: focusedJob.itemsSummary,
+                  statusTitle: focusedJob.isCollectionJob
+                      ? 'Collecting gallons'
+                      : 'On the way',
                   isDriverView: true,
                   isCollectionJob: focusedJob.isCollectionJob,
                   orderId: focusedJob.id,
@@ -1985,6 +1990,19 @@ class _DriverDashboardState extends State<DriverDashboard> {
                   onOrderPinTapped: (orderId) {
                     setState(() {
                       _selectedActiveOrderId = orderId;
+                    });
+                  },
+                  onChatTap: () {
+                    RealtimeChatModal.show(
+                      context,
+                      initialConversationId: 'order_${focusedJob.id}',
+                      initialOrderId: focusedJob.id,
+                    );
+                  },
+                  onHelpTap: () {
+                    setState(() {
+                      _selectedTab = 4;
+                      _activeSidebarMenu = 4;
                     });
                   },
                 ),

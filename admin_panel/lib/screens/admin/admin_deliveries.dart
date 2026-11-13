@@ -278,6 +278,18 @@ extension _AdminDeliveries on _AdminDashboardState {
                       _selectedDeliveryOrder = order;
                     });
                   },
+                  onChatTap: () {
+                    setState(() {
+                      _activeSidebarMenu = 7;
+                      _selectedTab = 7;
+                    });
+                  },
+                  onHelpTap: () {
+                    setState(() {
+                      _activeSidebarMenu = 7;
+                      _selectedTab = 7;
+                    });
+                  },
                 ),
               ],
             ),

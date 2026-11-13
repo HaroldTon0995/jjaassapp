@@ -57,6 +57,26 @@ class _RealtimeChatModalState extends State<RealtimeChatModal> {
         widget.initialConversationId!.isNotEmpty) {
       _currentConversationId = widget.initialConversationId!;
       _currentOrderId = widget.initialOrderId;
+      if (_currentOrderId != null) {
+        final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+        final matched = orderProvider.orders
+            .where((o) => o.id == _currentOrderId)
+            .toList();
+        if (matched.isNotEmpty) {
+          final order = matched.first;
+          final role = user?.role.name ?? 'customer';
+          if (role == 'driver') {
+            _currentPartnerName = order.customerName;
+            _currentPartnerRole = 'customer';
+          } else {
+            _currentPartnerName =
+                (order.driverName != null && order.driverName!.isNotEmpty)
+                    ? order.driverName!
+                    : 'Assigned Rider';
+            _currentPartnerRole = 'driver';
+          }
+        }
+      }
     } else {
       _currentConversationId = 'support_$userId';
       _currentPartnerName = 'Station Admin';
