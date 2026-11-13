@@ -1,4 +1,7 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
 import 'package:provider/provider.dart';
 import '../core/theme/app_theme.dart';
 import '../core/utils/helpers.dart';
@@ -48,6 +51,9 @@ class _ReportDeliveryIssueModalState extends State<ReportDeliveryIssueModal> {
   String _selectedIssueType = 'Seal Damaged';
   int _affectedCount = 1;
   String? _photoUrl;
+  Uint8List? _photoBytes;
+  String? _photoName;
+  bool _isPickingPhoto = false;
   bool _isSubmitting = false;
 
   final List<String> _issueTypes = [
@@ -71,6 +77,48 @@ class _ReportDeliveryIssueModalState extends State<ReportDeliveryIssueModal> {
     super.dispose();
   }
 
+  Future<void> _pickPhoto(ImageSource source) async {
+    if (_isPickingPhoto) return;
+    setState(() => _isPickingPhoto = true);
+    try {
+      final XFile? picked = await ImagePickerPlatform.instance
+          .getImageFromSource(
+            source: source,
+            options: const ImagePickerOptions(
+              maxWidth: 800,
+              maxHeight: 800,
+              imageQuality: 72,
+            ),
+          );
+      if (picked != null) {
+        final bytes = await picked.readAsBytes();
+        final ext = picked.name.toLowerCase().endsWith('.png') ? 'png' : 'jpeg';
+        final dataUrl = 'data:image/$ext;base64,${base64Encode(bytes)}';
+        if (mounted) {
+          setState(() {
+            _photoBytes = bytes;
+            _photoName = picked.name.isNotEmpty
+                ? picked.name
+                : 'defect_evidence.$ext';
+            _photoUrl = dataUrl;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        Helpers.showSnackBar(
+          context,
+          'Could not select photo: $e',
+          isError: true,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isPickingPhoto = false);
+      }
+    }
+  }
+
   Future<void> _submitReport() async {
     String finalType = _selectedIssueType;
     if (_selectedIssueType == 'Other (Specify)') {
@@ -84,6 +132,15 @@ class _ReportDeliveryIssueModalState extends State<ReportDeliveryIssueModal> {
         return;
       }
       finalType = custom;
+    }
+
+    if (_photoUrl == null || _photoUrl!.isEmpty) {
+      Helpers.showSnackBar(
+        context,
+        'Please attach an actual photo of the defective gallon as evidence.',
+        isError: true,
+      );
+      return;
     }
 
     final desc = _descController.text.trim();
@@ -114,6 +171,7 @@ class _ReportDeliveryIssueModalState extends State<ReportDeliveryIssueModal> {
       issueType: finalType,
       affectedGallonsCount: _affectedCount,
       photoUrl: _photoUrl,
+      photoBase64: _photoUrl,
       description: desc,
     );
 
@@ -291,85 +349,197 @@ class _ReportDeliveryIssueModalState extends State<ReportDeliveryIssueModal> {
 
           const SizedBox(height: 16),
 
-          // 3. Photo Evidence
-          const Text(
-            'Photo Evidence (Optional)',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF0F172A),
-            ),
+          // 3. Photo Evidence (Required)
+          Row(
+            children: [
+              const Text(
+                'Photo Evidence',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEE2E2),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'Required',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFDC2626),
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
-          if (_photoUrl != null)
+          if (_photoBytes != null && _photoUrl != null)
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: const Color(0xFFCBD5E1)),
               ),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      _photoUrl!,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF059669),
-                        fontWeight: FontWeight.w500,
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: SizedBox(
+                      height: 150,
+                      width: double.infinity,
+                      child: Image.memory(
+                        _photoBytes!,
+                        fit: BoxFit.cover,
                       ),
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  InkWell(
-                    onTap: () => setState(() => _photoUrl = null),
-                    child: const Padding(
-                      padding: EdgeInsets.all(4),
-                      child: Text(
-                        'Remove',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFFDC2626),
-                          fontWeight: FontWeight.w600,
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.check_circle_rounded,
+                        size: 16,
+                        color: Color(0xFF059669),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          '${_photoName ?? "defect_photo.jpg"} (${(_photoBytes!.lengthInBytes / 1024).toStringAsFixed(1)} KB)',
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            color: Color(0xFF059669),
+                            fontWeight: FontWeight.w600,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                    ),
+                      const SizedBox(width: 6),
+                      InkWell(
+                        onTap: () => _pickPhoto(ImageSource.camera),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 4,
+                          ),
+                          child: Text(
+                            'Retake',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: AppTheme.primaryColor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () => setState(() {
+                          _photoUrl = null;
+                          _photoBytes = null;
+                          _photoName = null;
+                        }),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 4,
+                          ),
+                          child: Text(
+                            'Remove',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: Color(0xFFDC2626),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             )
           else
-            InkWell(
-              onTap: () {
-                setState(() {
-                  _photoUrl =
-                      'evidence_${DateTime.now().millisecondsSinceEpoch}.jpg';
-                });
-              },
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: const Color(0xFFCBD5E1),
-                    style: BorderStyle.solid,
+            Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: _isPickingPhoto
+                        ? null
+                        : () => _pickPhoto(ImageSource.camera),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFCBD5E1)),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.camera_alt_rounded,
+                            size: 17,
+                            color: AppTheme.primaryColor,
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            'Take Photo',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.primaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-                alignment: Alignment.center,
-                child: const Text(
-                  '+ Attach Defect Photo',
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.primaryColor,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: InkWell(
+                    onTap: _isPickingPhoto
+                        ? null
+                        : () => _pickPhoto(ImageSource.gallery),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFCBD5E1)),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.photo_library_rounded,
+                            size: 17,
+                            color: AppTheme.primaryColor,
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            'From Gallery',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.primaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
 
           const SizedBox(height: 16),

@@ -911,7 +911,10 @@ extension _AdminClaims on _AdminDashboardState {
     BuildContext context,
     DeliveryIssueModel issue,
   ) {
-    final hasPhoto = photoUrl != null && photoUrl.trim().isNotEmpty;
+    final effectivePhoto = (photoUrl != null && photoUrl.trim().isNotEmpty)
+        ? photoUrl
+        : issue.photoBase64;
+    final hasPhoto = effectivePhoto != null && effectivePhoto.trim().isNotEmpty;
 
     return InkWell(
       onTap: () => _showInspectEvidenceDialog(context, issue),
@@ -929,7 +932,7 @@ extension _AdminClaims on _AdminDashboardState {
           alignment: Alignment.center,
           children: [
             if (hasPhoto)
-              _renderPhotoWidget(photoUrl)
+              _renderPhotoWidget(effectivePhoto)
             else
               const Column(
                 mainAxisAlignment: MainAxisAlignment.center,

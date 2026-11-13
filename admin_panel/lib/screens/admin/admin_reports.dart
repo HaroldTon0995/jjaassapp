@@ -666,48 +666,6 @@ extension _AdminReports on _AdminDashboardState {
                           if (reportOrders.isEmpty) {
                             Helpers.showSnackBar(
                               context,
-                              'No orders available to print.',
-                              isError: true,
-                            );
-                            return;
-                          }
-                          setState(() => _isActionLoading = true);
-                          try {
-                            await ReportService.printPDF(
-                              orders: reportOrders,
-                              interval: _reportInterval,
-                              formattedDate: reportFormattedDate,
-                            );
-                          } catch (e) {
-                            if (mounted) {
-                              Helpers.showSnackBar(
-                                context,
-                                'Failed to print report: $e',
-                                isError: true,
-                              );
-                            }
-                          } finally {
-                            if (mounted) {
-                              setState(() => _isActionLoading = false);
-                            }
-                          }
-                        },
-                  icon: const Icon(Icons.print_rounded, size: 16),
-                  label: const Text(
-                    'Print Report',
-                    style: TextStyle(fontSize: 11),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _isActionLoading
-                      ? null
-                      : () async {
-                          if (reportOrders.isEmpty) {
-                            Helpers.showSnackBar(
-                              context,
                               'No orders available to download.',
                               isError: true,
                             );
