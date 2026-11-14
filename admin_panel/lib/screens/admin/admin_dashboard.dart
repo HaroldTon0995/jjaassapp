@@ -134,6 +134,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
   final TextEditingController _adminPhoneController = TextEditingController(
     text: '+63 995 113 3652',
   );
+  final TextEditingController _stationPlusCodeController = TextEditingController(
+    text: AppConstants.stationPlusCode,
+  );
+  final TextEditingController _stationLatController = TextEditingController(
+    text: AppConstants.stationLat.toStringAsFixed(6),
+  );
+  final TextEditingController _stationLngController = TextEditingController(
+    text: AppConstants.stationLng.toStringAsFixed(6),
+  );
 
   // Customer & Driver Direct Messages (Decoupled from order system notifications)
   final List<Map<String, dynamic>> _inboxMessages = [
@@ -518,6 +527,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
     _adminNameController.dispose();
     _adminEmailController.dispose();
     _adminPhoneController.dispose();
+    _stationPlusCodeController.dispose();
+    _stationLatController.dispose();
+    _stationLngController.dispose();
     super.dispose();
   }
 

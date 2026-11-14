@@ -814,6 +814,228 @@ extension _AdminSettings on _AdminDashboardState {
               ],
             ),
           ),
+          const SizedBox(height: 20),
+
+          // Business Station HQ Origin Coordinates (7R96+J8H, Bacacay, Albay)
+          Container(
+            padding: const EdgeInsets.all(20.0),
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.darkSurface : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.store_mall_directory_rounded,
+                      color: AppTheme.primaryColor,
+                      size: 22,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Business Origin Coordinates (Station HQ)',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'All deliveries, driver routes, and order distances start from ${AppConstants.stationPlusCode}',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: [
+                    SizedBox(
+                      width: 280,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Plus Code / Station Address',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          TextField(
+                            controller: _stationPlusCodeController,
+                            style: const TextStyle(fontSize: 13),
+                            decoration: InputDecoration(
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(
+                      width: 180,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Station Latitude',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          TextField(
+                            controller: _stationLatController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                              signed: true,
+                            ),
+                            style: const TextStyle(fontSize: 13),
+                            decoration: InputDecoration(
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(
+                      width: 180,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Station Longitude',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          TextField(
+                            controller: _stationLngController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                              signed: true,
+                            ),
+                            style: const TextStyle(fontSize: 13),
+                            decoration: InputDecoration(
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  alignment: WrapAlignment.end,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          AppConstants.resetStationOrigin();
+                          _stationPlusCodeController.text =
+                              AppConstants.stationPlusCode;
+                          _stationLatController.text =
+                              AppConstants.stationLat.toStringAsFixed(6);
+                          _stationLngController.text =
+                              AppConstants.stationLng.toStringAsFixed(6);
+                        });
+                        Helpers.showSnackBar(
+                          context,
+                          'Station HQ reset to 7R96+J8H, Bacacay, Albay (13.269063, 123.810859)',
+                        );
+                      },
+                      icon: const Icon(Icons.restart_alt_rounded, size: 16),
+                      label: const Text('Reset to 7R96+J8H'),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        final parsedLat =
+                            double.tryParse(_stationLatController.text.trim());
+                        final parsedLng =
+                            double.tryParse(_stationLngController.text.trim());
+                        if (parsedLat == null ||
+                            parsedLng == null ||
+                            parsedLat < 12.0 ||
+                            parsedLat > 15.0 ||
+                            parsedLng < 122.0 ||
+                            parsedLng > 125.0) {
+                          Helpers.showSnackBar(
+                            context,
+                            'Enter valid Albay coordinates (e.g., 13.269063, 123.810859).',
+                            isError: true,
+                          );
+                          return;
+                        }
+                        setState(() {
+                          AppConstants.updateStationOrigin(
+                            lat: parsedLat,
+                            lng: parsedLng,
+                            plusCode: _stationPlusCodeController.text.trim(),
+                          );
+                        });
+                        Helpers.showSnackBar(
+                          context,
+                          'Station HQ origin updated to ${AppConstants.stationPlusCode} (${parsedLat.toStringAsFixed(6)}, ${parsedLng.toStringAsFixed(6)})!',
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor,
+                        foregroundColor: Colors.white,
+                      ),
+                      icon: const Icon(Icons.my_location_rounded, size: 16),
+                      label: const Text(
+                        'Save Station Origin',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 24),
 
           // 2. Water Refilling Station Compliance & Business Permits

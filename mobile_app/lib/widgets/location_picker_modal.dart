@@ -34,17 +34,18 @@ class LocationPickerModal extends StatefulWidget {
 }
 
 class _LocationPickerModalState extends State<LocationPickerModal> {
-  // Default to Tabaco City / Bacacay (Albay 1st District)
-  static const LatLng _defaultLocation = LatLng(13.3583, 123.7336);
+  // Exact Business Origin: 7R96+J8H, Bacacay, Albay
+  static LatLng get _defaultLocation =>
+      LatLng(AppConstants.stationLat, AppConstants.stationLng);
 
-  static const Map<String, LatLng> _albayFirstDistrictCenters = {
-    'Tabaco City': LatLng(13.3583, 123.7336),
-    'Bacacay': LatLng(13.2925, 123.7917),
-    'Malilipot': LatLng(13.3189, 123.7397),
-    'Malinao': LatLng(13.4025, 123.7042),
-    'Santo Domingo': LatLng(13.2356, 123.7764),
-    'Tiwi': LatLng(13.4586, 123.6806),
-  };
+  static Map<String, LatLng> get _albayFirstDistrictCenters => {
+        'Bacacay (HQ)': LatLng(AppConstants.stationLat, AppConstants.stationLng),
+        'Tabaco City': const LatLng(13.3583, 123.7336),
+        'Malilipot': const LatLng(13.3189, 123.7397),
+        'Malinao': const LatLng(13.4025, 123.7042),
+        'Santo Domingo': const LatLng(13.2356, 123.7764),
+        'Tiwi': const LatLng(13.4586, 123.6806),
+      };
 
   late LatLng _selectedLocation;
   late LatLng _mapCenter;

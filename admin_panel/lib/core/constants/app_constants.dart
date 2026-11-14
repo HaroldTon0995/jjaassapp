@@ -1,3 +1,5 @@
+import 'dart:math';
+
 class AppConstants {
   // App general info
   static const String appName = 'JJAASSApp';
@@ -54,5 +56,45 @@ class AppConstants {
   static String mapboxTileUrl(int z, int x, int y, {bool satellite = false}) {
     final style = satellite ? 'satellite-streets-v12' : 'streets-v12';
     return 'https://api.mapbox.com/styles/v1/mapbox/$style/tiles/256/$z/$x/$y@2x?access_token=$mapboxAccessToken';
+  }
+
+  // Exact Business Origin Coordinates: 7R96+J8H, Bacacay, Albay
+  static const String defaultStationPlusCode = '7R96+J8H, Bacacay, Albay';
+  static const double defaultStationLat = 13.269063;
+  static const double defaultStationLng = 123.810859;
+
+  static String stationPlusCode = defaultStationPlusCode;
+  static double stationLat = defaultStationLat;
+  static double stationLng = defaultStationLng;
+
+  static void updateStationOrigin({
+    required double lat,
+    required double lng,
+    String? plusCode,
+  }) {
+    stationLat = lat;
+    stationLng = lng;
+    if (plusCode != null && plusCode.trim().isNotEmpty) {
+      stationPlusCode = plusCode.trim();
+    }
+  }
+
+  static void resetStationOrigin() {
+    stationLat = defaultStationLat;
+    stationLng = defaultStationLng;
+    stationPlusCode = defaultStationPlusCode;
+  }
+
+  static double calculateDistanceKm(
+    double lat1,
+    double lng1,
+    double lat2,
+    double lng2,
+  ) {
+    const p = 0.017453292519943295;
+    final a = 0.5 -
+        cos((lat2 - lat1) * p) / 2 +
+        cos(lat1 * p) * cos(lat2 * p) * (1 - cos((lng2 - lng1) * p)) / 2;
+    return 12742 * asin(sqrt(a));
   }
 }

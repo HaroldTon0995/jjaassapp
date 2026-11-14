@@ -1735,7 +1735,11 @@ class OrderProvider extends ChangeNotifier {
       driverId: driverId,
       driverName: driverName,
       createdAt: DateTime.now(),
-      distance: '${(1.0 + Random().nextDouble() * 3.0).toStringAsFixed(1)} km',
+      distance: AppConstants.calculateDistanceLabelFromStation(
+        latitude,
+        longitude,
+        deliveryAddress,
+      ),
       deliveryNote: (deliveryNote != null && deliveryNote.trim().isNotEmpty)
           ? deliveryNote.trim()
           : null,

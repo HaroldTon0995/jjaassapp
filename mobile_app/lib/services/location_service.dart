@@ -15,8 +15,8 @@ class LocationService {
   bool _isBroadcasting = false;
   bool _useSimulation = false;
 
-  double _simLatitude = 14.5995;
-  double _simLongitude = 120.9842;
+  double _simLatitude = AppConstants.stationLat;
+  double _simLongitude = AppConstants.stationLng;
   double _simHeading = 45.0;
 
   bool get isBroadcasting => _isBroadcasting;

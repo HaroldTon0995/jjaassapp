@@ -667,10 +667,10 @@ class LiveFleetGpsMapWidget extends StatefulWidget {
 }
 
 class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget> {
-  // JJAASS Water Market HQ in Albay 1st District (Tabaco City / Bacacay)
-  static const LatLng _stationHQ = LatLng(13.3583, 123.7336);
+  // Exact Business Origin: 7R96+J8H, Bacacay, Albay (13.269063, 123.810859)
+  LatLng get _stationHQ => LatLng(AppConstants.stationLat, AppConstants.stationLng);
 
-  LatLng _mapCenter = _stationHQ;
+  LatLng _mapCenter = LatLng(AppConstants.stationLat, AppConstants.stationLng);
   int _zoom = 14;
   final Map<String, List<LatLng>> _mapboxRouteCache = {};
   final Map<String, int> _mapboxEtaCache = {};
@@ -1100,7 +1100,7 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Mapbox Live Fleet • Albay 1st District',
+                          'Mapbox Live Fleet • ${AppConstants.stationPlusCode}',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,

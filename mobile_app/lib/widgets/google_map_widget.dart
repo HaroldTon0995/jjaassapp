@@ -56,8 +56,9 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
   StreamSubscription<DriverLocation>? _trackingStreamSub;
   bool _hasRealLocation = false;
 
-  // Default coordinates: Tabaco City / Bacacay (Albay 1st District)
-  static const LatLng _defaultAlbayFirstDistrict = LatLng(13.3583, 123.7336);
+  // Exact Business Origin: 7R96+J8H, Bacacay, Albay
+  static LatLng get _defaultAlbayFirstDistrict =>
+      LatLng(AppConstants.stationLat, AppConstants.stationLng);
 
   LatLng get _destinationCoord {
     if (widget.destinationLat != null && widget.destinationLng != null) {
@@ -101,7 +102,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
 
   void _setupRouteAndTracking() {
     final dest = _destinationCoord;
-    _originCoord = LatLng(dest.latitude - 0.0075, dest.longitude - 0.0065);
+    _originCoord = LatLng(AppConstants.stationLat, AppConstants.stationLng);
     _routePoints = _buildStreetGridFallbackRoute(_originCoord, dest);
     _routeProgress = 0.42;
     _driverCoord = _interpolateAlongRoute(_routePoints, _routeProgress);
@@ -121,7 +122,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
         oldWidget.destinationLat != widget.destinationLat ||
         oldWidget.destinationLng != widget.destinationLng) {
       final dest = _destinationCoord;
-      _originCoord = LatLng(dest.latitude - 0.0075, dest.longitude - 0.0065);
+      _originCoord = LatLng(AppConstants.stationLat, AppConstants.stationLng);
       _routePoints = _buildStreetGridFallbackRoute(_originCoord, dest);
       _routeProgress = 0.42;
       _driverCoord = _interpolateAlongRoute(_routePoints, _routeProgress);
@@ -551,6 +552,8 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
           }
         }
 
+        final originX = _lngToWorldX(_originCoord.longitude, _zoom) - leftWx;
+        final originY = _latToWorldY(_originCoord.latitude, _zoom) - topWy;
         final driverX = _lngToWorldX(_driverCoord.longitude, _zoom) - leftWx;
         final driverY = _latToWorldY(_driverCoord.latitude, _zoom) - topWy;
         final destX = _lngToWorldX(dest.longitude, _zoom) - leftWx;
@@ -595,6 +598,57 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
                       progress: _routeProgress,
                     ),
                   ),
+                ),
+              ),
+
+              // Business Station HQ Origin Pin (7R96+J8H, Bacacay, Albay)
+              Positioned(
+                left: originX - 48,
+                top: originY - 46,
+                width: 96,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppTheme.navyColor.withValues(alpha: 0.94),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'HQ • 7R96+J8H',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Container(
+                      width: 26,
+                      height: 26,
+                      decoration: BoxDecoration(
+                        color: AppTheme.navyColor,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.25),
+                            blurRadius: 5,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.store_rounded,
+                        color: Colors.white,
+                        size: 14,
+                      ),
+                    ),
+                  ],
                 ),
               ),
 

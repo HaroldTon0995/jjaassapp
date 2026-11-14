@@ -56,8 +56,9 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
   StreamSubscription<DriverLocation>? _trackingStreamSub;
   bool _hasRealLocation = false;
 
-  // Default coordinates: Tabaco City / Bacacay (Albay 1st District)
-  static const LatLng _defaultAlbayFirstDistrict = LatLng(13.3583, 123.7336);
+  // Exact Business Origin: 7R96+J8H, Bacacay, Albay
+  static LatLng get _defaultAlbayFirstDistrict =>
+      LatLng(AppConstants.stationLat, AppConstants.stationLng);
 
   LatLng get _destinationCoord {
     if (widget.destinationLat != null && widget.destinationLng != null) {
@@ -101,7 +102,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
 
   void _setupRouteAndTracking() {
     final dest = _destinationCoord;
-    _originCoord = LatLng(dest.latitude - 0.0075, dest.longitude - 0.0065);
+    _originCoord = LatLng(AppConstants.stationLat, AppConstants.stationLng);
     _routePoints = _buildStreetGridFallbackRoute(_originCoord, dest);
     _routeProgress = 0.42;
     _driverCoord = _interpolateAlongRoute(_routePoints, _routeProgress);
@@ -121,7 +122,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
         oldWidget.destinationLat != widget.destinationLat ||
         oldWidget.destinationLng != widget.destinationLng) {
       final dest = _destinationCoord;
-      _originCoord = LatLng(dest.latitude - 0.0075, dest.longitude - 0.0065);
+      _originCoord = LatLng(AppConstants.stationLat, AppConstants.stationLng);
       _routePoints = _buildStreetGridFallbackRoute(_originCoord, dest);
       _routeProgress = 0.42;
       _driverCoord = _interpolateAlongRoute(_routePoints, _routeProgress);
