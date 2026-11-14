@@ -43,4 +43,16 @@ class AppConstants {
     'GEMINI_API_KEY',
     defaultValue: '',
   );
+
+  // Mapbox Public Access Token for Maps & Directions API
+  static const String mapboxAccessToken = String.fromEnvironment(
+    'MAPBOX_ACCESS_TOKEN',
+    defaultValue:
+        'pk.eyJ1IjoiaGFyb2xkYm9yYm8wOTA4IiwiYSI6ImNtd2Z4N29yeTA3cGEyenB3a2Fxc2k3eXcifQ.x3vsYQm8-awub-o59syruQ',
+  );
+
+  static String mapboxTileUrl(int z, int x, int y, {bool satellite = false}) {
+    final style = satellite ? 'satellite-streets-v12' : 'streets-v12';
+    return 'https://api.mapbox.com/styles/v1/mapbox/$style/tiles/256/$z/$x/$y@2x?access_token=$mapboxAccessToken';
+  }
 }

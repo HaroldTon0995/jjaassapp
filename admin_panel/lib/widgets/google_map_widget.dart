@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
+import '../core/constants/app_constants.dart';
 import '../core/theme/app_theme.dart';
 import '../services/tracking_service.dart';
 
@@ -86,6 +87,8 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
   late LatLng _mapCenter;
   List<LatLng> _routePoints = [];
   double _routeProgress = 0.42;
+  int? _mapboxEtaMinutes;
+  double? _mapboxDistanceKm;
   int _zoom = 15;
   bool _isLoadingLocation = false;
   Timer? _mockMovementTimer;
@@ -162,6 +165,52 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
   }
 
   Future<void> _fetchOsrmStreetRoute(LatLng start, LatLng end) async {
+    // 1. Primary: Mapbox Directions API (traffic-aware driving route + ETA)
+    if (AppConstants.mapboxAccessToken.isNotEmpty) {
+      try {
+        final mbUrl = Uri.parse(
+          'https://api.mapbox.com/directions/v5/mapbox/driving/'
+          '${start.longitude},${start.latitude};${end.longitude},${end.latitude}'
+          '?geometries=geojson&overview=full&access_token=${AppConstants.mapboxAccessToken}',
+        );
+        final mbRes = await http.get(mbUrl).timeout(const Duration(seconds: 5));
+        if (mbRes.statusCode == 200 && mounted) {
+          final data = jsonDecode(mbRes.body) as Map<String, dynamic>;
+          final routes = data['routes'] as List<dynamic>?;
+          if (routes != null && routes.isNotEmpty) {
+            final firstRoute = routes.first as Map<String, dynamic>;
+            final geometry = firstRoute['geometry'] as Map<String, dynamic>?;
+            final coords = geometry?['coordinates'] as List<dynamic>?;
+            final durationSecs = (firstRoute['duration'] as num?)?.toDouble();
+            final distMeters = (firstRoute['distance'] as num?)?.toDouble();
+            if (coords != null && coords.length >= 2) {
+              final parsed = coords.map((c) {
+                final pair = c as List<dynamic>;
+                return LatLng(
+                  (pair[1] as num).toDouble(),
+                  (pair[0] as num).toDouble(),
+                );
+              }).toList();
+              setState(() {
+                _routePoints = parsed;
+                if (durationSecs != null && durationSecs > 0) {
+                  _mapboxEtaMinutes = max(2, (durationSecs / 60.0).round());
+                }
+                if (distMeters != null && distMeters > 0) {
+                  _mapboxDistanceKm = distMeters / 1000.0;
+                }
+                if (!_hasRealLocation) {
+                  _driverCoord = _interpolateAlongRoute(_routePoints, _routeProgress);
+                }
+              });
+              return;
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    // 2. Fallback: OSRM public driving route
     try {
       final url = Uri.parse(
         'https://router.project-osrm.org/route/v1/driving/'
@@ -416,8 +465,13 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
     }
 
     final dest = _destinationCoord;
-    final distKm = _calculateDistanceKm(_driverCoord, dest);
-    final baseEta = max(3, (distKm * 4.2).round());
+    final straightDistKm = _calculateDistanceKm(_driverCoord, dest);
+    final distKm = _mapboxDistanceKm != null
+        ? max(0.1, _mapboxDistanceKm! * (1.0 - _routeProgress * 0.65))
+        : straightDistKm;
+    final baseEta = _mapboxEtaMinutes != null
+        ? max(2, (_mapboxEtaMinutes! * (1.0 - _routeProgress * 0.5)).round())
+        : max(3, (distKm * 4.2).round());
     final minEta = max(2, baseEta - 2);
     final maxEta = minEta + 5;
 
@@ -467,7 +521,9 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
                 width: 256,
                 height: 256,
                 child: Image.network(
-                  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/$_zoom/$ty/$tx',
+                  AppConstants.mapboxAccessToken.isNotEmpty
+                      ? AppConstants.mapboxTileUrl(_zoom, tx, ty)
+                      : 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/$_zoom/$ty/$tx',
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) {
                     return Image.network(

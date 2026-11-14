@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import '../core/constants/app_constants.dart';
 import '../core/theme/app_theme.dart';
 
 /// Modal dialog for customers to pin their exact delivery house/building location
@@ -280,7 +281,9 @@ class _LocationPickerModalState extends State<LocationPickerModal> {
                           width: 256,
                           height: 256,
                           child: Image.network(
-                            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/$_zoom/$ty/$tx',
+                            AppConstants.mapboxAccessToken.isNotEmpty
+                                ? AppConstants.mapboxTileUrl(_zoom, tx, ty)
+                                : 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/$_zoom/$ty/$tx',
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) {
                               return Image.network(

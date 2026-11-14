@@ -1,6 +1,9 @@
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
+import '../core/constants/app_constants.dart';
 import '../core/theme/app_theme.dart';
 import '../models/order_model.dart';
 import '../models/user_model.dart';
@@ -664,23 +667,47 @@ class LiveFleetGpsMapWidget extends StatefulWidget {
 }
 
 class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget> {
-  GoogleMapController? _mapController;
-
   // JJAASS Water Market HQ in Albay 1st District (Tabaco City / Bacacay)
   static const LatLng _stationHQ = LatLng(13.3583, 123.7336);
+
+  LatLng _mapCenter = _stationHQ;
+  int _zoom = 14;
+  final Map<String, List<LatLng>> _mapboxRouteCache = {};
+  final Map<String, int> _mapboxEtaCache = {};
+  final Set<String> _fetchingRouteIds = {};
+
+  static double _lngToWorldX(double lng, int zoom) {
+    final worldSize = 256.0 * (1 << zoom);
+    return (lng + 180.0) / 360.0 * worldSize;
+  }
+
+  static double _latToWorldY(double lat, int zoom) {
+    final worldSize = 256.0 * (1 << zoom);
+    final sinLat = sin(lat * pi / 180.0).clamp(-0.9999, 0.9999);
+    return (0.5 - log((1.0 + sinLat) / (1.0 - sinLat)) / (4.0 * pi)) * worldSize;
+  }
+
+  static double _worldXToLng(double wx, int zoom) {
+    final worldSize = 256.0 * (1 << zoom);
+    return (wx / worldSize) * 360.0 - 180.0;
+  }
+
+  static double _worldYToLat(double wy, int zoom) {
+    final worldSize = 256.0 * (1 << zoom);
+    final n = pi - 2.0 * pi * wy / worldSize;
+    return 180.0 / pi * atan(0.5 * (exp(n) - exp(-n)));
+  }
 
   LatLng _getOrderCoord(OrderModel order, int index) {
     if (order.latitude != null && order.longitude != null) {
       return LatLng(order.latitude!, order.longitude!);
     }
-    // Deterministic offset in Albay 1st District for orders without raw GPS
     final hash = order.id.hashCode;
     final latOffset = ((hash % 100) / 10000.0) - 0.005 + (index * 0.0018);
     final lngOffset = (((hash >> 4) % 100) / 10000.0) - 0.005 - (index * 0.0016);
     return LatLng(_stationHQ.latitude + latOffset, _stationHQ.longitude + lngOffset);
   }
 
-  /// Generates a street-following multi-turn route (Foodpanda avenue/cross-street style)
   List<LatLng> _buildStreetRouteWaypoints(LatLng start, LatLng end) {
     final dLat = end.latitude - start.latitude;
     final dLng = end.longitude - start.longitude;
@@ -694,30 +721,70 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget> {
     ];
   }
 
-  LatLng _getDriverCoord(OrderModel order, LatLng destCoord) {
-    final pts = _buildStreetRouteWaypoints(_stationHQ, destCoord);
+  Future<void> _ensureMapboxRoute(String orderId, LatLng destCoord) async {
+    if (_mapboxRouteCache.containsKey(orderId) ||
+        _fetchingRouteIds.contains(orderId) ||
+        AppConstants.mapboxAccessToken.isEmpty) {
+      return;
+    }
+    _fetchingRouteIds.add(orderId);
+    try {
+      final url = Uri.parse(
+        'https://api.mapbox.com/directions/v5/mapbox/driving/'
+        '${_stationHQ.longitude},${_stationHQ.latitude};${destCoord.longitude},${destCoord.latitude}'
+        '?geometries=geojson&overview=full&access_token=${AppConstants.mapboxAccessToken}',
+      );
+      final res = await http.get(url).timeout(const Duration(seconds: 5));
+      if (res.statusCode == 200 && mounted) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        final routes = data['routes'] as List<dynamic>?;
+        if (routes != null && routes.isNotEmpty) {
+          final firstRoute = routes.first as Map<String, dynamic>;
+          final coords = (firstRoute['geometry'] as Map<String, dynamic>?)?['coordinates'] as List<dynamic>?;
+          final durationSecs = (firstRoute['duration'] as num?)?.toDouble();
+          if (coords != null && coords.length >= 2) {
+            setState(() {
+              _mapboxRouteCache[orderId] = coords.map((c) {
+                final pair = c as List<dynamic>;
+                return LatLng((pair[1] as num).toDouble(), (pair[0] as num).toDouble());
+              }).toList();
+              if (durationSecs != null && durationSecs > 0) {
+                _mapboxEtaCache[orderId] = max(2, (durationSecs / 60.0).round());
+              }
+            });
+          }
+        }
+      }
+    } catch (_) {
+      // Keep street-grid fallback
+    } finally {
+      _fetchingRouteIds.remove(orderId);
+    }
+  }
+
+  LatLng _getDriverCoord(OrderModel order, List<LatLng> routePts) {
+    if (routePts.length < 2) return _stationHQ;
     if (order.orderStatus == OrderStatus.onDelivery) {
-      return pts[3]; // 68% along the street-turning route
+      return routePts[(routePts.length * 0.68).floor().clamp(0, routePts.length - 1)];
     } else if (order.orderStatus == OrderStatus.assigned) {
-      return pts[1]; // 28% along the street-turning route
+      return routePts[(routePts.length * 0.30).floor().clamp(0, routePts.length - 1)];
     }
     return _stationHQ;
   }
 
   void _zoomIn() {
-    _mapController?.animateCamera(CameraUpdate.zoomIn());
+    if (_zoom < 18) setState(() => _zoom++);
   }
 
   void _zoomOut() {
-    _mapController?.animateCamera(CameraUpdate.zoomOut());
+    if (_zoom > 11) setState(() => _zoom--);
   }
 
   void _resetView() {
-    _mapController?.animateCamera(
-      CameraUpdate.newCameraPosition(
-        const CameraPosition(target: _stationHQ, zoom: 14.5),
-      ),
-    );
+    setState(() {
+      _mapCenter = _stationHQ;
+      _zoom = 14;
+    });
   }
 
   @override
@@ -725,11 +792,13 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget> {
     super.didUpdateWidget(oldWidget);
     if (widget.selectedOrder != null && widget.selectedOrder != oldWidget.selectedOrder) {
       final dest = _getOrderCoord(widget.selectedOrder!, 0);
-      _mapController?.animateCamera(
-        CameraUpdate.newCameraPosition(
-          CameraPosition(target: dest, zoom: 15.5),
-        ),
-      );
+      setState(() {
+        _mapCenter = LatLng(
+          (dest.latitude + _stationHQ.latitude) / 2.0 - 0.001,
+          (dest.longitude + _stationHQ.longitude) / 2.0,
+        );
+        _zoom = 15;
+      });
     }
   }
 
@@ -743,88 +812,10 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget> {
     final OrderModel? trackedOrder = widget.selectedOrder ??
         (activeDispatches.isNotEmpty ? activeDispatches.first : null);
 
-    // Build real Google Map Markers & Street-Routed Polylines
-    final Set<Marker> markers = {};
-    final Set<Polyline> polylines = {};
-
-    // 1. Water Station Headquarters Pin
-    markers.add(
-      Marker(
-        markerId: const MarkerId('station_hq'),
-        position: _stationHQ,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-        infoWindow: const InfoWindow(
-          title: 'JJAASS Water Market HQ',
-          snippet: 'Station Central Hub • Albay 1st District',
-        ),
-      ),
-    );
-
-    // 2. Customer Delivery Pins & Active Riders
-    for (int i = 0; i < activeOrders.length; i++) {
-      final o = activeOrders[i];
-      final isSelected = trackedOrder?.id == o.id;
-      final destCoord = _getOrderCoord(o, i);
-      final driverCoord = _getDriverCoord(o, destCoord);
-      final isActive = o.orderStatus == OrderStatus.onDelivery || o.orderStatus == OrderStatus.assigned;
-      final isCompleted = o.orderStatus == OrderStatus.completed;
-
-      final double markerHue = isSelected
-          ? BitmapDescriptor.hueAzure
-          : (isCompleted
-              ? BitmapDescriptor.hueGreen
-              : (o.isCollectionJob
-                  ? BitmapDescriptor.hueGreen
-                  : (isActive ? BitmapDescriptor.hueCyan : BitmapDescriptor.hueOrange)));
-
-      markers.add(
-        Marker(
-          markerId: MarkerId('customer_${o.id}'),
-          position: destCoord,
-          icon: BitmapDescriptor.defaultMarkerWithHue(markerHue),
-          infoWindow: InfoWindow(
-            title: o.isCollectionJob
-                ? '${o.id} • ${o.customerName} (Collection Task)'
-                : '${o.id} • ${o.customerName}',
-            snippet: o.isCollectionJob
-                ? '${o.deliveryAddress} (${isCompleted ? 'Collected' : 'Collecting Empties'})'
-                : '${o.deliveryAddress} (${o.orderStatus.displayName})',
-            onTap: () => widget.onSelectOrder?.call(o),
-          ),
-          onTap: () => widget.onSelectOrder?.call(o),
-        ),
-      );
-
-      // Rider Marker & Multi-Turn Street Polyline
-      if (isActive && o.driverName != null) {
-        markers.add(
-          Marker(
-            markerId: MarkerId('driver_${o.id}'),
-            position: driverCoord,
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
-            infoWindow: InfoWindow(
-              title: '🛵 Rider: ${o.driverName}',
-              snippet: o.isCollectionJob
-                  ? 'Dispatched for Collection ${o.id} • Speed ~28 km/h'
-                  : 'Dispatched for ${o.id} • Speed ~28 km/h',
-            ),
-            onTap: () => widget.onSelectOrder?.call(o),
-          ),
-        );
-
-        final streetWaypoints = _buildStreetRouteWaypoints(_stationHQ, destCoord);
-        polylines.add(
-          Polyline(
-            polylineId: PolylineId('route_${o.id}'),
-            points: streetWaypoints,
-            color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF38BDF8),
-            width: isSelected ? 5 : 3,
-            jointType: JointType.round,
-            startCap: Cap.roundCap,
-            endCap: Cap.roundCap,
-          ),
-        );
-      }
+    // Prefetch Mapbox Directions routes for active dispatches
+    for (int i = 0; i < activeDispatches.length; i++) {
+      final o = activeDispatches[i];
+      _ensureMapboxRoute(o.id, _getOrderCoord(o, i));
     }
 
     final double routeProgress = trackedOrder == null
@@ -836,6 +827,12 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget> {
         (trackedOrder?.driverName != null && trackedOrder!.driverName!.trim().isNotEmpty)
             ? trackedOrder.driverName!.trim()
             : 'Assigned JJAASS Rider';
+    final int? trackedEta = trackedOrder != null ? _mapboxEtaCache[trackedOrder.id] : null;
+    final String etaRangeLabel = trackedOrder?.orderStatus == OrderStatus.completed
+        ? 'Delivered'
+        : (trackedEta != null
+            ? '${max(2, trackedEta - 2)} – ${trackedEta + 3} mins'
+            : '5 – 10 mins');
 
     return Container(
       height: 460,
@@ -849,380 +846,575 @@ class _LiveFleetGpsMapWidgetState extends State<LiveFleetGpsMapWidget> {
           width: 1.5,
         ),
       ),
-      child: Stack(
-        children: [
-          // Authentic Google Map
-          Positioned.fill(
-            child: GoogleMap(
-              initialCameraPosition: const CameraPosition(
-                target: _stationHQ,
-                zoom: 14.5,
-              ),
-              mapType: widget.satelliteMode ? MapType.hybrid : MapType.normal,
-              markers: markers,
-              polylines: polylines,
-              zoomControlsEnabled: false,
-              myLocationButtonEnabled: false,
-              compassEnabled: true,
-              mapToolbarEnabled: true,
-              onMapCreated: (controller) {
-                _mapController = controller;
-              },
-            ),
-          ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth > 0 ? constraints.maxWidth : 800.0;
+          final height = constraints.maxHeight > 0 ? constraints.maxHeight : 460.0;
+          final mapViewportHeight = trackedOrder != null ? height * 0.64 : height;
 
-          // Map Header Legend & Badge
-          Positioned(
-            top: 14,
-            left: 14,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? const Color(0xFF0F172A).withValues(alpha: 0.90)
-                    : Colors.white.withValues(alpha: 0.95),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+          final centerWx = _lngToWorldX(_mapCenter.longitude, _zoom);
+          final centerWy = _latToWorldY(_mapCenter.latitude, _zoom);
+          final leftWx = centerWx - width / 2.0;
+          final topWy = centerWy - mapViewportHeight / 2.0;
+
+          final maxTile = (1 << _zoom) - 1;
+          final minTx = (leftWx / 256.0).floor().clamp(0, maxTile);
+          final maxTx = ((leftWx + width) / 256.0).floor().clamp(0, maxTile);
+          final minTy = (topWy / 256.0).floor().clamp(0, maxTile);
+          final maxTy = ((topWy + height) / 256.0).floor().clamp(0, maxTile);
+
+          final tiles = <Widget>[];
+          for (int tx = minTx; tx <= maxTx; tx++) {
+            for (int ty = minTy; ty <= maxTy; ty++) {
+              final tileLeft = tx * 256.0 - leftWx;
+              final tileTop = ty * 256.0 - topWy;
+              tiles.add(
+                Positioned(
+                  key: ValueKey('admin_mb_${widget.satelliteMode}_${_zoom}_${tx}_$ty'),
+                  left: tileLeft,
+                  top: tileTop,
+                  width: 256,
+                  height: 256,
+                  child: Image.network(
+                    AppConstants.mapboxAccessToken.isNotEmpty
+                        ? AppConstants.mapboxTileUrl(
+                            _zoom,
+                            tx,
+                            ty,
+                            satellite: widget.satelliteMode,
+                          )
+                        : 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/$_zoom/$ty/$tx',
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Image.network(
+                        'https://tile.openstreetmap.org/$_zoom/$tx/$ty.png',
+                        headers: const {
+                          'User-Agent': 'JJAASSWaterMarket/1.0 (water delivery app)'
+                        },
+                        fit: BoxFit.cover,
+                        errorBuilder: (c, e, s) => Container(
+                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+                        ),
+                      );
+                    },
+                  ),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.12),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+              );
+            }
+          }
+
+          Offset toScreen(LatLng pt) => Offset(
+                _lngToWorldX(pt.longitude, _zoom) - leftWx,
+                _latToWorldY(pt.latitude, _zoom) - topWy,
+              );
+
+          final routeOverlays = <Map<String, dynamic>>[];
+          final pinWidgets = <Widget>[];
+
+          // 1. Station HQ Pin
+          final hqPt = toScreen(_stationHQ);
+          pinWidgets.add(
+            Positioned(
+              left: hqPt.dx - 18,
+              top: hqPt.dy - 18,
+              child: Tooltip(
+                message: 'JJAASS Water Market HQ • Albay 1st District',
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppTheme.navyColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.28),
+                        blurRadius: 6,
+                      ),
+                    ],
                   ),
-                ],
+                  child: const Icon(Icons.store_rounded, color: Colors.white, size: 18),
+                ),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 9,
-                    height: 9,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF10B981),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Live Fleet GPS • Albay 1st District',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : const Color(0xFF1E293B),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      '${activeDispatches.length} Active Dispatches',
-                      style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        color: AppTheme.primaryColor,
+            ),
+          );
+
+          // 2. Active & Pending Orders + Riders
+          for (int i = 0; i < activeOrders.length; i++) {
+            final o = activeOrders[i];
+            final isSelected = trackedOrder?.id == o.id;
+            final destCoord = _getOrderCoord(o, i);
+            final routeCoords = _mapboxRouteCache[o.id] ??
+                _buildStreetRouteWaypoints(_stationHQ, destCoord);
+            final driverCoord = _getDriverCoord(o, routeCoords);
+            final isActive =
+                o.orderStatus == OrderStatus.onDelivery || o.orderStatus == OrderStatus.assigned;
+            final isCompleted = o.orderStatus == OrderStatus.completed;
+
+            if (isActive) {
+              routeOverlays.add({
+                'points': routeCoords.map(toScreen).toList(),
+                'isSelected': isSelected,
+              });
+            }
+
+            final destPt = toScreen(destCoord);
+            pinWidgets.add(
+              Positioned(
+                left: destPt.dx - 15,
+                top: destPt.dy - 30,
+                child: GestureDetector(
+                  onTap: () => widget.onSelectOrder?.call(o),
+                  child: Tooltip(
+                    message: '${o.id} • ${o.customerName} (${o.orderStatus.displayName})',
+                    child: Container(
+                      width: 30,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? const Color(0xFF0F172A)
+                            : (isCompleted
+                                ? const Color(0xFF10B981)
+                                : (isActive ? const Color(0xFF0284C7) : const Color(0xFFF59E0B))),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.24),
+                            blurRadius: 5,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.water_drop_rounded,
+                        color: Colors.white,
+                        size: 15,
                       ),
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
 
-          // Top-Right "Help" Pill Button (Foodpanda Style)
-          Positioned(
-            top: 14,
-            right: 56,
-            child: Material(
-              color: isDark ? const Color(0xFF1E293B) : Colors.white,
-              elevation: 2,
-              borderRadius: BorderRadius.circular(18),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(18),
-                onTap: widget.onHelpTap,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: isDark ? Colors.white24 : const Color(0xFF94A3B8),
-                    ),
-                  ),
-                  child: Text(
-                    'Help',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w800,
-                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+            if (isActive && o.driverName != null) {
+              final drvPt = toScreen(driverCoord);
+              pinWidgets.add(
+                Positioned(
+                  left: drvPt.dx - 17,
+                  top: drvPt.dy - 17,
+                  child: GestureDetector(
+                    onTap: () => widget.onSelectOrder?.call(o),
+                    child: Tooltip(
+                      message: '🛵 Rider: ${o.driverName} (${o.id})',
+                      child: Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF0284C7), Color(0xFF1D63B8)],
+                          ),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2.5),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF0284C7).withValues(alpha: 0.45),
+                              blurRadius: 8,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.two_wheeler_rounded,
+                          color: Colors.white,
+                          size: 17,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ),
-          ),
+              );
+            }
+          }
 
-          // Map Control Floating Action Buttons (Zoom / Recenter 🎯)
-          Positioned(
-            top: 14,
-            right: 14,
-            child: Column(
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onScaleStart: (_) {},
+            onScaleUpdate: (details) {
+              final delta = details.focalPointDelta;
+              if (delta.dx == 0 && delta.dy == 0) return;
+              final newWx = _lngToWorldX(_mapCenter.longitude, _zoom) - delta.dx;
+              final newWy = _latToWorldY(_mapCenter.latitude, _zoom) - delta.dy;
+              setState(() {
+                _mapCenter = LatLng(
+                  _worldYToLat(newWy, _zoom).clamp(13.0, 13.7),
+                  _worldXToLng(newWx, _zoom).clamp(123.3, 124.1),
+                );
+              });
+            },
+            child: Stack(
               children: [
-                _buildMapButton(
-                  icon: Icons.add_rounded,
-                  tooltip: 'Zoom In',
-                  isDark: isDark,
-                  onTap: _zoomIn,
-                ),
-                const SizedBox(height: 6),
-                _buildMapButton(
-                  icon: Icons.remove_rounded,
-                  tooltip: 'Zoom Out',
-                  isDark: isDark,
-                  onTap: _zoomOut,
-                ),
-                const SizedBox(height: 6),
-                _buildMapButton(
-                  icon: Icons.gps_fixed_rounded,
-                  tooltip: 'Recenter Route',
-                  isDark: isDark,
-                  onTap: _resetView,
-                ),
-              ],
-            ),
-          ),
+                ...tiles,
 
-          // Foodpanda-Style 2-Card Live Tracker Overlay (Floating ETA Ring + Rider Chat Card)
-          if (trackedOrder != null)
-            Positioned(
-              left: 14,
-              right: 14,
-              bottom: 12,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Part 2: Floating Live ETA Range & Circular Progress Ring Card
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                // Mapbox Directions Street Route Polylines
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: CustomPaint(
+                      painter: _AdminFleetRoutesPainter(routes: routeOverlays),
+                    ),
+                  ),
+                ),
+
+                ...pinWidgets,
+
+                // Map Header Legend & Badge
+                Positioned(
+                  top: 14,
+                  left: 14,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
                       color: isDark
-                          ? const Color(0xFF0F172A).withValues(alpha: 0.96)
-                          : Colors.white.withValues(alpha: 0.98),
-                      borderRadius: BorderRadius.circular(16),
+                          ? const Color(0xFF0F172A).withValues(alpha: 0.90)
+                          : Colors.white.withValues(alpha: 0.95),
+                      borderRadius: BorderRadius.circular(18),
                       border: Border.all(
                         color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
                       ),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.12),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
                       ],
                     ),
                     child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    trackedOrder.orderStatus == OrderStatus.completed
-                                        ? 'Delivered'
-                                        : '5 – 10 mins',
-                                    style: TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w900,
-                                      color: isDark ? Colors.white : const Color(0xFF0F172A),
-                                      letterSpacing: -0.5,
-                                      height: 1.1,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.primaryColor.withValues(alpha: 0.14),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      trackedOrder.id,
-                                      style: const TextStyle(
-                                        fontSize: 10.5,
-                                        fontWeight: FontWeight.w800,
-                                        color: AppTheme.primaryColor,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                trackedOrder.isCollectionJob
-                                    ? 'Collecting empty gallons'
-                                    : (trackedOrder.orderStatus == OrderStatus.assigned
-                                        ? 'Rider assigned & preparing'
-                                        : 'On the way'),
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w800,
-                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
-                                ),
-                              ),
-                              Text(
-                                'Rider $driverLabel is heading to ${trackedOrder.customerName} (${trackedOrder.deliveryAddress})',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  color: isDark ? Colors.white70 : const Color(0xFF64748B),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
+                        Container(
+                          width: 9,
+                          height: 9,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF10B981),
+                            shape: BoxShape.circle,
                           ),
                         ),
-                        const SizedBox(width: 14),
-                        SizedBox(
-                          width: 60,
-                          height: 60,
-                          child: CustomPaint(
-                            painter: _AdminTrackerRingPainter(progress: routeProgress),
-                            child: Center(
-                              child: Container(
-                                width: 32,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [Color(0xFF0284C7), Color(0xFF1D63B8)],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  borderRadius: BorderRadius.circular(9),
-                                ),
-                                child: const Icon(
-                                  Icons.water_drop_rounded,
-                                  color: Colors.white,
-                                  size: 18,
-                                ),
-                              ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Mapbox Live Fleet • Albay 1st District',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : const Color(0xFF1E293B),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '${activeDispatches.length} Active Dispatches',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.primaryColor,
                             ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 8),
+                ),
 
-                  // Part 3: Bottom Rider Motorbike Info & Interactive Chat Action Card
-                  Container(
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? const Color(0xFF0F172A).withValues(alpha: 0.96)
-                          : Colors.white.withValues(alpha: 0.98),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.10),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
+                // Top-Right "Help" Pill Button
+                Positioned(
+                  top: 14,
+                  right: 56,
+                  child: Material(
+                    color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                    elevation: 2,
+                    borderRadius: BorderRadius.circular(18),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(18),
+                      onTap: widget.onHelpTap,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
+                            color: isDark ? Colors.white24 : const Color(0xFF94A3B8),
+                          ),
                         ),
-                      ],
+                        child: Text(
+                          'Help',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w800,
+                            color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          ),
+                        ),
+                      ),
                     ),
+                  ),
+                ),
+
+                // Map Control Floating Action Buttons (Zoom / Recenter 🎯)
+                Positioned(
+                  top: 14,
+                  right: 14,
+                  child: Column(
+                    children: [
+                      _buildMapButton(
+                        icon: Icons.add_rounded,
+                        tooltip: 'Zoom In',
+                        isDark: isDark,
+                        onTap: _zoomIn,
+                      ),
+                      const SizedBox(height: 6),
+                      _buildMapButton(
+                        icon: Icons.remove_rounded,
+                        tooltip: 'Zoom Out',
+                        isDark: isDark,
+                        onTap: _zoomOut,
+                      ),
+                      const SizedBox(height: 6),
+                      _buildMapButton(
+                        icon: Icons.gps_fixed_rounded,
+                        tooltip: 'Recenter Route',
+                        isDark: isDark,
+                        onTap: _resetView,
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Foodpanda-Style 2-Card Live Tracker Overlay
+                if (trackedOrder != null)
+                  Positioned(
+                    left: 14,
+                    right: 14,
+                    bottom: 12,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? const Color(0xFF0F172A).withValues(alpha: 0.96)
+                                : Colors.white.withValues(alpha: 0.98),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.12),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
                           child: Row(
                             children: [
-                              Container(
-                                width: 34,
-                                height: 34,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFE0F2FE),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.sports_motorsports_rounded,
-                                  color: Color(0xFF0284C7),
-                                  size: 19,
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          etaRangeLabel,
+                                          style: TextStyle(
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.w900,
+                                            color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                            letterSpacing: -0.5,
+                                            height: 1.1,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.primaryColor.withValues(alpha: 0.14),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            trackedOrder.id,
+                                            style: const TextStyle(
+                                              fontSize: 10.5,
+                                              fontWeight: FontWeight.w800,
+                                              color: AppTheme.primaryColor,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      trackedOrder.isCollectionJob
+                                          ? 'Collecting empty gallons'
+                                          : (trackedOrder.orderStatus == OrderStatus.assigned
+                                              ? 'Rider assigned & preparing'
+                                              : 'On the way'),
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w800,
+                                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                    Text(
+                                      'Rider $driverLabel is heading to ${trackedOrder.customerName} (${trackedOrder.deliveryAddress})',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  'The rider ($driverLabel) will deliver ${trackedOrder.itemsSummary} to ${trackedOrder.customerName} by motorbike',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    color: isDark ? Colors.white : const Color(0xFF1E293B),
+                              const SizedBox(width: 14),
+                              SizedBox(
+                                width: 60,
+                                height: 60,
+                                child: CustomPaint(
+                                  painter: _AdminTrackerRingPainter(progress: routeProgress),
+                                  child: Center(
+                                    child: Container(
+                                      width: 32,
+                                      height: 32,
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          colors: [Color(0xFF0284C7), Color(0xFF1D63B8)],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                        borderRadius: BorderRadius.circular(9),
+                                      ),
+                                      child: const Icon(
+                                        Icons.water_drop_rounded,
+                                        color: Colors.white,
+                                        size: 18,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        Divider(
-                          height: 1,
-                          color: isDark ? Colors.white10 : const Color(0xFFF1F5F9),
-                        ),
-                        Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            borderRadius: const BorderRadius.vertical(
-                              bottom: Radius.circular(16),
+                        const SizedBox(height: 8),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? const Color(0xFF0F172A).withValues(alpha: 0.96)
+                                : Colors.white.withValues(alpha: 0.98),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
                             ),
-                            onTap: widget.onChatTap,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.chat_bubble_outline_rounded,
-                                    size: 16,
-                                    color: isDark ? Colors.white70 : const Color(0xFF334155),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      'Chat with rider or customer (${trackedOrder.id})',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.10),
+                                blurRadius: 10,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 34,
+                                      height: 34,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFE0F2FE),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.sports_motorsports_rounded,
+                                        color: Color(0xFF0284C7),
+                                        size: 19,
                                       ),
                                     ),
-                                  ),
-                                  Icon(
-                                    Icons.chevron_right_rounded,
-                                    size: 18,
-                                    color: isDark ? Colors.white54 : const Color(0xFF64748B),
-                                  ),
-                                ],
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        'The rider ($driverLabel) will deliver ${trackedOrder.itemsSummary} to ${trackedOrder.customerName} by motorbike',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: isDark ? Colors.white : const Color(0xFF1E293B),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
+                              Divider(
+                                height: 1,
+                                color: isDark ? Colors.white10 : const Color(0xFFF1F5F9),
+                              ),
+                              Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  borderRadius: const BorderRadius.vertical(
+                                    bottom: Radius.circular(16),
+                                  ),
+                                  onTap: widget.onChatTap,
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.chat_bubble_outline_rounded,
+                                          size: 16,
+                                          color: isDark ? Colors.white70 : const Color(0xFF334155),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Text(
+                                            'Chat with rider or customer (${trackedOrder.id})',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                            ),
+                                          ),
+                                        ),
+                                        Icon(
+                                          Icons.chevron_right_rounded,
+                                          size: 18,
+                                          color: isDark ? Colors.white54 : const Color(0xFF64748B),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
+              ],
             ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -1295,4 +1487,42 @@ class _AdminTrackerRingPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _AdminTrackerRingPainter oldDelegate) =>
       oldDelegate.progress != progress;
+}
+
+class _AdminFleetRoutesPainter extends CustomPainter {
+  final List<Map<String, dynamic>> routes;
+  const _AdminFleetRoutesPainter({required this.routes});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (final r in routes) {
+      final pts = r['points'] as List<Offset>;
+      final isSelected = r['isSelected'] == true;
+      if (pts.length < 2) continue;
+
+      final casing = Paint()
+        ..color = Colors.white.withValues(alpha: 0.9)
+        ..strokeWidth = isSelected ? 8.0 : 5.5
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..style = PaintingStyle.stroke;
+
+      final line = Paint()
+        ..color = isSelected ? const Color(0xFF0284C7) : const Color(0xFF38BDF8)
+        ..strokeWidth = isSelected ? 4.8 : 3.2
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..style = PaintingStyle.stroke;
+
+      final path = Path()..moveTo(pts.first.dx, pts.first.dy);
+      for (int i = 1; i < pts.length; i++) {
+        path.lineTo(pts[i].dx, pts[i].dy);
+      }
+      canvas.drawPath(path, casing);
+      canvas.drawPath(path, line);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _AdminFleetRoutesPainter oldDelegate) => true;
 }
