@@ -50,7 +50,7 @@ class AppConstants {
   static const String mapboxAccessToken = String.fromEnvironment(
     'MAPBOX_ACCESS_TOKEN',
     defaultValue:
-        'pk.eyJ1IjoiaGFyb2xkYm9yYm8wOTA4IiwiYSI6ImNtd2Z4N29yeTA3cGEyenB3a2Fxc2k3eXcifQ.x3vsYQm8-awub-o59syruQ',
+        'pk.eyJ1IjoiaGFyb2xkYm9yYm8wOTA4IiwiYSI6ImNtd2cwM2lseDBlNDgyenM5aHpzdjEzeGwifQ.nQyHfUgRtfXRwPN4Vtc24A',
   );
 
   static String mapboxTileUrl(int z, int x, int y, {bool satellite = false}) {
