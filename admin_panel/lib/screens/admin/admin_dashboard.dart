@@ -144,72 +144,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
     text: AppConstants.stationLng.toStringAsFixed(6),
   );
 
-  // Customer & Driver Direct Messages (Decoupled from order system notifications)
-  final List<Map<String, dynamic>> _inboxMessages = [
-    {
-      'id': 'msg_001',
-      'sender': 'haroldcristonborbo',
-      'role': 'Customer',
-      'snippet':
-          'Hi Admin, can you schedule delivery every Monday for our household?',
-      'time': '12 mins ago',
-      'isRead': false,
-      'messages': [
-        {
-          'sender': 'haroldcristonborbo',
-          'text':
-              'Hi Admin, can you schedule delivery every Monday for our household?',
-          'time': '12 mins ago',
-          'isAdmin': false,
-        },
-      ],
-      'timestamp': DateTime.now(),
-    },
-    {
-      'id': 'msg_002',
-      'sender': 'Tonton Borbo',
-      'role': 'Driver',
-      'snippet':
-          'Traffic in Malilipot highway, will finish delivery deliveries in 20 mins.',
-      'time': '35 mins ago',
-      'isRead': false,
-      'messages': [
-        {
-          'sender': 'Tonton Borbo',
-          'text':
-              'Traffic in Malilipot highway, will finish delivery deliveries in 20 mins.',
-          'time': '35 mins ago',
-          'isAdmin': false,
-        },
-      ],
-      'timestamp': DateTime.now(),
-    },
-    {
-      'id': 'msg_003',
-      'sender': 'Carl Customer',
-      'role': 'Customer',
-      'snippet': 'Thank you! The purified water quality is very clean.',
-      'time': '2 hours ago',
-      'isRead': true,
-      'messages': [
-        {
-          'sender': 'Carl Customer',
-          'text': 'Thank you! The purified water quality is very clean.',
-          'time': '2 hours ago',
-          'isAdmin': false,
-        },
-        {
-          'sender': 'Station Admin',
-          'text':
-              'You are very welcome! We test our filtration systems weekly for highest purity.',
-          'time': '1 hour ago',
-          'isAdmin': true,
-        },
-      ],
-      'timestamp': DateTime.now(),
-    },
-  ];
-
   // Order state tracking
   List<OrderModel> _previousOrders = [];
 
@@ -355,14 +289,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ts.day == today.day;
     });
 
-    _inboxMessages.retainWhere((m) {
-      final ts = m['timestamp'] as DateTime?;
-      if (ts == null) return true;
-      return ts.year == today.year &&
-          ts.month == today.month &&
-          ts.day == today.day;
-    });
-
     _previousOrders = List.from(currentOrders);
   }
 
@@ -455,14 +381,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
     _notifications.retainWhere((n) {
       final ts = n['timestamp'] as DateTime?;
-      if (ts == null) return true;
-      return ts.year == today.year &&
-          ts.month == today.month &&
-          ts.day == today.day;
-    });
-
-    _inboxMessages.retainWhere((m) {
-      final ts = m['timestamp'] as DateTime?;
       if (ts == null) return true;
       return ts.year == today.year &&
           ts.month == today.month &&

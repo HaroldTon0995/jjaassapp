@@ -499,7 +499,12 @@ extension _AdminHeader on _AdminDashboardState {
   // Customer & Driver Direct Communication Hub Dialog
   void _showInboxDialog(bool isDark, {String? targetConversationId}) {
     String? selectedConvoId = targetConversationId;
+    Map<String, dynamic>? pendingNewChat;
+    bool showUserPicker = false;
+    String userSearchQuery = '';
+    int lastThreadCount = -1;
     final TextEditingController replyController = TextEditingController();
+    final TextEditingController userSearchController = TextEditingController();
     final ScrollController convoScrollController = ScrollController();
 
     void scrollToBottom() {
@@ -611,9 +616,38 @@ extension _AdminHeader on _AdminDashboardState {
                 if (selectedConvoId != null) {
                   selectedConvo = convos.firstWhere(
                     (c) => c['id'] == selectedConvoId,
-                    orElse: () => convos.isNotEmpty ? convos.first : {},
+                    orElse: () =>
+                        pendingNewChat != null &&
+                            pendingNewChat!['id'] == selectedConvoId
+                        ? pendingNewChat!
+                        : (convos.isNotEmpty ? convos.first : {}),
                   );
                 }
+
+                final int currentThreadCount =
+                    (selectedConvo?['messages'] as List?)?.length ?? 0;
+                if (currentThreadCount > lastThreadCount) {
+                  lastThreadCount = currentThreadCount;
+                  if (selectedConvoId != null) {
+                    ChatService.instance.markConversationAsRead(
+                      selectedConvoId!,
+                      'admin',
+                    );
+                  }
+                  scrollToBottom();
+                }
+
+                final chatUsers = _allUsers
+                    .where((u) => u.role != UserRole.admin)
+                    .where((u) {
+                      if (userSearchQuery.trim().isEmpty) return true;
+                      final q = userSearchQuery.trim().toLowerCase();
+                      return u.name.toLowerCase().contains(q) ||
+                          u.email.toLowerCase().contains(q) ||
+                          u.role.name.toLowerCase().contains(q);
+                    })
+                    .toList()
+                  ..sort((a, b) => a.name.compareTo(b.name));
 
                 final orderProvider = Provider.of<OrderProvider>(
                   context,
@@ -680,7 +714,7 @@ extension _AdminHeader on _AdminDashboardState {
                         Expanded(
                           child: Row(
                             children: [
-                              // Left: Conversation List
+                              // Left: Conversation List + New Chat Picker
                               Container(
                                 width: 280,
                                 decoration: BoxDecoration(
@@ -692,14 +726,244 @@ extension _AdminHeader on _AdminDashboardState {
                                     ),
                                   ),
                                 ),
-                                child: convos.isEmpty
-                                    ? const Center(
-                                        child: Text(
-                                          'No active messages.',
-                                          style: TextStyle(color: Colors.grey),
+                                child: Column(
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.fromLTRB(
+                                        0,
+                                        0,
+                                        10,
+                                        8,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              showUserPicker
+                                                  ? 'Start New Chat'
+                                                  : 'Live Conversations (${convos.length})',
+                                              style: const TextStyle(
+                                                fontSize: 11.5,
+                                                fontWeight: FontWeight.w800,
+                                                color: AppTheme.navyColor,
+                                              ),
+                                            ),
+                                          ),
+                                          TextButton.icon(
+                                            onPressed: () {
+                                              setDialogState(() {
+                                                showUserPicker =
+                                                    !showUserPicker;
+                                                if (!showUserPicker) {
+                                                  userSearchQuery = '';
+                                                  userSearchController.clear();
+                                                }
+                                              });
+                                            },
+                                            icon: Icon(
+                                              showUserPicker
+                                                  ? Icons.arrow_back_rounded
+                                                  : Icons.add_comment_rounded,
+                                              size: 14,
+                                            ),
+                                            label: Text(
+                                              showUserPicker
+                                                  ? 'Back'
+                                                  : 'New Chat',
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            style: TextButton.styleFrom(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 4,
+                                                  ),
+                                              minimumSize: Size.zero,
+                                              tapTargetSize:
+                                                  MaterialTapTargetSize
+                                                      .shrinkWrap,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (showUserPicker)
+                                      Padding(
+                                        padding: const EdgeInsets.fromLTRB(
+                                          0,
+                                          0,
+                                          10,
+                                          8,
                                         ),
-                                      )
-                                    : ListView.separated(
+                                        child: TextField(
+                                          controller: userSearchController,
+                                          style: const TextStyle(fontSize: 11.5),
+                                          decoration: InputDecoration(
+                                            hintText:
+                                                'Search customer or driver...',
+                                            hintStyle: const TextStyle(
+                                              fontSize: 11,
+                                            ),
+                                            prefixIcon: const Icon(
+                                              Icons.search_rounded,
+                                              size: 16,
+                                            ),
+                                            isDense: true,
+                                            contentPadding:
+                                                const EdgeInsets.symmetric(
+                                                  horizontal: 10,
+                                                  vertical: 8,
+                                                ),
+                                            border: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                          ),
+                                          onChanged: (val) {
+                                            setDialogState(() {
+                                              userSearchQuery = val;
+                                            });
+                                          },
+                                        ),
+                                      ),
+                                    Expanded(
+                                      child: showUserPicker
+                                          ? (chatUsers.isEmpty
+                                                ? const Center(
+                                                    child: Text(
+                                                      'No matching customers or drivers.',
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      style: TextStyle(
+                                                        fontSize: 11.5,
+                                                        color: Colors.grey,
+                                                      ),
+                                                    ),
+                                                  )
+                                                : ListView.separated(
+                                                    itemCount: chatUsers.length,
+                                                    separatorBuilder: (_, _) =>
+                                                        const Divider(
+                                                          height: 1,
+                                                        ),
+                                                    itemBuilder: (context, i) {
+                                                      final u = chatUsers[i];
+                                                      final roleLabel =
+                                                          u.role ==
+                                                              UserRole.driver
+                                                          ? 'Driver'
+                                                          : 'Customer';
+                                                      final initial =
+                                                          u.name.isNotEmpty
+                                                          ? u.name[0]
+                                                                .toUpperCase()
+                                                          : 'U';
+                                                      return ListTile(
+                                                        contentPadding:
+                                                            const EdgeInsets.symmetric(
+                                                              horizontal: 10,
+                                                              vertical: 2,
+                                                            ),
+                                                        leading: CircleAvatar(
+                                                          radius: 15,
+                                                          backgroundColor: AppTheme
+                                                              .primaryColor
+                                                              .withValues(
+                                                                alpha: 0.15,
+                                                              ),
+                                                          child: Text(
+                                                            initial,
+                                                            style:
+                                                                const TextStyle(
+                                                                  fontSize: 11,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
+                                                                  color: AppTheme
+                                                                      .primaryColor,
+                                                                ),
+                                                          ),
+                                                        ),
+                                                        title: Text(
+                                                          u.name,
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                          style:
+                                                              const TextStyle(
+                                                                fontSize: 12,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w700,
+                                                              ),
+                                                        ),
+                                                        subtitle: Text(
+                                                          '$roleLabel • ${u.email}',
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                          style:
+                                                              const TextStyle(
+                                                                fontSize: 10,
+                                                                color:
+                                                                    Colors.grey,
+                                                              ),
+                                                        ),
+                                                        onTap: () {
+                                                          final convoId =
+                                                              'support_${u.id}';
+                                                          setDialogState(() {
+                                                            selectedConvoId =
+                                                                convoId;
+                                                            lastThreadCount =
+                                                                -1;
+                                                            pendingNewChat = {
+                                                              'id': convoId,
+                                                              'conversationId':
+                                                                  convoId,
+                                                              'orderId': null,
+                                                              'sender': u.name,
+                                                              'role': roleLabel,
+                                                              'partnerId': u.id,
+                                                              'snippet': '',
+                                                              'time': 'Now',
+                                                              'isRead': true,
+                                                              'unreadCount': 0,
+                                                              'messages':
+                                                                  <
+                                                                    ChatMessageModel
+                                                                  >[],
+                                                            };
+                                                            showUserPicker =
+                                                                false;
+                                                            userSearchQuery =
+                                                                '';
+                                                            userSearchController
+                                                                .clear();
+                                                          });
+                                                        },
+                                                      );
+                                                    },
+                                                  ))
+                                          : (convos.isEmpty
+                                                ? const Center(
+                                                    child: Padding(
+                                                      padding: EdgeInsets.all(
+                                                        16.0,
+                                                      ),
+                                                      child: Text(
+                                                        'No active chats yet.\nClick "New Chat" above to message a customer or driver.',
+                                                        textAlign:
+                                                            TextAlign.center,
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          color: Colors.grey,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  )
+                                                : ListView.separated(
                                         itemCount: convos.length,
                                         separatorBuilder: (_, _) =>
                                             const Divider(height: 1),
@@ -845,6 +1109,7 @@ extension _AdminHeader on _AdminDashboardState {
                                               setDialogState(() {
                                                 selectedConvoId =
                                                     convo['id'] as String;
+                                                lastThreadCount = -1;
                                               });
                                               ChatService.instance
                                                   .markConversationAsRead(
@@ -855,7 +1120,10 @@ extension _AdminHeader on _AdminDashboardState {
                                             },
                                           );
                                         },
-                                      ),
+                                      )),
+                                    ),
+                                  ],
+                                ),
                               ),
 
                               // Right: Message Thread & Reply

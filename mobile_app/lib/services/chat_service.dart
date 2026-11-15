@@ -22,8 +22,6 @@ class ChatService extends ChangeNotifier {
     if (_initialized) return;
     _initialized = true;
 
-    _seedInitialMockMessages();
-
     if (isSupabaseConfigured) {
       _initBroadcastChannel();
       _listenToRealtimeStream();
@@ -46,9 +44,11 @@ class ChatService extends ChangeNotifier {
               try {
                 final msg = ChatMessageModel.fromJson(
                     Map<String, dynamic>.from(payload));
+                if (msg.id.startsWith('msg_seed_')) return;
                 final exists = _messages.any((m) => m.id == msg.id);
                 if (!exists) {
                   _messages.add(msg);
+                  _messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
                   notifyListeners();
                 }
               } catch (e) {
@@ -62,50 +62,23 @@ class ChatService extends ChangeNotifier {
     }
   }
 
-  void _seedInitialMockMessages() {
-    if (_messages.isNotEmpty) return;
-    final now = DateTime.now();
-    _messages.addAll([
-      ChatMessageModel(
-        id: 'msg_seed_1',
-        conversationId: 'support_haroldcristonborbo',
-        senderId: 'usr_haroldcristonborbo',
-        senderName: 'haroldcristonborbo',
-        senderRole: 'customer',
-        receiverId: 'admin',
-        receiverName: 'Station Admin',
-        receiverRole: 'admin',
-        message: 'Hi Admin, can you schedule delivery every Monday for our household?',
-        isRead: false,
-        createdAt: now.subtract(const Duration(minutes: 12)),
-      ),
-      ChatMessageModel(
-        id: 'msg_seed_2',
-        conversationId: 'support_tonton_driver',
-        senderId: 'usr_tonton_driver',
-        senderName: 'Tonton Borbo',
-        senderRole: 'driver',
-        receiverId: 'admin',
-        receiverName: 'Station Admin',
-        receiverRole: 'admin',
-        message: 'Traffic along Malilipot highway, will finish delivery soon.',
-        isRead: false,
-        createdAt: now.subtract(const Duration(minutes: 25)),
-      ),
-      ChatMessageModel(
-        id: 'msg_seed_3',
-        conversationId: 'support_carl_customer',
-        senderId: 'usr_carl_customer',
-        senderName: 'Carl Customer',
-        senderRole: 'customer',
-        receiverId: 'admin',
-        receiverName: 'Station Admin',
-        receiverRole: 'admin',
-        message: 'Thank you! The purified water quality is very clean and crisp.',
-        isRead: true,
-        createdAt: now.subtract(const Duration(hours: 1)),
-      ),
-    ]);
+  bool _upsertMessages(List<ChatMessageModel> fetched) {
+    bool changed = false;
+    for (final m in fetched) {
+      if (m.id.startsWith('msg_seed_')) continue;
+      final idx = _messages.indexWhere((existing) => existing.id == m.id);
+      if (idx == -1) {
+        _messages.add(m);
+        changed = true;
+      } else if (_messages[idx].isRead != m.isRead) {
+        _messages[idx] = m;
+        changed = true;
+      }
+    }
+    if (changed) {
+      _messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    }
+    return changed;
   }
 
   Future<void> _fetchDirectMessages({bool silent = false}) async {
@@ -120,17 +93,9 @@ class ChatService extends ChangeNotifier {
           .map((m) => ChatMessageModel.fromJson(m as Map<String, dynamic>))
           .toList();
 
-      if (fetched.isNotEmpty) {
-        bool changed = false;
-        for (var m in fetched) {
-          if (!_messages.any((existing) => existing.id == m.id)) {
-            _messages.add(m);
-            changed = true;
-          }
-        }
-        if (changed || !silent) {
-          notifyListeners();
-        }
+      final changed = _upsertMessages(fetched);
+      if (changed || !silent) {
+        notifyListeners();
       }
     } catch (_) {
       // Supabase table chat_messages might not exist yet; silently retain local messages
@@ -149,17 +114,8 @@ class ChatService extends ChangeNotifier {
             final fetched = data
                 .map((m) => ChatMessageModel.fromJson(m))
                 .toList();
-            if (fetched.isNotEmpty) {
-              bool changed = false;
-              for (var m in fetched) {
-                if (!_messages.any((existing) => existing.id == m.id)) {
-                  _messages.add(m);
-                  changed = true;
-                }
-              }
-              if (changed) {
-                notifyListeners();
-              }
+            if (_upsertMessages(fetched)) {
+              notifyListeners();
             }
           }, onError: (err) {
             debugPrint('Chat Realtime stream error: $err');
