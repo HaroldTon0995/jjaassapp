@@ -133,6 +133,10 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   late TextEditingController _profileNameController;
   late TextEditingController _profilePhoneController;
 
+  // Live Delivery Issue Resolution Notification Tracking (active session only)
+  final Map<String, String> _knownIssueStatuses = {};
+  final Set<String> _notifiedIssueEvents = {};
+
   @override
   void initState() {
     super.initState();
@@ -152,6 +156,12 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     _profileNameController = TextEditingController(text: initialName);
     _profilePhoneController = TextEditingController(text: initialPhone);
 
+    // Seed existing issue statuses so offline-resolved claims do not popup on login
+    for (final issue in DeliveryIssueService.instance.issues) {
+      _knownIssueStatuses[issue.id] = issue.status.toLowerCase();
+    }
+    DeliveryIssueService.instance.addListener(_onDeliveryIssuesChanged);
+
     // Initialize selected water type dynamically from OrderProvider catalog
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final orderProvider = Provider.of<OrderProvider>(context, listen: false);
@@ -167,8 +177,186 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     _loadSavedCustomerLocation();
   }
 
+  void _onDeliveryIssuesChanged() {
+    if (!mounted) return;
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final userId = auth.currentUser?.id.trim() ?? '';
+    final userName = auth.currentUser?.name.trim().toLowerCase() ?? '';
+
+    for (final issue in DeliveryIssueService.instance.issues) {
+      final matchesUser =
+          (userId.isNotEmpty && issue.customerId.trim() == userId) ||
+          (userName.isNotEmpty &&
+              issue.customerName.trim().toLowerCase() == userName);
+      if (!matchesUser) continue;
+
+      final currentStatus = issue.status.toLowerCase();
+      final prevStatus = _knownIssueStatuses[issue.id];
+      _knownIssueStatuses[issue.id] = currentStatus;
+
+      final isResolvedNow = currentStatus == 'accepted' ||
+          currentStatus == 'approved' ||
+          currentStatus == 'declined';
+      if (!isResolvedNow) continue;
+
+      final resolvedWhileLoggedIn = prevStatus == 'pending' ||
+          (prevStatus == null &&
+              issue.resolvedAt != null &&
+              DateTime.now().difference(issue.resolvedAt!).inSeconds <= 90);
+
+      if (resolvedWhileLoggedIn &&
+          _notifiedIssueEvents.add('${issue.id}_$currentStatus')) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _showIssueResolutionDialog(issue);
+          }
+        });
+      }
+    }
+  }
+
+  void _showIssueResolutionDialog(DeliveryIssueModel issue) {
+    final isAccepted = issue.status.toLowerCase() == 'accepted' ||
+        issue.status.toLowerCase() == 'approved';
+    final accentColor =
+        isAccepted ? const Color(0xFF10B981) : const Color(0xFFEF4444);
+    final feedbackText = (issue.adminFeedback != null &&
+            issue.adminFeedback!.trim().isNotEmpty)
+        ? issue.adminFeedback!.trim()
+        : (isAccepted
+            ? 'Your defect/swap claim has been approved! You can now redeem ${issue.affectedGallonsCount} replacement gallon(s) on your next order.'
+            : 'Your reported issue was declined by the Station Admin. Please reach out to Support if you have questions.');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+        contentPadding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: accentColor.withValues(alpha: 0.14),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isAccepted
+                    ? Icons.check_circle_rounded
+                    : Icons.cancel_rounded,
+                color: accentColor,
+                size: 26,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isAccepted
+                        ? 'Issue Report Accepted!'
+                        : 'Issue Report Declined',
+                    style: const TextStyle(
+                      fontSize: 16.5,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                  Text(
+                    '${issue.orderId} • ${issue.id}',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                      color: accentColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Issue: ${issue.issueType} (${issue.affectedGallonsCount} gallon(s))',
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1E293B),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Station Admin Message:',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    feedbackText,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      height: 1.4,
+                      color: Color(0xFF334155),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Close'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              setState(() {
+                _selectedTab = 2;
+                _activeSidebarMenu = 2;
+              });
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: accentColor,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            icon: const Icon(Icons.local_shipping_rounded, size: 16),
+            label: const Text(
+              'View Deliveries',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
+    DeliveryIssueService.instance.removeListener(_onDeliveryIssuesChanged);
     _orderAddressController.dispose();
     _deliveryNoteController.dispose();
     _chatInputController.dispose();
