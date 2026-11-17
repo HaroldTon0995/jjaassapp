@@ -21,7 +21,10 @@ extension _AdminHeader on _AdminDashboardState {
         children: [
           if (_selectedTab != 0) ...[
             OutlinedButton.icon(
-              onPressed: () => setState(() => _selectedTab = 0),
+              onPressed: () => setState(() {
+                _selectedTab = 0;
+                _activeSidebarMenu = 0;
+              }),
               icon: const Icon(Icons.arrow_back_rounded, size: 16),
               label: const Text('Back'),
               style: OutlinedButton.styleFrom(

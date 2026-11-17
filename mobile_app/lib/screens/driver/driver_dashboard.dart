@@ -420,7 +420,10 @@ class _DriverDashboardState extends State<DriverDashboard> {
       canPop: _selectedTab == 0,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop && _selectedTab != 0) {
-          setState(() => _selectedTab = 0);
+          setState(() {
+            _selectedTab = 0;
+            _activeSidebarMenu = 0;
+          });
         }
       },
       child: Scaffold(
@@ -451,7 +454,10 @@ class _DriverDashboardState extends State<DriverDashboard> {
                           IconButton(
                             icon: const Icon(Icons.arrow_back_rounded),
                             tooltip: 'Back to Dashboard',
-                            onPressed: () => setState(() => _selectedTab = 0),
+                            onPressed: () => setState(() {
+                              _selectedTab = 0;
+                              _activeSidebarMenu = 0;
+                            }),
                           ),
                         ],
                       ),
@@ -585,7 +591,10 @@ class _DriverDashboardState extends State<DriverDashboard> {
         children: [
           if (_selectedTab != 0) ...[
             OutlinedButton.icon(
-              onPressed: () => setState(() => _selectedTab = 0),
+              onPressed: () => setState(() {
+                _selectedTab = 0;
+                _activeSidebarMenu = 0;
+              }),
               icon: const Icon(Icons.arrow_back_rounded, size: 16),
               label: const Text('Back'),
               style: OutlinedButton.styleFrom(
@@ -4509,7 +4518,7 @@ class _SidebarItemTileState extends State<_SidebarItemTile> {
       backgroundColor = AppTheme.navyColor;
       contentColor = Colors.white;
     } else if (_isHovered) {
-      backgroundColor = const Color(0xFFEFF6FF);
+      backgroundColor = const Color(0xFFE0ECFF);
       contentColor = widget.textColor ?? AppTheme.navyColor;
     } else {
       backgroundColor = Colors.transparent;
@@ -4517,16 +4526,26 @@ class _SidebarItemTileState extends State<_SidebarItemTile> {
     }
 
     return MouseRegion(
+      cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOut,
         margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 2.0),
         decoration: BoxDecoration(
           color: backgroundColor,
           borderRadius: BorderRadius.circular(10),
+          border: (!active && _isHovered)
+              ? Border.all(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.25),
+                  width: 1,
+                )
+              : null,
         ),
         child: ListTile(
           onTap: widget.onTap,
+          hoverColor: Colors.transparent,
           dense: true,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
