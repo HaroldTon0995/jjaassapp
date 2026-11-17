@@ -1614,7 +1614,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final orderProvider = Provider.of<OrderProvider>(context);
     _syncRealtimeNotifications(orderProvider.orders);
 
-    return Scaffold(
+    return PopScope(
+      canPop: _selectedTab == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _selectedTab != 0) {
+          setState(() => _selectedTab = 0);
+        }
+      },
+      child: Scaffold(
       backgroundColor: AppTheme.lightBg,
       drawer: (!isWide)
           ? Drawer(
@@ -1628,6 +1635,26 @@ class _AdminDashboardState extends State<AdminDashboard> {
               backgroundColor: AppTheme.navyColor,
               foregroundColor: Colors.white,
               elevation: 2,
+              leadingWidth: _selectedTab != 0 ? 96 : null,
+              leading: _selectedTab != 0
+                  ? Builder(
+                      builder: (ctx) => Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.menu_rounded),
+                            tooltip: 'Menu',
+                            onPressed: () => Scaffold.of(ctx).openDrawer(),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.arrow_back_rounded),
+                            tooltip: 'Back to Overview',
+                            onPressed: () => setState(() => _selectedTab = 0),
+                          ),
+                        ],
+                      ),
+                    )
+                  : null,
               titleSpacing: 8,
               title: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1690,6 +1717,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ),
         ],
       ),
+    ),
     );
   }
 

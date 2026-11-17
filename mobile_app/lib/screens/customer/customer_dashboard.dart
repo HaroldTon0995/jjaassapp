@@ -1145,7 +1145,14 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     final isWide = media.size.width >= 1100;
     const isDark = false;
 
-    return Scaffold(
+    return PopScope(
+      canPop: _selectedTab == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _selectedTab != 0) {
+          setState(() => _selectedTab = 0);
+        }
+      },
+      child: Scaffold(
       backgroundColor: AppTheme.lightBg,
       drawer: (!isWide)
           ? Drawer(
@@ -1159,6 +1166,26 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
               backgroundColor: AppTheme.navyColor,
               foregroundColor: Colors.white,
               elevation: 2,
+              leadingWidth: _selectedTab != 0 ? 96 : null,
+              leading: _selectedTab != 0
+                  ? Builder(
+                      builder: (ctx) => Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.menu_rounded),
+                            tooltip: 'Menu',
+                            onPressed: () => Scaffold.of(ctx).openDrawer(),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.arrow_back_rounded),
+                            tooltip: 'Back to Dashboard',
+                            onPressed: () => setState(() => _selectedTab = 0),
+                          ),
+                        ],
+                      ),
+                    )
+                  : null,
               titleSpacing: 8,
               title: Row(
                 children: [
@@ -1264,6 +1291,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -1279,6 +1307,22 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
       ),
       child: Row(
         children: [
+          if (_selectedTab != 0) ...[
+            OutlinedButton.icon(
+              onPressed: () => setState(() => _selectedTab = 0),
+              icon: const Icon(Icons.arrow_back_rounded, size: 16),
+              label: const Text('Back'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.navyColor,
+                side: const BorderSide(color: Color(0xFFCBD5E1)),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+          ],
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

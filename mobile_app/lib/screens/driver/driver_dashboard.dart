@@ -416,7 +416,14 @@ class _DriverDashboardState extends State<DriverDashboard> {
     final isWide = media.size.width >= 1100;
     const isDark = false;
 
-    return Scaffold(
+    return PopScope(
+      canPop: _selectedTab == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _selectedTab != 0) {
+          setState(() => _selectedTab = 0);
+        }
+      },
+      child: Scaffold(
       backgroundColor: AppTheme.lightBg,
       drawer: (!isWide)
           ? Drawer(
@@ -430,6 +437,26 @@ class _DriverDashboardState extends State<DriverDashboard> {
               backgroundColor: AppTheme.navyColor,
               foregroundColor: Colors.white,
               elevation: 2,
+              leadingWidth: _selectedTab != 0 ? 96 : null,
+              leading: _selectedTab != 0
+                  ? Builder(
+                      builder: (ctx) => Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.menu_rounded),
+                            tooltip: 'Menu',
+                            onPressed: () => Scaffold.of(ctx).openDrawer(),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.arrow_back_rounded),
+                            tooltip: 'Back to Dashboard',
+                            onPressed: () => setState(() => _selectedTab = 0),
+                          ),
+                        ],
+                      ),
+                    )
+                  : null,
               titleSpacing: 8,
               title: Row(
                 children: [
@@ -537,6 +564,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -555,6 +583,22 @@ class _DriverDashboardState extends State<DriverDashboard> {
       ),
       child: Row(
         children: [
+          if (_selectedTab != 0) ...[
+            OutlinedButton.icon(
+              onPressed: () => setState(() => _selectedTab = 0),
+              icon: const Icon(Icons.arrow_back_rounded, size: 16),
+              label: const Text('Back'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.navyColor,
+                side: const BorderSide(color: Color(0xFFCBD5E1)),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+          ],
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -3174,9 +3218,26 @@ class _DriverDashboardState extends State<DriverDashboard> {
     final user = auth.currentUser;
     final driverId = user?.id ?? '';
     final completedJobs = orderProvider.getDriverCompletedJobs(driverId);
+    final deliveredJobs = completedJobs
+        .where(
+          (j) =>
+              !j.isCollectionJob &&
+              !j.id.toUpperCase().startsWith('#COL') &&
+              !j.waterType.toLowerCase().contains('collection'),
+        )
+        .toList();
+    final collectionJobs = completedJobs
+        .where(
+          (j) =>
+              j.isCollectionJob ||
+              j.id.toUpperCase().startsWith('#COL') ||
+              j.waterType.toLowerCase().contains('collection'),
+        )
+        .toList();
+    final isSmall = MediaQuery.of(context).size.width < 600;
 
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: EdgeInsets.all(isSmall ? 12.0 : 24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -3184,62 +3245,214 @@ class _DriverDashboardState extends State<DriverDashboard> {
             'Trip Duty Log Sheet',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           Expanded(
             child: completedJobs.isEmpty
-                ? const Center(child: Text('No trips completed today.'))
-                : ListView.builder(
-                    itemCount: completedJobs.length,
-                    itemBuilder: (context, index) {
-                      final job = completedJobs[index];
-                      final orderTotal = job.totalAmount;
-
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 10),
-                        child: ListTile(
-                          leading: const CircleAvatar(
-                            backgroundColor: Colors.white,
-                            child: Icon(
-                              Icons.check_rounded,
-                              color: AppTheme.primaryColor,
-                            ),
-                          ),
-                          title: Text(
-                            '${job.customerName} (${job.id})',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Text(
-                            'Dest: ${job.deliveryAddress} • Items: ${job.itemsSummary} • ${job.paymentMethod}',
-                          ),
-                          trailing: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                '₱${orderTotal.toStringAsFixed(2)}',
-                                style: const TextStyle(
-                                  color: Color(0xFF10B981),
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                job.completedAt?.toString().split('.')[0] ??
-                                    'Completed',
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ],
-                          ),
+                ? const Center(child: Text('No trips completed yet.'))
+                : ListView(
+                    children: [
+                      if (deliveredJobs.isNotEmpty) ...[
+                        _buildDutyDivisionHeader(
+                          'Delivered Orders',
+                          Icons.local_shipping_rounded,
+                          const Color(0xFF10B981),
+                          deliveredJobs.length,
                         ),
-                      );
-                    },
+                        ...deliveredJobs.map(
+                          (job) => _buildDutyHistoryItemTile(job, isDark),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
+                      if (collectionJobs.isNotEmpty) ...[
+                        _buildDutyDivisionHeader(
+                          'Gallon Collections',
+                          Icons.recycling_rounded,
+                          const Color(0xFF0284C7),
+                          collectionJobs.length,
+                        ),
+                        ...collectionJobs.map(
+                          (job) => _buildDutyHistoryItemTile(job, isDark),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
+                    ],
                   ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDutyDivisionHeader(
+    String title,
+    IconData icon,
+    Color color,
+    int count,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(top: 8, bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              '$count',
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDutyHistoryItemTile(OrderModel job, bool isDark) {
+    final isCollection =
+        job.isCollectionJob ||
+        job.id.toUpperCase().startsWith('#COL') ||
+        job.waterType.toLowerCase().contains('collection');
+    final color = isCollection
+        ? const Color(0xFF0284C7)
+        : const Color(0xFF10B981);
+    final statusLabel = isCollection ? 'Collected' : 'Delivered';
+    final completedStr =
+        (job.completedAt ?? job.createdAt).toString().split('.')[0];
+    final cleanAddress = job.deliveryAddress
+        .replaceAll(RegExp(r'\[BORROWED_[^\]]+\]'), '')
+        .trim();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: const Color(0xFFCBD5E1),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ListTile(
+        onTap: () {
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text('${job.customerName} (${job.id})'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Type: ${isCollection ? "Gallon Collection" : "Delivery"}'),
+                  const SizedBox(height: 6),
+                  Text('Items: ${job.itemsSummary}'),
+                  const SizedBox(height: 6),
+                  Text('Payment: ${job.paymentMethod}'),
+                  const SizedBox(height: 6),
+                  Text('Destination: ${cleanAddress.isEmpty ? "Pinned GPS Location" : cleanAddress}'),
+                  const SizedBox(height: 6),
+                  Text('Completed: $completedStr'),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Close'),
+                ),
+              ],
+            ),
+          );
+        },
+        leading: CircleAvatar(
+          backgroundColor: color.withValues(alpha: 0.08),
+          child: Icon(
+            isCollection
+                ? Icons.recycling_rounded
+                : Icons.local_shipping_rounded,
+            color: color,
+          ),
+        ),
+        title: Text(
+          '${job.customerName} (${job.id})',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF0F172A),
+            fontSize: 14.5,
+          ),
+        ),
+        subtitle: Text(
+          '${job.itemsSummary} • ${job.paymentMethod}\nCompleted: $completedStr',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: Color(0xFF475569),
+            fontSize: 12,
+            height: 1.4,
+          ),
+        ),
+        isThreeLine: true,
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              '₱${job.totalAmount.toStringAsFixed(2)}',
+              style: const TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 14,
+                color: Color(0xFF0F172A),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                statusLabel,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
