@@ -1114,6 +1114,107 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
   }
 
+  Future<void> _confirmClearAllTransactions() async {
+    final confirmController = TextEditingController();
+    bool isDeleting = false;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          final canDelete =
+              confirmController.text.trim().toUpperCase() == 'DELETE ALL' &&
+              !isDeleting;
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            title: const Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Colors.red),
+                SizedBox(width: 8),
+                Expanded(child: Text('Clear All Transactions')),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'This will permanently delete ALL orders, deliveries, collection jobs, payment records, and delivery issue claims from Admin, Driver, and Customer.',
+                  style: TextStyle(fontSize: 13),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'User accounts, products/inventory, and station settings will NOT be affected.',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  'Type DELETE ALL below to confirm:',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: confirmController,
+                  onChanged: (_) => setDialogState(() {}),
+                  decoration: const InputDecoration(
+                    hintText: 'DELETE ALL',
+                    isDense: true,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: isDeleting ? null : () => Navigator.of(ctx).pop(false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton.icon(
+                onPressed: canDelete
+                    ? () async {
+                        setDialogState(() => isDeleting = true);
+                        Navigator.of(ctx).pop(true);
+                      }
+                    : null,
+                icon: const Icon(Icons.delete_forever_rounded, size: 16),
+                label: const Text('Delete All Transactions'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+      final ordersOk = await orderProvider.clearAllTransactions();
+      final issuesOk = await DeliveryIssueService.instance.clearAllIssues();
+      if (!mounted) return;
+      setState(() {
+        _notifications.clear();
+        _previousOrders.clear();
+      });
+      if (ordersOk && issuesOk) {
+        Helpers.showSnackBar(
+          context,
+          'All transactions and claims have been cleared across Admin, Driver, and Customer.',
+        );
+      } else {
+        Helpers.showSnackBar(
+          context,
+          'Cleared locally, but some Supabase rows could not be deleted. Check connection.',
+          isError: true,
+        );
+      }
+    }
+  }
+
   Future<void> _handleLogout() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     await authProvider.logout();

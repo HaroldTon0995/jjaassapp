@@ -56,27 +56,56 @@ extension _AdminOrders on _AdminDashboardState {
                     color: isDark ? Colors.white : const Color(0xFF1E293B),
                   ),
                 ),
-                ElevatedButton.icon(
-                  onPressed: () => _showCreateOrderDialog(isDark),
-                  icon: const Icon(
-                    Icons.add_rounded,
-                    size: 16,
-                    color: Colors.white,
-                  ),
-                  label: const Text(
-                    'New Order',
-                    style: TextStyle(fontSize: 12, color: Colors.white),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
+                Row(
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _confirmClearAllTransactions,
+                      icon: const Icon(
+                        Icons.delete_sweep_rounded,
+                        size: 16,
+                        color: Colors.red,
+                      ),
+                      label: const Text(
+                        'Clear All',
+                        style: TextStyle(fontSize: 12, color: Colors.red),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                          color: Colors.red.withValues(alpha: 0.4),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                    const SizedBox(width: 10),
+                    ElevatedButton.icon(
+                      onPressed: () => _showCreateOrderDialog(isDark),
+                      icon: const Icon(
+                        Icons.add_rounded,
+                        size: 16,
+                        color: Colors.white,
+                      ),
+                      label: const Text(
+                        'New Order',
+                        style: TextStyle(fontSize: 12, color: Colors.white),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),

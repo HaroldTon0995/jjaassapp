@@ -2130,6 +2130,25 @@ class OrderProvider extends ChangeNotifier {
     return success;
   }
 
+  /// Permanently remove ALL orders/transactions from Supabase (syncs across Admin, Driver & Customer)
+  Future<bool> clearAllTransactions() async {
+    _orders.clear();
+    _returnedGallonOrderIds.clear();
+    InventoryStorage.saveReturnedGallonOrders(_returnedGallonOrderIds);
+    bool success = true;
+    if (_isSupabaseConfigured) {
+      try {
+        final client = Supabase.instance.client;
+        await client.from('orders').delete().neq('id', '');
+      } catch (e) {
+        debugPrint('Supabase clear all orders error: $e');
+        success = false;
+      }
+    }
+    notifyListeners();
+    return success;
+  }
+
   // Helper Queries
 
   // Customer Queries

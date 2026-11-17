@@ -139,29 +139,29 @@ class DeliveryIssueService extends ChangeNotifier {
           .map((m) => DeliveryIssueModel.fromJson(m as Map<String, dynamic>))
           .toList();
 
-      if (fetched.isNotEmpty) {
-        _hasLoadedFromCacheOrServer = true;
-        bool changed = false;
-        for (var f in fetched) {
-          final idx = _issues.indexWhere((i) => i.id == f.id);
-          if (idx >= 0) {
-            if (_issues[idx].status != f.status ||
-                _issues[idx].adminFeedback != f.adminFeedback ||
-                _issues[idx].isTransactionDone != f.isTransactionDone) {
-              _issues[idx] = f;
-              changed = true;
-            }
-          } else {
-            _issues.add(f);
+      _hasLoadedFromCacheOrServer = true;
+      final fetchedIds = fetched.map((f) => f.id).toSet();
+      final int beforeLen = _issues.length;
+      _issues.removeWhere((i) => !fetchedIds.contains(i.id));
+      bool changed = _issues.length != beforeLen;
+
+      for (var f in fetched) {
+        final idx = _issues.indexWhere((i) => i.id == f.id);
+        if (idx >= 0) {
+          if (_issues[idx].status != f.status ||
+              _issues[idx].adminFeedback != f.adminFeedback ||
+              _issues[idx].isTransactionDone != f.isTransactionDone) {
+            _issues[idx] = f;
             changed = true;
           }
+        } else {
+          _issues.add(f);
+          changed = true;
         }
-        if (changed || !silent) {
-          _saveToCache();
-          notifyListeners();
-        }
-      } else if (!_hasLoadedFromCacheOrServer && _issues.isEmpty) {
-        _seedInitialMockIssues();
+      }
+      if (changed || !silent) {
+        _saveToCache();
+        notifyListeners();
       }
     } catch (_) {
       // Retain local cached issues silently if offline or table pending
@@ -219,19 +219,19 @@ class DeliveryIssueService extends ChangeNotifier {
             final fetched = data
                 .map((m) => DeliveryIssueModel.fromJson(m))
                 .toList();
-            if (fetched.isNotEmpty) {
-              _hasLoadedFromCacheOrServer = true;
-              for (var f in fetched) {
-                final idx = _issues.indexWhere((i) => i.id == f.id);
-                if (idx >= 0) {
-                  _issues[idx] = f;
-                } else {
-                  _issues.add(f);
-                }
+            _hasLoadedFromCacheOrServer = true;
+            final fetchedIds = fetched.map((f) => f.id).toSet();
+            _issues.removeWhere((i) => !fetchedIds.contains(i.id));
+            for (var f in fetched) {
+              final idx = _issues.indexWhere((i) => i.id == f.id);
+              if (idx >= 0) {
+                _issues[idx] = f;
+              } else {
+                _issues.add(f);
               }
-              _saveToCache();
-              notifyListeners();
             }
+            _saveToCache();
+            notifyListeners();
           }, onError: (err) {
             debugPrint('Delivery issues stream error: $err');
           });
@@ -454,6 +454,24 @@ class DeliveryIssueService extends ChangeNotifier {
 
   List<DeliveryIssueModel> get completedIssues =>
       _issues.where((i) => i.isDone).toList();
+
+  Future<bool> clearAllIssues() async {
+    _issues.clear();
+    _hasLoadedFromCacheOrServer = true;
+    _saveToCache();
+    notifyListeners();
+    bool success = true;
+    if (isSupabaseConfigured) {
+      try {
+        final client = Supabase.instance.client;
+        await client.from('delivery_issues').delete().neq('id', '');
+      } catch (e) {
+        debugPrint('Supabase clear all delivery issues error: $e');
+        success = false;
+      }
+    }
+    return success;
+  }
 
   @override
   void dispose() {

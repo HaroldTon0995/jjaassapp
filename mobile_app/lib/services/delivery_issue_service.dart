@@ -103,28 +103,28 @@ class DeliveryIssueService extends ChangeNotifier {
           .map((m) => DeliveryIssueModel.fromJson(m as Map<String, dynamic>))
           .toList();
 
-      if (fetched.isNotEmpty) {
-        _hasLoadedFromServer = true;
-        bool changed = false;
-        for (var f in fetched) {
-          final idx = _issues.indexWhere((i) => i.id == f.id);
-          if (idx >= 0) {
-            if (_issues[idx].status != f.status ||
-                _issues[idx].adminFeedback != f.adminFeedback ||
-                _issues[idx].isTransactionDone != f.isTransactionDone) {
-              _issues[idx] = f;
-              changed = true;
-            }
-          } else {
-            _issues.add(f);
+      _hasLoadedFromServer = true;
+      final fetchedIds = fetched.map((f) => f.id).toSet();
+      final int beforeLen = _issues.length;
+      _issues.removeWhere((i) => !fetchedIds.contains(i.id));
+      bool changed = _issues.length != beforeLen;
+
+      for (var f in fetched) {
+        final idx = _issues.indexWhere((i) => i.id == f.id);
+        if (idx >= 0) {
+          if (_issues[idx].status != f.status ||
+              _issues[idx].adminFeedback != f.adminFeedback ||
+              _issues[idx].isTransactionDone != f.isTransactionDone) {
+            _issues[idx] = f;
             changed = true;
           }
+        } else {
+          _issues.add(f);
+          changed = true;
         }
-        if (changed || !silent) {
-          notifyListeners();
-        }
-      } else if (!_hasLoadedFromServer && _issues.isEmpty) {
-        _seedInitialMockIssues();
+      }
+      if (changed || !silent) {
+        notifyListeners();
       }
     } catch (_) {
       // Retain local memory issues silently
@@ -180,18 +180,18 @@ class DeliveryIssueService extends ChangeNotifier {
             final fetched = data
                 .map((m) => DeliveryIssueModel.fromJson(m))
                 .toList();
-            if (fetched.isNotEmpty) {
-              _hasLoadedFromServer = true;
-              for (var f in fetched) {
-                final idx = _issues.indexWhere((i) => i.id == f.id);
-                if (idx >= 0) {
-                  _issues[idx] = f;
-                } else {
-                  _issues.add(f);
-                }
+            _hasLoadedFromServer = true;
+            final fetchedIds = fetched.map((f) => f.id).toSet();
+            _issues.removeWhere((i) => !fetchedIds.contains(i.id));
+            for (var f in fetched) {
+              final idx = _issues.indexWhere((i) => i.id == f.id);
+              if (idx >= 0) {
+                _issues[idx] = f;
+              } else {
+                _issues.add(f);
               }
-              notifyListeners();
             }
+            notifyListeners();
           }, onError: (err) {
             debugPrint('Delivery issues stream error: $err');
           });
