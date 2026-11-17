@@ -1579,14 +1579,10 @@ extension _AdminOverview on _AdminDashboardState {
                       TextField(
                         controller: phoneController,
                         keyboardType: TextInputType.phone,
-                        decoration: InputDecoration(
-                          labelText: isDelivery
-                              ? 'Contact Phone Number'
-                              : 'Contact Phone Number (Optional)',
-                          hintText: isDelivery
-                              ? 'e.g. +63 912 345 6789'
-                              : 'Optional — leave blank for walk-in',
-                          prefixIcon: const Icon(Icons.phone),
+                        decoration: const InputDecoration(
+                          labelText: 'Contact Phone Number (Optional)',
+                          hintText: 'Optional — e.g. +63 912 345 6789',
+                          prefixIcon: Icon(Icons.phone),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -2280,9 +2276,7 @@ extension _AdminOverview on _AdminDashboardState {
                             customerName: name,
                             customerPhone: (phone.isNotEmpty && phone != '+63')
                                 ? phone
-                                : (isDelivery
-                                      ? '+63 Guest'
-                                      : 'Walk-in (No Phone)'),
+                                : 'No Phone Provided',
                             deliveryAddress: address,
                             waterType: selectedWaterType,
                             quantity: qty,
