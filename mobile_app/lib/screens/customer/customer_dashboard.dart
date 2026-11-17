@@ -3180,8 +3180,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                   const SizedBox(height: 14),
                 ],
 
-                // Station Products & Items (shown in Select Product mode)
-                if (_isSelectProductMode)
+                // Station Products & Items (Always shown when active products exist)
                 Builder(
                   builder: (context) {
                     final stationItems = orderProvider.standaloneProducts;
@@ -3234,7 +3233,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                         ),
                         const SizedBox(height: 10),
                         SizedBox(
-                          height: 138,
+                          height: 176,
                           child: ListView.separated(
                             scrollDirection: Axis.horizontal,
                             physics: const BouncingScrollPhysics(),
@@ -3251,6 +3250,42 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                               final isSelected = qty > 0;
                               final Color color = item['color'] as Color? ?? Colors.teal;
                               final IconData icon = item['icon'] as IconData? ?? Icons.inventory_2_rounded;
+                              final String imageUrl = (item['image_url']?.toString() ?? '').trim();
+                              final String imageAsset = (item['image']?.toString() ?? '').trim();
+
+                              Widget buildProductThumb() {
+                                if (imageUrl.isNotEmpty) {
+                                  if (imageUrl.startsWith('data:image')) {
+                                    try {
+                                      return Image.memory(
+                                        base64Decode(imageUrl.split(',').last),
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        height: double.infinity,
+                                        errorBuilder: (_, _, _) => Icon(icon, color: color, size: 22),
+                                      );
+                                    } catch (_) {}
+                                  } else if (imageUrl.startsWith('http')) {
+                                    return Image.network(
+                                      imageUrl,
+                                      fit: BoxFit.cover,
+                                      width: double.infinity,
+                                      height: double.infinity,
+                                      errorBuilder: (_, _, _) => Icon(icon, color: color, size: 22),
+                                    );
+                                  }
+                                }
+                                if (imageAsset.isNotEmpty) {
+                                  return Image.asset(
+                                    imageAsset,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    errorBuilder: (_, _, _) => Icon(icon, color: color, size: 22),
+                                  );
+                                }
+                                return Icon(icon, color: color, size: 22);
+                              }
 
                               return Container(
                                 width: 165,
@@ -3271,35 +3306,43 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Container(
-                                          padding: const EdgeInsets.all(6),
+                                          width: 52,
+                                          height: 52,
                                           decoration: BoxDecoration(
                                             color: color.withValues(alpha: 0.12),
                                             borderRadius: BorderRadius.circular(8),
                                           ),
-                                          child: Icon(icon, color: color, size: 16),
+                                          clipBehavior: Clip.antiAlias,
+                                          child: buildProductThumb(),
                                         ),
                                         const SizedBox(width: 8),
                                         Expanded(
-                                          child: Text(
-                                            '₱${price.toStringAsFixed(price.truncateToDouble() == price ? 0 : 2)}',
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w900,
-                                              fontSize: 13,
-                                              color: AppTheme.navyColor,
-                                            ),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.end,
+                                            children: [
+                                              Text(
+                                                '₱${price.toStringAsFixed(price.truncateToDouble() == price ? 0 : 2)}',
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w900,
+                                                  fontSize: 13.5,
+                                                  color: AppTheme.navyColor,
+                                                ),
+                                              ),
+                                              if (isOut)
+                                                const Text(
+                                                  'Out of stock',
+                                                  style: TextStyle(
+                                                    fontSize: 9.5,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.red,
+                                                  ),
+                                                ),
+                                            ],
                                           ),
                                         ),
-                                        if (isOut)
-                                          const Text(
-                                            'Out',
-                                            style: TextStyle(
-                                              fontSize: 9.5,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.red,
-                                            ),
-                                          ),
                                       ],
                                     ),
                                     const SizedBox(height: 6),
@@ -4906,8 +4949,12 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                     ),
                   ),
                 ],
-                // Delivery Issue / Gallon Swap Claim Button & Badge (For Completed Orders)
-                if (isDone) ...[
+                // Delivery Issue / Gallon Swap Claim Button & Badge (Delivery Transactions Only)
+                if (isDone &&
+                    !order.isCollectionJob &&
+                    !order.isWalkIn &&
+                    !order.id.toUpperCase().startsWith('#COL') &&
+                    !order.waterType.toLowerCase().contains('collection')) ...[
                   ListenableBuilder(
                     listenable: DeliveryIssueService.instance,
                     builder: (context, _) {

@@ -1212,18 +1212,16 @@ class OrderProvider extends ChangeNotifier {
           'stock': item['stock'],
           'capacity': item['capacity'],
           'description': item['description'] ?? '',
+          'image_url': item['image_url'] ?? '',
           'is_refill': item['is_refill'] ?? false,
           'is_active': item['is_active'] ?? true,
         };
         try {
           await client.from('inventory').upsert(payload);
         } catch (e) {
-          if (payload.containsKey('is_refill')) {
-            payload.remove('is_refill');
-          }
-          if (payload.containsKey('is_active')) {
-            payload.remove('is_active');
-          }
+          payload.remove('image_url');
+          payload.remove('is_refill');
+          payload.remove('is_active');
           await client.from('inventory').upsert(payload);
         }
       } else if (action == 'delete') {
@@ -1330,6 +1328,7 @@ class OrderProvider extends ChangeNotifier {
       final newDesc = isPurified
           ? 'Purified drinking water refill (Always available)'
           : (row['description']?.toString() ?? '');
+      final newImageUrl = row['image_url']?.toString() ?? '';
       final newIsActive = row['is_active'] is bool ? row['is_active'] as bool : true;
       final newIsRefill = row['is_refill'] is bool
           ? row['is_refill'] as bool
@@ -1347,6 +1346,7 @@ class OrderProvider extends ChangeNotifier {
             cur['unit'] != newUnit ||
             cur['category'] != newCat ||
             cur['description'] != newDesc ||
+            (cur['image_url']?.toString() ?? '') != newImageUrl ||
             cur['is_refill'] != newIsRefill ||
             (cur['is_active'] ?? true) != newIsActive) {
           cur['stock'] = newStock;
@@ -1356,6 +1356,9 @@ class OrderProvider extends ChangeNotifier {
           cur['unit'] = newUnit;
           cur['category'] = newCat;
           cur['description'] = newDesc;
+          if (newImageUrl.isNotEmpty || row.containsKey('image_url')) {
+            cur['image_url'] = newImageUrl;
+          }
           cur['is_refill'] = newIsRefill;
           cur['is_active'] = newIsActive;
           hasChanges = true;
@@ -1371,6 +1374,7 @@ class OrderProvider extends ChangeNotifier {
           'stock': newStock,
           'capacity': newCap,
           'description': newDesc,
+          'image_url': newImageUrl,
           'is_refill': newIsRefill,
           'is_active': newIsActive,
           'color': defaultColorForCategory(newCat),
@@ -1498,6 +1502,9 @@ class OrderProvider extends ChangeNotifier {
           }
           if (cached['description'] != null) {
             _inventoryItems[idx]['description'] = cached['description'];
+          }
+          if (cached['image_url'] != null) {
+            _inventoryItems[idx]['image_url'] = cached['image_url'];
           }
           if (cached['is_active'] != null) {
             _inventoryItems[idx]['is_active'] = cached['is_active'];

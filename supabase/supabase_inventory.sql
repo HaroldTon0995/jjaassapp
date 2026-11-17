@@ -10,6 +10,7 @@ create table if not exists public.inventory (
   stock double precision not null default 0.0,
   capacity double precision not null default 100.0,
   description text default '',
+  image_url text default '',
   is_refill boolean not null default false,
   is_active boolean default true,
   updated_at timestamptz not null default now()
@@ -22,6 +23,7 @@ alter table public.inventory add column if not exists price double precision not
 alter table public.inventory add column if not exists stock double precision not null default 0.0;
 alter table public.inventory add column if not exists capacity double precision not null default 100.0;
 alter table public.inventory add column if not exists description text default '';
+alter table public.inventory add column if not exists image_url text default '';
 alter table public.inventory add column if not exists is_refill boolean not null default false;
 alter table public.inventory add column if not exists is_active boolean default true;
 alter table public.inventory add column if not exists updated_at timestamptz not null default now();

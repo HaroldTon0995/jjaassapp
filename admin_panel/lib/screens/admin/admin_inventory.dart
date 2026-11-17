@@ -29,6 +29,9 @@ extension _AdminInventory on _AdminDashboardState {
     String selectedUnit = isEditing
         ? (itemToEdit['unit'] as String? ?? 'Gallons')
         : 'Gallons';
+    String selectedImageUrl = isEditing
+        ? (itemToEdit['image_url'] as String? ?? '')
+        : '';
     Color selectedColor = isEditing
         ? (itemToEdit['color'] as Color? ?? Colors.blue)
         : Colors.blue;
@@ -465,6 +468,92 @@ extension _AdminInventory on _AdminDashboardState {
                               );
                             }).toList(),
                       ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Product Image (Shown to Customers)',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              color: selectedColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: isDark
+                                    ? Colors.white12
+                                    : const Color(0xFFCBD5E1),
+                              ),
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: _buildInventoryImageWidget(
+                              selectedImageUrl,
+                              isEditing
+                                  ? itemToEdit['image'] as String?
+                                  : null,
+                              selectedIcon,
+                              selectedColor,
+                              size: 28,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                OutlinedButton.icon(
+                                  onPressed: () async {
+                                    final picked =
+                                        await LaptopFilePicker.pickImage();
+                                    if (picked != null) {
+                                      setDialogState(() {
+                                        selectedImageUrl = picked.dataUrl;
+                                      });
+                                    }
+                                  },
+                                  icon: const Icon(
+                                    Icons.upload_rounded,
+                                    size: 16,
+                                  ),
+                                  label: Text(
+                                    selectedImageUrl.isEmpty
+                                        ? 'Upload Image'
+                                        : 'Change Image',
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                                if (selectedImageUrl.isNotEmpty)
+                                  TextButton.icon(
+                                    onPressed: () {
+                                      setDialogState(() {
+                                        selectedImageUrl = '';
+                                      });
+                                    },
+                                    icon: const Icon(
+                                      Icons.delete_outline_rounded,
+                                      size: 16,
+                                      color: Colors.red,
+                                    ),
+                                    label: const Text(
+                                      'Remove',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.red,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -512,6 +601,7 @@ extension _AdminInventory on _AdminDashboardState {
                         color: selectedColor,
                         icon: selectedIcon,
                         description: desc,
+                        imageUrl: selectedImageUrl,
                         isRefill: isRefill,
                       );
                       Navigator.of(context).pop();
@@ -530,6 +620,7 @@ extension _AdminInventory on _AdminDashboardState {
                         color: selectedColor,
                         icon: selectedIcon,
                         description: desc,
+                        imageUrl: selectedImageUrl,
                         isRefill: isRefill,
                       );
                       Navigator.of(context).pop();
@@ -3452,19 +3543,12 @@ extension _AdminInventory on _AdminDashboardState {
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     clipBehavior: Clip.antiAlias,
-                                    child: imagePath != null
-                                        ? Image.asset(
-                                            imagePath,
-                                            fit: BoxFit.contain,
-                                            errorBuilder:
-                                                (context, error, stackTrace) =>
-                                                    Icon(
-                                                      icon,
-                                                      color: color,
-                                                      size: 20,
-                                                    ),
-                                          )
-                                        : Icon(icon, color: color, size: 20),
+                                    child: _buildInventoryImageWidget(
+                                      prod['image_url'] as String?,
+                                      imagePath,
+                                      icon,
+                                      color,
+                                    ),
                                   ),
                                   const SizedBox(width: 10),
                                   Expanded(
@@ -4463,5 +4547,48 @@ extension _AdminInventory on _AdminDashboardState {
         ),
       ),
     );
+  }
+
+  Widget _buildInventoryImageWidget(
+    String? imageUrl,
+    String? imageAsset,
+    IconData fallbackIcon,
+    Color fallbackColor, {
+    double size = 20,
+  }) {
+    final cleanUrl = (imageUrl ?? '').trim();
+    if (cleanUrl.isNotEmpty) {
+      if (cleanUrl.startsWith('data:image')) {
+        try {
+          final base64Part = cleanUrl.split(',').last;
+          return Image.memory(
+            base64Decode(base64Part),
+            fit: BoxFit.cover,
+            width: double.infinity,
+            height: double.infinity,
+            errorBuilder: (_, _, _) =>
+                Icon(fallbackIcon, color: fallbackColor, size: size),
+          );
+        } catch (_) {}
+      } else if (cleanUrl.startsWith('http')) {
+        return Image.network(
+          cleanUrl,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+          errorBuilder: (_, _, _) =>
+              Icon(fallbackIcon, color: fallbackColor, size: size),
+        );
+      }
+    }
+    if (imageAsset != null && imageAsset.isNotEmpty) {
+      return Image.asset(
+        imageAsset,
+        fit: BoxFit.contain,
+        errorBuilder: (_, _, _) =>
+            Icon(fallbackIcon, color: fallbackColor, size: size),
+      );
+    }
+    return Icon(fallbackIcon, color: fallbackColor, size: size);
   }
 }
