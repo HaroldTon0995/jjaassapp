@@ -1243,7 +1243,7 @@ extension _AdminOverview on _AdminDashboardState {
     }
 
     final nameController = TextEditingController();
-    final phoneController = TextEditingController(text: '+63 ');
+    final phoneController = TextEditingController();
     final addressController = TextEditingController();
     final qtyController = TextEditingController(text: '1');
     bool isBorrowingContainers = false;
@@ -1498,7 +1498,7 @@ extension _AdminOverview on _AdminDashboardState {
                                 isRegistered = false;
                                 selectedCustomer = null;
                                 nameController.clear();
-                                phoneController.text = '+63 ';
+                                phoneController.clear();
                                 if (isDelivery) {
                                   addressController.clear();
                                 }
@@ -1578,9 +1578,15 @@ extension _AdminOverview on _AdminDashboardState {
                       const SizedBox(height: 12),
                       TextField(
                         controller: phoneController,
-                        decoration: const InputDecoration(
-                          labelText: 'Contact Phone Number',
-                          prefixIcon: Icon(Icons.phone),
+                        keyboardType: TextInputType.phone,
+                        decoration: InputDecoration(
+                          labelText: isDelivery
+                              ? 'Contact Phone Number'
+                              : 'Contact Phone Number (Optional)',
+                          hintText: isDelivery
+                              ? 'e.g. +63 912 345 6789'
+                              : 'Optional — leave blank for walk-in',
+                          prefixIcon: const Icon(Icons.phone),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -2272,9 +2278,11 @@ extension _AdminOverview on _AdminDashboardState {
                           final newOrder = await orderProvider.placeOrder(
                             customerId: custId,
                             customerName: name,
-                            customerPhone: phone.isNotEmpty
+                            customerPhone: (phone.isNotEmpty && phone != '+63')
                                 ? phone
-                                : '+63 Guest',
+                                : (isDelivery
+                                      ? '+63 Guest'
+                                      : 'Walk-in (No Phone)'),
                             deliveryAddress: address,
                             waterType: selectedWaterType,
                             quantity: qty,
