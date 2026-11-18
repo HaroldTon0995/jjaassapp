@@ -1579,44 +1579,52 @@ extension _AdminOverview on _AdminDashboardState {
                             ),
                           )
                         else
-                          PopupMenuButton<UserModel>(
-                            position: PopupMenuPosition.under,
-                            color: isDark ? AppTheme.darkSurface : Colors.white,
-                            constraints: BoxConstraints(
-                              minWidth: dialogWidth,
-                              maxWidth: dialogWidth,
-                              maxHeight: 260,
-                            ),
-                            onSelected: (val) {
-                              setDialogState(() {
-                                applyRegisteredCustomer(
-                                  val,
-                                  isDelivery: isDelivery,
+                          LayoutBuilder(
+                            builder: (ctx, box) => PopupMenuButton<UserModel>(
+                              position: PopupMenuPosition.under,
+                              color: isDark
+                                  ? AppTheme.darkSurface
+                                  : Colors.white,
+                              constraints: BoxConstraints(
+                                minWidth: box.maxWidth,
+                                maxWidth: box.maxWidth,
+                                maxHeight: 260,
+                              ),
+                              onSelected: (val) {
+                                setDialogState(() {
+                                  applyRegisteredCustomer(
+                                    val,
+                                    isDelivery: isDelivery,
+                                  );
+                                });
+                              },
+                              itemBuilder: (context) => customersList.map((cust) {
+                                return PopupMenuItem<UserModel>(
+                                  value: cust,
+                                  child: Text(
+                                    '${cust.name} (${cust.email})',
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  ),
                                 );
-                              });
-                            },
-                            itemBuilder: (context) => customersList.map((cust) {
-                              return PopupMenuItem<UserModel>(
-                                value: cust,
+                              }).toList(),
+                              child: InputDecorator(
+                                decoration: const InputDecoration(
+                                  labelText: 'Select Registered Customer',
+                                  prefixIcon: Icon(
+                                    Icons.account_circle_rounded,
+                                  ),
+                                  suffixIcon: Icon(
+                                    Icons.arrow_drop_down_rounded,
+                                  ),
+                                ),
                                 child: Text(
-                                  '${cust.name} (${cust.email})',
+                                  selectedCustomer != null
+                                      ? '${selectedCustomer!.name} (${selectedCustomer!.email})'
+                                      : 'Choose a customer...',
                                   overflow: TextOverflow.ellipsis,
                                   maxLines: 1,
                                 ),
-                              );
-                            }).toList(),
-                            child: InputDecorator(
-                              decoration: const InputDecoration(
-                                labelText: 'Select Registered Customer',
-                                prefixIcon: Icon(Icons.account_circle_rounded),
-                                suffixIcon: Icon(Icons.arrow_drop_down_rounded),
-                              ),
-                              child: Text(
-                                selectedCustomer != null
-                                    ? '${selectedCustomer!.name} (${selectedCustomer!.email})'
-                                    : 'Choose a customer...',
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
                               ),
                             ),
                           ),
@@ -1745,63 +1753,66 @@ extension _AdminOverview on _AdminDashboardState {
                                   ),
                                 )
                               else
-                                PopupMenuButton<String>(
-                                  position: PopupMenuPosition.under,
-                                  color: isDark
-                                      ? AppTheme.darkSurface
-                                      : Colors.white,
-                                  constraints: BoxConstraints(
-                                    minWidth: dialogWidth - 28,
-                                    maxWidth: dialogWidth - 28,
-                                    maxHeight: 240,
-                                  ),
-                                  onSelected: (selectedId) {
-                                    setDialogState(() {
-                                      if (selectedId == '__UNASSIGNED__') {
-                                        selectedDriver = null;
-                                      } else {
-                                        selectedDriver = driversList.firstWhere(
-                                          (d) => d.id == selectedId,
-                                          orElse: () => driversList.first,
-                                        );
-                                      }
-                                    });
-                                  },
-                                  itemBuilder: (context) => [
-                                    const PopupMenuItem<String>(
-                                      value: '__UNASSIGNED__',
-                                      child: Text(
-                                        'Leave Unassigned (Open for Drivers to Accept)',
-                                        overflow: TextOverflow.ellipsis,
-                                        maxLines: 1,
-                                      ),
+                                LayoutBuilder(
+                                  builder: (ctx, box) => PopupMenuButton<String>(
+                                    position: PopupMenuPosition.under,
+                                    color: isDark
+                                        ? AppTheme.darkSurface
+                                        : Colors.white,
+                                    constraints: BoxConstraints(
+                                      minWidth: box.maxWidth,
+                                      maxWidth: box.maxWidth,
+                                      maxHeight: 240,
                                     ),
-                                    ...driversList.map((d) {
-                                      return PopupMenuItem<String>(
-                                        value: d.id,
+                                    onSelected: (selectedId) {
+                                      setDialogState(() {
+                                        if (selectedId == '__UNASSIGNED__') {
+                                          selectedDriver = null;
+                                        } else {
+                                          selectedDriver = driversList
+                                              .firstWhere(
+                                                (d) => d.id == selectedId,
+                                                orElse: () => driversList.first,
+                                              );
+                                        }
+                                      });
+                                    },
+                                    itemBuilder: (context) => [
+                                      const PopupMenuItem<String>(
+                                        value: '__UNASSIGNED__',
                                         child: Text(
-                                          '🛵 ${d.name} (${d.email})',
+                                          'Leave Unassigned (Open for Drivers to Accept)',
                                           overflow: TextOverflow.ellipsis,
                                           maxLines: 1,
                                         ),
-                                      );
-                                    }),
-                                  ],
-                                  child: InputDecorator(
-                                    decoration: const InputDecoration(
-                                      labelText: 'Select Driver to Dispatch',
-                                      filled: true,
-                                      fillColor: Colors.white,
-                                      suffixIcon: Icon(
-                                        Icons.arrow_drop_down_rounded,
                                       ),
-                                    ),
-                                    child: Text(
-                                      selectedDriver == null
-                                          ? 'Leave Unassigned (Open for Drivers to Accept)'
-                                          : '🛵 ${selectedDriver!.name} (${selectedDriver!.email})',
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 1,
+                                      ...driversList.map((d) {
+                                        return PopupMenuItem<String>(
+                                          value: d.id,
+                                          child: Text(
+                                            '🛵 ${d.name} (${d.email})',
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
+                                          ),
+                                        );
+                                      }),
+                                    ],
+                                    child: InputDecorator(
+                                      decoration: const InputDecoration(
+                                        labelText: 'Select Driver to Dispatch',
+                                        filled: true,
+                                        fillColor: Colors.white,
+                                        suffixIcon: Icon(
+                                          Icons.arrow_drop_down_rounded,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        selectedDriver == null
+                                            ? 'Leave Unassigned (Open for Drivers to Accept)'
+                                            : '🛵 ${selectedDriver!.name} (${selectedDriver!.email})',
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -1965,247 +1976,136 @@ extension _AdminOverview on _AdminDashboardState {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      if (isMobile) ...[
-                        DropdownButtonFormField<String>(
-                          isExpanded: true,
-                          initialValue: selectedWaterType,
-                          dropdownColor: isDark
-                              ? AppTheme.darkSurface
-                              : Colors.white,
-                          decoration: const InputDecoration(
-                            labelText: 'Water Product',
-                          ),
-                          items: orderProvider.waterProducts.map((prod) {
-                            final name = prod['name'] as String;
-                            final price = prod['price'] as double;
-                            return DropdownMenuItem<String>(
-                              value: name,
-                              child: Text(
-                                '$name (₱${price.toStringAsFixed(0)})',
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
+                      Builder(
+                        builder: (context) {
+                          Widget buildWaterProductDropdown() {
+                            return LayoutBuilder(
+                              builder: (ctx, box) => PopupMenuButton<String>(
+                                position: PopupMenuPosition.under,
+                                color: isDark
+                                    ? AppTheme.darkSurface
+                                    : Colors.white,
+                                constraints: BoxConstraints(
+                                  minWidth: box.maxWidth,
+                                  maxWidth: box.maxWidth,
+                                  maxHeight: 240,
+                                ),
+                                onSelected: (val) {
+                                  setDialogState(() {
+                                    selectedWaterType = val;
+                                    final match = orderProvider.waterProducts
+                                        .firstWhere((p) => p['name'] == val);
+                                    pricePerUnit = match['price'] as double;
+                                  });
+                                },
+                                itemBuilder: (context) =>
+                                    orderProvider.waterProducts.map((prod) {
+                                      final name = prod['name'] as String;
+                                      final price = prod['price'] as double;
+                                      return PopupMenuItem<String>(
+                                        value: name,
+                                        child: Text(
+                                          '$name (₱${price.toStringAsFixed(0)})',
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
+                                        ),
+                                      );
+                                    }).toList(),
+                                child: InputDecorator(
+                                  decoration: const InputDecoration(
+                                    labelText: 'Water Product',
+                                    suffixIcon: Icon(
+                                      Icons.arrow_drop_down_rounded,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    '$selectedWaterType (₱${pricePerUnit.toStringAsFixed(0)})',
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  ),
+                                ),
                               ),
                             );
-                          }).toList(),
-                          onChanged: (val) {
-                            if (val != null) {
-                              setDialogState(() {
-                                selectedWaterType = val;
-                                final match = orderProvider.waterProducts
-                                    .firstWhere((p) => p['name'] == val);
-                                pricePerUnit = match['price'] as double;
-                              });
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 10),
-                        TextField(
-                          controller: qtyController,
-                          keyboardType: TextInputType.number,
-                          onChanged: (val) => setDialogState(() {}),
-                          decoration: const InputDecoration(
-                            labelText: 'Quantity',
-                            prefixIcon: Icon(Icons.water_drop_rounded),
-                          ),
-                        ),
-                      ] else ...[
-                        Row(
-                          children: [
-                            Expanded(
-                              flex: 3,
-                              child: DropdownButtonFormField<String>(
-                                isExpanded: true,
-                                initialValue: selectedWaterType,
-                                dropdownColor: isDark
-                                    ? AppTheme.darkSurface
-                                    : Colors.white,
-                                decoration: const InputDecoration(
-                                  labelText: 'Water Product',
-                                ),
-                                items: orderProvider.waterProducts.map((prod) {
-                                  final name = prod['name'] as String;
-                                  final price = prod['price'] as double;
-                                  return DropdownMenuItem<String>(
-                                    value: name,
-                                    child: Text(
-                                      '$name (₱${price.toStringAsFixed(0)})',
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 1,
-                                    ),
-                                  );
-                                }).toList(),
-                                onChanged: (val) {
-                                  if (val != null) {
-                                    setDialogState(() {
-                                      selectedWaterType = val;
-                                      final match = orderProvider.waterProducts
-                                          .firstWhere((p) => p['name'] == val);
-                                      pricePerUnit = match['price'] as double;
-                                    });
-                                  }
+                          }
+
+                          Widget buildPaymentMethodDropdown() {
+                            final methods = <Map<String, String>>[
+                              {'value': 'Cash', 'label': 'Cash'},
+                              {'value': 'GCash', 'label': 'GCash'},
+                              if (isDelivery)
+                                {
+                                  'value': 'Cash on Delivery',
+                                  'label': 'Cash on Delivery (COD)',
                                 },
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              flex: 2,
-                              child: TextField(
-                                controller: qtyController,
-                                keyboardType: TextInputType.number,
-                                onChanged: (val) => setDialogState(() {}),
-                                decoration: const InputDecoration(
-                                  labelText: 'Quantity',
-                                  prefixIcon: Icon(Icons.water_drop_rounded),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                      const SizedBox(height: 12),
-                      if (isMobile) ...[
-                        DropdownButtonFormField<String>(
-                          isExpanded: true,
-                          initialValue: selectedPaymentMethod,
-                          dropdownColor: isDark
-                              ? AppTheme.darkSurface
-                              : Colors.white,
-                          decoration: const InputDecoration(
-                            labelText: 'Payment Method',
-                          ),
-                          items: [
-                            const DropdownMenuItem(
-                              value: 'Cash',
-                              child: Text(
-                                'Cash',
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                              ),
-                            ),
-                            const DropdownMenuItem(
-                              value: 'GCash',
-                              child: Text(
-                                'GCash',
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                              ),
-                            ),
-                            if (isDelivery)
-                              const DropdownMenuItem(
-                                value: 'Cash on Delivery',
-                                child: Text(
-                                  'Cash on Delivery (COD)',
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
-                                ),
-                              ),
-                          ],
-                          onChanged: (val) {
-                            if (val != null) {
-                              setDialogState(() {
-                                selectedPaymentMethod = val;
-                              });
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 10),
-                        DropdownButtonFormField<String>(
-                          isExpanded: true,
-                          initialValue: selectedPaymentStatus,
-                          dropdownColor: isDark
-                              ? AppTheme.darkSurface
-                              : Colors.white,
-                          decoration: const InputDecoration(
-                            labelText: 'Payment Status',
-                          ),
-                          items: const [
-                            DropdownMenuItem(
-                              value: 'Pending',
-                              child: Text(
-                                'Pending',
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                              ),
-                            ),
-                            DropdownMenuItem(
-                              value: 'Paid',
-                              child: Text(
-                                'Paid',
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                              ),
-                            ),
-                          ],
-                          onChanged: (val) {
-                            if (val != null) {
-                              setDialogState(() {
-                                selectedPaymentStatus = val;
-                              });
-                            }
-                          },
-                        ),
-                      ] else ...[
-                        Row(
-                          children: [
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                isExpanded: true,
-                                initialValue: selectedPaymentMethod,
-                                dropdownColor: isDark
+                            ];
+                            final selectedLabel = methods.firstWhere(
+                              (m) => m['value'] == selectedPaymentMethod,
+                              orElse: () => methods.first,
+                            )['label']!;
+                            return LayoutBuilder(
+                              builder: (ctx, box) => PopupMenuButton<String>(
+                                position: PopupMenuPosition.under,
+                                color: isDark
                                     ? AppTheme.darkSurface
                                     : Colors.white,
-                                decoration: const InputDecoration(
-                                  labelText: 'Payment Method',
+                                constraints: BoxConstraints(
+                                  minWidth: box.maxWidth,
+                                  maxWidth: box.maxWidth,
+                                  maxHeight: 220,
                                 ),
-                                items: [
-                                  const DropdownMenuItem(
-                                    value: 'Cash',
-                                    child: Text(
-                                      'Cash',
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 1,
-                                    ),
-                                  ),
-                                  const DropdownMenuItem(
-                                    value: 'GCash',
-                                    child: Text(
-                                      'GCash',
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 1,
-                                    ),
-                                  ),
-                                  if (isDelivery)
-                                    const DropdownMenuItem(
-                                      value: 'Cash on Delivery',
-                                      child: Text(
-                                        'Cash on Delivery (COD)',
-                                        overflow: TextOverflow.ellipsis,
-                                        maxLines: 1,
+                                onSelected: (val) {
+                                  setDialogState(() {
+                                    selectedPaymentMethod = val;
+                                  });
+                                },
+                                itemBuilder: (context) => methods
+                                    .map(
+                                      (m) => PopupMenuItem<String>(
+                                        value: m['value']!,
+                                        child: Text(
+                                          m['label']!,
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
+                                        ),
                                       ),
+                                    )
+                                    .toList(),
+                                child: InputDecorator(
+                                  decoration: const InputDecoration(
+                                    labelText: 'Payment Method',
+                                    suffixIcon: Icon(
+                                      Icons.arrow_drop_down_rounded,
                                     ),
-                                ],
-                                onChanged: (val) {
-                                  if (val != null) {
-                                    setDialogState(() {
-                                      selectedPaymentMethod = val;
-                                    });
-                                  }
-                                },
+                                  ),
+                                  child: Text(
+                                    selectedLabel,
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  ),
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                isExpanded: true,
-                                initialValue: selectedPaymentStatus,
-                                dropdownColor: isDark
+                            );
+                          }
+
+                          Widget buildPaymentStatusDropdown() {
+                            return LayoutBuilder(
+                              builder: (ctx, box) => PopupMenuButton<String>(
+                                position: PopupMenuPosition.under,
+                                color: isDark
                                     ? AppTheme.darkSurface
                                     : Colors.white,
-                                decoration: const InputDecoration(
-                                  labelText: 'Payment Status',
+                                constraints: BoxConstraints(
+                                  minWidth: box.maxWidth,
+                                  maxWidth: box.maxWidth,
+                                  maxHeight: 200,
                                 ),
-                                items: const [
-                                  DropdownMenuItem(
+                                onSelected: (val) {
+                                  setDialogState(() {
+                                    selectedPaymentStatus = val;
+                                  });
+                                },
+                                itemBuilder: (context) => const [
+                                  PopupMenuItem<String>(
                                     value: 'Pending',
                                     child: Text(
                                       'Pending',
@@ -2213,7 +2113,7 @@ extension _AdminOverview on _AdminDashboardState {
                                       maxLines: 1,
                                     ),
                                   ),
-                                  DropdownMenuItem(
+                                  PopupMenuItem<String>(
                                     value: 'Paid',
                                     child: Text(
                                       'Paid',
@@ -2222,18 +2122,83 @@ extension _AdminOverview on _AdminDashboardState {
                                     ),
                                   ),
                                 ],
-                                onChanged: (val) {
-                                  if (val != null) {
-                                    setDialogState(() {
-                                      selectedPaymentStatus = val;
-                                    });
-                                  }
-                                },
+                                child: InputDecorator(
+                                  decoration: const InputDecoration(
+                                    labelText: 'Payment Status',
+                                    suffixIcon: Icon(
+                                      Icons.arrow_drop_down_rounded,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    selectedPaymentStatus,
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
+                            );
+                          }
+
+                          if (isMobile) {
+                            return Column(
+                              children: [
+                                buildWaterProductDropdown(),
+                                const SizedBox(height: 10),
+                                TextField(
+                                  controller: qtyController,
+                                  keyboardType: TextInputType.number,
+                                  onChanged: (val) => setDialogState(() {}),
+                                  decoration: const InputDecoration(
+                                    labelText: 'Quantity',
+                                    prefixIcon: Icon(Icons.water_drop_rounded),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                buildPaymentMethodDropdown(),
+                                const SizedBox(height: 10),
+                                buildPaymentStatusDropdown(),
+                              ],
+                            );
+                          }
+
+                          return Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    flex: 3,
+                                    child: buildWaterProductDropdown(),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    flex: 2,
+                                    child: TextField(
+                                      controller: qtyController,
+                                      keyboardType: TextInputType.number,
+                                      onChanged: (val) =>
+                                          setDialogState(() {}),
+                                      decoration: const InputDecoration(
+                                        labelText: 'Quantity',
+                                        prefixIcon: Icon(
+                                          Icons.water_drop_rounded,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(child: buildPaymentMethodDropdown()),
+                                  const SizedBox(width: 12),
+                                  Expanded(child: buildPaymentStatusDropdown()),
+                                ],
+                              ),
+                            ],
+                          );
+                        },
+                      ),
                       const SizedBox(height: 16),
                       Builder(
                         builder: (context) {
