@@ -1259,6 +1259,48 @@ extension _AdminOverview on _AdminDashboardState {
     String selectedPaymentMethod = 'Cash on Delivery';
     String selectedPaymentStatus = 'Pending';
 
+    void applyRegisteredCustomer(UserModel cust, {required bool isDelivery}) {
+      selectedCustomer = cust;
+      nameController.text = cust.name;
+
+      String resolvedPhone = cust.phone.trim();
+      String resolvedAddress = cust.address.trim();
+
+      if (resolvedPhone.isEmpty || resolvedAddress.isEmpty) {
+        for (final o in orderProvider.orders) {
+          final matchesId = o.customerId == cust.id;
+          final matchesName =
+              o.customerName.trim().toLowerCase() ==
+              cust.name.trim().toLowerCase();
+          if (!matchesId && !matchesName) continue;
+
+          if (resolvedPhone.isEmpty) {
+            final p = o.customerPhone.trim();
+            if (p.isNotEmpty &&
+                p != '+63' &&
+                p != '+63 Guest' &&
+                p != 'No Phone Provided' &&
+                p != 'Walk-in (No Phone)') {
+              resolvedPhone = p;
+            }
+          }
+          if (resolvedAddress.isEmpty && !o.isWalkIn) {
+            final a = o.deliveryAddress.trim();
+            if (a.isNotEmpty &&
+                !a.toLowerCase().contains('store pickup / walk-in')) {
+              resolvedAddress = a;
+            }
+          }
+          if (resolvedPhone.isNotEmpty && resolvedAddress.isNotEmpty) break;
+        }
+      }
+
+      phoneController.text = resolvedPhone;
+      if (isDelivery) {
+        addressController.text = resolvedAddress;
+      }
+    }
+
     showDialog(
       context: context,
       builder: (context) {
@@ -1512,9 +1554,10 @@ extension _AdminOverview on _AdminDashboardState {
                               setDialogState(() {
                                 isRegistered = true;
                                 if (customersList.isNotEmpty) {
-                                  selectedCustomer = customersList.first;
-                                  nameController.text = selectedCustomer!.name;
-                                  phoneController.text = '+63 912 345 6789';
+                                  applyRegisteredCustomer(
+                                    selectedCustomer ?? customersList.first,
+                                    isDelivery: isDelivery,
+                                  );
                                 }
                               });
                             },
@@ -1536,18 +1579,24 @@ extension _AdminOverview on _AdminDashboardState {
                             ),
                           )
                         else
-                          DropdownButtonFormField<UserModel>(
-                            isExpanded: true,
-                            initialValue: selectedCustomer,
-                            dropdownColor: isDark
-                                ? AppTheme.darkSurface
-                                : Colors.white,
-                            decoration: const InputDecoration(
-                              labelText: 'Select Registered Customer',
-                              prefixIcon: Icon(Icons.account_circle_rounded),
+                          PopupMenuButton<UserModel>(
+                            position: PopupMenuPosition.under,
+                            color: isDark ? AppTheme.darkSurface : Colors.white,
+                            constraints: BoxConstraints(
+                              minWidth: dialogWidth,
+                              maxWidth: dialogWidth,
+                              maxHeight: 260,
                             ),
-                            items: customersList.map((cust) {
-                              return DropdownMenuItem<UserModel>(
+                            onSelected: (val) {
+                              setDialogState(() {
+                                applyRegisteredCustomer(
+                                  val,
+                                  isDelivery: isDelivery,
+                                );
+                              });
+                            },
+                            itemBuilder: (context) => customersList.map((cust) {
+                              return PopupMenuItem<UserModel>(
                                 value: cust,
                                 child: Text(
                                   '${cust.name} (${cust.email})',
@@ -1556,14 +1605,20 @@ extension _AdminOverview on _AdminDashboardState {
                                 ),
                               );
                             }).toList(),
-                            onChanged: (val) {
-                              if (val != null) {
-                                setDialogState(() {
-                                  selectedCustomer = val;
-                                  nameController.text = val.name;
-                                });
-                              }
-                            },
+                            child: InputDecorator(
+                              decoration: const InputDecoration(
+                                labelText: 'Select Registered Customer',
+                                prefixIcon: Icon(Icons.account_circle_rounded),
+                                suffixIcon: Icon(Icons.arrow_drop_down_rounded),
+                              ),
+                              child: Text(
+                                selectedCustomer != null
+                                    ? '${selectedCustomer!.name} (${selectedCustomer!.email})'
+                                    : 'Choose a customer...',
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                            ),
                           ),
                         const SizedBox(height: 12),
                       ],
@@ -1690,20 +1745,31 @@ extension _AdminOverview on _AdminDashboardState {
                                   ),
                                 )
                               else
-                                DropdownButtonFormField<UserModel?>(
-                                  isExpanded: true,
-                                  initialValue: selectedDriver,
-                                  dropdownColor: isDark
+                                PopupMenuButton<String>(
+                                  position: PopupMenuPosition.under,
+                                  color: isDark
                                       ? AppTheme.darkSurface
                                       : Colors.white,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Select Driver to Dispatch',
-                                    filled: true,
-                                    fillColor: Colors.white,
+                                  constraints: BoxConstraints(
+                                    minWidth: dialogWidth - 28,
+                                    maxWidth: dialogWidth - 28,
+                                    maxHeight: 240,
                                   ),
-                                  items: [
-                                    const DropdownMenuItem<UserModel?>(
-                                      value: null,
+                                  onSelected: (selectedId) {
+                                    setDialogState(() {
+                                      if (selectedId == '__UNASSIGNED__') {
+                                        selectedDriver = null;
+                                      } else {
+                                        selectedDriver = driversList.firstWhere(
+                                          (d) => d.id == selectedId,
+                                          orElse: () => driversList.first,
+                                        );
+                                      }
+                                    });
+                                  },
+                                  itemBuilder: (context) => [
+                                    const PopupMenuItem<String>(
+                                      value: '__UNASSIGNED__',
                                       child: Text(
                                         'Leave Unassigned (Open for Drivers to Accept)',
                                         overflow: TextOverflow.ellipsis,
@@ -1711,8 +1777,8 @@ extension _AdminOverview on _AdminDashboardState {
                                       ),
                                     ),
                                     ...driversList.map((d) {
-                                      return DropdownMenuItem<UserModel?>(
-                                        value: d,
+                                      return PopupMenuItem<String>(
+                                        value: d.id,
                                         child: Text(
                                           '🛵 ${d.name} (${d.email})',
                                           overflow: TextOverflow.ellipsis,
@@ -1721,11 +1787,23 @@ extension _AdminOverview on _AdminDashboardState {
                                       );
                                     }),
                                   ],
-                                  onChanged: (val) {
-                                    setDialogState(() {
-                                      selectedDriver = val;
-                                    });
-                                  },
+                                  child: InputDecorator(
+                                    decoration: const InputDecoration(
+                                      labelText: 'Select Driver to Dispatch',
+                                      filled: true,
+                                      fillColor: Colors.white,
+                                      suffixIcon: Icon(
+                                        Icons.arrow_drop_down_rounded,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      selectedDriver == null
+                                          ? 'Leave Unassigned (Open for Drivers to Accept)'
+                                          : '🛵 ${selectedDriver!.name} (${selectedDriver!.email})',
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
+                                  ),
                                 ),
                             ],
                           ),

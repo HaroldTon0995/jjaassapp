@@ -9,12 +9,16 @@ class UserModel {
   final String name;
   final String email;
   final UserRole role;
+  final String phone;
+  final String address;
 
   UserModel({
     required this.id,
     required this.name,
     required this.email,
     required this.role,
+    this.phone = '',
+    this.address = '',
   });
 
   // Convert to JSON
@@ -24,6 +28,8 @@ class UserModel {
       'name': name,
       'email': email,
       'role': role.name,
+      'phone': phone,
+      'address': address,
     };
   }
 
@@ -59,6 +65,10 @@ class UserModel {
       name: _resolveDisplayName(json),
       email: (json['email'] ?? '').toString(),
       role: parsedRole,
+      phone: (json['phone'] ?? json['contact_number'] ?? '').toString().trim(),
+      address: (json['address'] ?? json['delivery_address'] ?? '')
+          .toString()
+          .trim(),
     );
   }
 
