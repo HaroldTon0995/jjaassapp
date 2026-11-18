@@ -1633,69 +1633,146 @@ extension _AdminOverview on _AdminDashboardState {
 
                       TextField(
                         controller: nameController,
-                        decoration: const InputDecoration(
+                        readOnly: isRegistered,
+                        decoration: InputDecoration(
                           labelText: 'Customer Full Name *',
-                          prefixIcon: Icon(Icons.person),
+                          prefixIcon: const Icon(Icons.person),
+                          filled: isRegistered,
+                          fillColor: isRegistered
+                              ? (isDark
+                                    ? Colors.white10
+                                    : const Color(0xFFF1F5F9))
+                              : null,
+                          suffixIcon: isRegistered
+                              ? const Tooltip(
+                                  message: 'Locked to registered account',
+                                  child: Icon(
+                                    Icons.lock_outline_rounded,
+                                    size: 18,
+                                    color: Color(0xFF64748B),
+                                  ),
+                                )
+                              : null,
                         ),
                       ),
                       const SizedBox(height: 12),
                       TextField(
                         controller: phoneController,
+                        readOnly: isRegistered,
                         keyboardType: TextInputType.phone,
                         decoration: InputDecoration(
                           labelText: isRegistered
                               ? 'Contact Phone Number'
                               : 'Contact Phone Number (Optional)',
                           hintText: isRegistered
-                              ? 'e.g. +63 912 345 6789'
+                              ? (phoneController.text.isEmpty
+                                    ? 'No phone saved on account'
+                                    : null)
                               : 'Optional — e.g. +63 912 345 6789',
                           prefixIcon: const Icon(Icons.phone),
+                          filled: isRegistered,
+                          fillColor: isRegistered
+                              ? (isDark
+                                    ? Colors.white10
+                                    : const Color(0xFFF1F5F9))
+                              : null,
+                          suffixIcon: isRegistered
+                              ? const Tooltip(
+                                  message: 'Locked to registered account',
+                                  child: Icon(
+                                    Icons.lock_outline_rounded,
+                                    size: 18,
+                                    color: Color(0xFF64748B),
+                                  ),
+                                )
+                              : null,
                         ),
                       ),
                       if (isDelivery) ...[
                         const SizedBox(height: 12),
-                        TextField(
-                          controller: addressController,
-                          decoration: const InputDecoration(
-                            labelText: 'Delivery Address (Albay 1st District) *',
-                            hintText: 'e.g. Purok 1, Tabaco City, Albay',
-                            prefixIcon: Icon(Icons.location_on),
-                            helperText:
-                                'Service Scope: Tabaco City, Bacacay, Malilipot, Malinao, Santo Domingo, Tiwi',
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children:
-                              const [
-                                'Tabaco City',
-                                'Bacacay',
-                                'Malilipot',
-                                'Malinao',
-                                'Santo Domingo',
-                                'Tiwi',
-                              ].map((mun) {
-                                return ActionChip(
-                                  visualDensity: VisualDensity.compact,
-                                  label: Text(
-                                    mun,
-                                    style: const TextStyle(fontSize: 11),
+                        Builder(
+                          builder: (context) {
+                            final bool lockAddress =
+                                isRegistered &&
+                                (selectedCustomer?.address.trim().isNotEmpty ??
+                                    false);
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                TextField(
+                                  controller: addressController,
+                                  readOnly: lockAddress,
+                                  decoration: InputDecoration(
+                                    labelText:
+                                        'Delivery Address (Albay 1st District) *',
+                                    hintText:
+                                        'e.g. Purok 1, Tabaco City, Albay',
+                                    prefixIcon: const Icon(Icons.location_on),
+                                    filled: lockAddress,
+                                    fillColor: lockAddress
+                                        ? (isDark
+                                              ? Colors.white10
+                                              : const Color(0xFFF1F5F9))
+                                        : null,
+                                    suffixIcon: lockAddress
+                                        ? const Tooltip(
+                                            message:
+                                                'Locked to registered account',
+                                            child: Icon(
+                                              Icons.lock_outline_rounded,
+                                              size: 18,
+                                              color: Color(0xFF64748B),
+                                            ),
+                                          )
+                                        : null,
+                                    helperText: lockAddress
+                                        ? 'Saved address from registered customer account'
+                                        : 'Service Scope: Tabaco City, Bacacay, Malilipot, Malinao, Santo Domingo, Tiwi',
                                   ),
-                                  onPressed: () {
-                                    setDialogState(() {
-                                      final current = addressController.text
-                                          .trim();
-                                      if (!current.contains(mun)) {
-                                        addressController.text = current.isEmpty
-                                            ? '$mun, Albay'
-                                            : '$current, $mun, Albay';
-                                      }
-                                    });
-                                  },
-                                );
-                              }).toList(),
+                                ),
+                                if (!lockAddress) ...[
+                                  const SizedBox(height: 8),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 6,
+                                    children:
+                                        const [
+                                          'Tabaco City',
+                                          'Bacacay',
+                                          'Malilipot',
+                                          'Malinao',
+                                          'Santo Domingo',
+                                          'Tiwi',
+                                        ].map((mun) {
+                                          return ActionChip(
+                                            visualDensity:
+                                                VisualDensity.compact,
+                                            label: Text(
+                                              mun,
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                              ),
+                                            ),
+                                            onPressed: () {
+                                              setDialogState(() {
+                                                final current =
+                                                    addressController.text
+                                                        .trim();
+                                                if (!current.contains(mun)) {
+                                                  addressController.text =
+                                                      current.isEmpty
+                                                      ? '$mun, Albay'
+                                                      : '$current, $mun, Albay';
+                                                }
+                                              });
+                                            },
+                                          );
+                                        }).toList(),
+                                  ),
+                                ],
+                              ],
+                            );
+                          },
                         ),
                       ],
                       const SizedBox(height: 18),
