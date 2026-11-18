@@ -20,6 +20,18 @@ class ReportDeliveryIssueModal extends StatefulWidget {
   });
 
   static void show(BuildContext context, OrderModel order) {
+    final isCollection = order.isCollectionJob ||
+        order.id.toUpperCase().startsWith('#COL') ||
+        order.waterType.toLowerCase().contains('collection');
+    if (isCollection || order.isWalkIn) {
+      Helpers.showSnackBar(
+        context,
+        'Issue reporting is only available for completed delivery transactions.',
+        isError: true,
+      );
+      return;
+    }
+
     final isNarrow = MediaQuery.of(context).size.width < 600;
     if (isNarrow) {
       showModalBottomSheet(

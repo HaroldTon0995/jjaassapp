@@ -51,6 +51,70 @@ class LaptopFilePicker {
     return completer.future;
   }
 
+  /// Picks an image on Web and resizes/compresses it via Canvas (max 480px JPEG)
+  /// so Base64 data URLs stay lightweight for localStorage and Supabase sync.
+  static Future<LaptopPickedFile?> pickCompressedImage({
+    int maxDimension = 480,
+    double quality = 0.78,
+  }) async {
+    final picked = await pickImage();
+    if (picked == null || !kIsWeb) return picked;
+
+    final completer = Completer<LaptopPickedFile?>();
+    final img = web.HTMLImageElement();
+
+    img.onload = (web.Event _) {
+      try {
+        final origW = img.naturalWidth;
+        final origH = img.naturalHeight;
+        if (origW <= 0 || origH <= 0) {
+          if (!completer.isCompleted) completer.complete(picked);
+          return;
+        }
+        double scale = 1.0;
+        if (origW > maxDimension || origH > maxDimension) {
+          scale = maxDimension / (origW > origH ? origW : origH);
+        }
+        final targetW = (origW * scale).round().clamp(1, maxDimension);
+        final targetH = (origH * scale).round().clamp(1, maxDimension);
+
+        final canvas = web.HTMLCanvasElement()
+          ..width = targetW
+          ..height = targetH;
+        final ctx = canvas.getContext('2d') as web.CanvasRenderingContext2D?;
+        if (ctx == null) {
+          if (!completer.isCompleted) completer.complete(picked);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, targetW.toDouble(), targetH.toDouble());
+        final compressedDataUrl = canvas.toDataURL('image/jpeg', quality.toJS);
+        final base64Str = compressedDataUrl.contains(',')
+            ? compressedDataUrl.split(',')[1]
+            : compressedDataUrl;
+        final bytes = base64Decode(base64Str);
+        if (!completer.isCompleted) {
+          completer.complete(
+            LaptopPickedFile(
+              name: picked.name,
+              size: bytes.length,
+              bytes: bytes,
+              dataUrl: compressedDataUrl,
+            ),
+          );
+        }
+      } catch (_) {
+        if (!completer.isCompleted) completer.complete(picked);
+      }
+    }.toJS;
+
+    img.onerror = (web.Event _) {
+      if (!completer.isCompleted) completer.complete(picked);
+    }.toJS;
+
+    img.src = picked.dataUrl;
+    return completer.future;
+  }
+
   static void _readFile(web.File file, Function(LaptopPickedFile?) callback) {
     final fileName = file.name;
     final fileSize = file.size;

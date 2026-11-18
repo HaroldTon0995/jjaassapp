@@ -34,7 +34,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
     {
       'sender': 'AquaBot',
       'message':
-          "Hello! I'm **AquaBot 💧**, your JJAASS Water Market driver dispatch assistant.\n\nTap any topic in the **Quick Inquiry Guide** above, or type your question below for instant delivery, route, or gallon collection guidance!",
+          "Hello! I'm AquaBot 💧, your JJAASS Water Market driver dispatch assistant.\n\nTap any topic in the Quick Inquiry Guide above, or type your question below for instant delivery, route, or gallon collection guidance!",
     },
   ];
   final TextEditingController _supportInputController = TextEditingController();
@@ -43,7 +43,8 @@ class _DriverDashboardState extends State<DriverDashboard> {
   bool _isChatLoading = false;
 
   // Station Admin Direct Chat States
-  final TextEditingController _adminChatInputController = TextEditingController();
+  final TextEditingController _adminChatInputController =
+      TextEditingController();
   final ScrollController _adminChatScrollController = ScrollController();
 
   // Settings controller
@@ -165,10 +166,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
     );
 
     if (availableJobs.isEmpty) {
-      Helpers.showSnackBar(
-        context,
-        'No available job invitations to accept.',
-      );
+      Helpers.showSnackBar(context, 'No available job invitations to accept.');
       return;
     }
 
@@ -183,9 +181,15 @@ class _DriverDashboardState extends State<DriverDashboard> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: const [
-            Icon(Icons.playlist_add_check_circle_rounded, color: AppTheme.primaryColor),
+            Icon(
+              Icons.playlist_add_check_circle_rounded,
+              color: AppTheme.primaryColor,
+            ),
             SizedBox(width: 8),
-            Text('Accept All Jobs', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            Text(
+              'Accept All Jobs',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
           ],
         ),
         content: Column(
@@ -208,15 +212,33 @@ class _DriverDashboardState extends State<DriverDashboard> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Total Deliveries:', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
-                      Text('${availableJobs.length}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      const Text(
+                        'Total Deliveries:',
+                        style: TextStyle(
+                          color: Color(0xFF64748B),
+                          fontSize: 13,
+                        ),
+                      ),
+                      Text(
+                        '${availableJobs.length}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 6),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Total Transaction Value:', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                      const Text(
+                        'Total Transaction Value:',
+                        style: TextStyle(
+                          color: Color(0xFF64748B),
+                          fontSize: 13,
+                        ),
+                      ),
                       Text(
                         '₱${totalOrderAmount.toStringAsFixed(2)}',
                         style: const TextStyle(
@@ -240,7 +262,9 @@ class _DriverDashboardState extends State<DriverDashboard> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryColor,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Confirm & Accept All'),
@@ -330,7 +354,8 @@ class _DriverDashboardState extends State<DriverDashboard> {
 
       if (mounted) {
         setState(() {
-          if (_supportMessages.isNotEmpty && _supportMessages.last['message'] == 'Thinking...') {
+          if (_supportMessages.isNotEmpty &&
+              _supportMessages.last['message'] == 'Thinking...') {
             _supportMessages.removeLast();
           }
           _supportMessages.add({'sender': 'AquaBot', 'message': response});
@@ -341,12 +366,14 @@ class _DriverDashboardState extends State<DriverDashboard> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          if (_supportMessages.isNotEmpty && _supportMessages.last['message'] == 'Thinking...') {
+          if (_supportMessages.isNotEmpty &&
+              _supportMessages.last['message'] == 'Thinking...') {
             _supportMessages.removeLast();
           }
           _supportMessages.add({
             'sender': 'AquaBot',
-            'message': 'Sorry, I encountered an issue retrieving a response. Please check your connection and try again.'
+            'message':
+                'Sorry, I encountered an issue retrieving a response. Please check your connection and try again.',
           });
           _isChatLoading = false;
         });
@@ -427,150 +454,162 @@ class _DriverDashboardState extends State<DriverDashboard> {
         }
       },
       child: Scaffold(
-      backgroundColor: AppTheme.lightBg,
-      drawer: (!isWide)
-          ? Drawer(
-              backgroundColor: Colors.white,
-              child: _buildSidebar(isDark, isDrawer: true),
-            )
-          : null,
-      appBar: isWide
-          ? null
-          : AppBar(
-              backgroundColor: AppTheme.navyColor,
-              foregroundColor: Colors.white,
-              elevation: 2,
-              leadingWidth: _selectedTab != 0 ? 96 : null,
-              leading: _selectedTab != 0
-                  ? Builder(
-                      builder: (ctx) => Row(
+        backgroundColor: AppTheme.lightBg,
+        drawer: (!isWide)
+            ? Drawer(
+                backgroundColor: Colors.white,
+                child: _buildSidebar(isDark, isDrawer: true),
+              )
+            : null,
+        appBar: isWide
+            ? null
+            : AppBar(
+                backgroundColor: AppTheme.navyColor,
+                foregroundColor: Colors.white,
+                elevation: 2,
+                leadingWidth: _selectedTab != 0 ? 96 : null,
+                leading: _selectedTab != 0
+                    ? Builder(
+                        builder: (ctx) => Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.menu_rounded),
+                              tooltip: 'Menu',
+                              onPressed: () => Scaffold.of(ctx).openDrawer(),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.arrow_back_rounded),
+                              tooltip: 'Back to Dashboard',
+                              onPressed: () => setState(() {
+                                _selectedTab = 0;
+                                _activeSidebarMenu = 0;
+                              }),
+                            ),
+                          ],
+                        ),
+                      )
+                    : null,
+                titleSpacing: 8,
+                title: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          IconButton(
-                            icon: const Icon(Icons.menu_rounded),
-                            tooltip: 'Menu',
-                            onPressed: () => Scaffold.of(ctx).openDrawer(),
+                          Text(
+                            _getTabTitle(),
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                            ),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.arrow_back_rounded),
-                            tooltip: 'Back to Dashboard',
-                            onPressed: () => setState(() {
-                              _selectedTab = 0;
-                              _activeSidebarMenu = 0;
-                            }),
+                          const Text(
+                            'JJAASS Water Market • Driver',
+                            style: TextStyle(
+                              color: Color(0xFFBFDBFE),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 11,
+                            ),
                           ),
                         ],
                       ),
-                    )
-                  : null,
-              titleSpacing: 8,
-              title: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _getTabTitle(),
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const Text(
-                          'JJAASS Water Market • Driver',
-                          style: TextStyle(
-                            color: Color(0xFFBFDBFE),
-                            fontWeight: FontWeight.w600,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
                     ),
-                  ),
-                ],
-              ),
-              actions: [
-                ListenableBuilder(
-                  listenable: ChatService.instance,
-                  builder: (context, _) {
-                    final auth = Provider.of<AuthProvider>(context, listen: false);
-                    final userId = auth.currentUser?.id ?? '';
-                    final unread = ChatService.instance.getUnreadCount(userId, 'driver');
-                    return Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        IconButton(
-                          tooltip: 'Dispatch & Customer Live Chat',
-                          icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white),
-                          onPressed: () => RealtimeChatModal.show(context),
-                        ),
-                        if (unread > 0)
-                          Positioned(
-                            right: 6,
-                            top: 6,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: Colors.redAccent,
-                                shape: BoxShape.circle,
-                              ),
-                              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                              child: Center(
-                                child: Text(
-                                  '$unread',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 8,
-                                    fontWeight: FontWeight.bold,
+                  ],
+                ),
+                actions: [
+                  ListenableBuilder(
+                    listenable: ChatService.instance,
+                    builder: (context, _) {
+                      final auth = Provider.of<AuthProvider>(
+                        context,
+                        listen: false,
+                      );
+                      final userId = auth.currentUser?.id ?? '';
+                      final unread = ChatService.instance.getUnreadCount(
+                        userId,
+                        'driver',
+                      );
+                      return Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          IconButton(
+                            tooltip: 'Dispatch & Customer Live Chat',
+                            icon: const Icon(
+                              Icons.chat_bubble_outline_rounded,
+                              color: Colors.white,
+                            ),
+                            onPressed: () => RealtimeChatModal.show(context),
+                          ),
+                          if (unread > 0)
+                            Positioned(
+                              right: 6,
+                              top: 6,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  color: Colors.redAccent,
+                                  shape: BoxShape.circle,
+                                ),
+                                constraints: const BoxConstraints(
+                                  minWidth: 16,
+                                  minHeight: 16,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '$unread',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                      ],
-                    );
-                  },
-                ),
-                IconButton(
-                  tooltip: 'Refresh',
-                  icon: const Icon(Icons.sync_rounded, color: Colors.white),
-                  onPressed: _loadDashboardData,
-                ),
-              ],
-            ),
-      body: Row(
-        children: [
-          if (isWide) _buildSidebar(isDark),
-          Expanded(
-            child: _isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(
-                      color: AppTheme.navyColor,
-                    ),
-                  )
-                : Column(
-                    children: [
-                      if (isWide) _buildDesktopHeader(isDark),
-                      Expanded(
-                        child: RefreshIndicator(
-                          color: AppTheme.navyColor,
-                          onRefresh: _loadDashboardData,
-                          child: _buildSelectedTabContent(
-                            isDark,
-                            media.size.width,
+                        ],
+                      );
+                    },
+                  ),
+                  IconButton(
+                    tooltip: 'Refresh',
+                    icon: const Icon(Icons.sync_rounded, color: Colors.white),
+                    onPressed: _loadDashboardData,
+                  ),
+                ],
+              ),
+        body: Row(
+          children: [
+            if (isWide) _buildSidebar(isDark),
+            Expanded(
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: AppTheme.navyColor,
+                      ),
+                    )
+                  : Column(
+                      children: [
+                        if (isWide) _buildDesktopHeader(isDark),
+                        Expanded(
+                          child: RefreshIndicator(
+                            color: AppTheme.navyColor,
+                            onRefresh: _loadDashboardData,
+                            child: _buildSelectedTabContent(
+                              isDark,
+                              media.size.width,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-          ),
-        ],
+                      ],
+                    ),
+            ),
+          ],
+        ),
       ),
-    ),
     );
   }
 
@@ -581,10 +620,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(
-          bottom: BorderSide(
-            color: Color(0xFFCBD5E1),
-            width: 1.0,
-          ),
+          bottom: BorderSide(color: Color(0xFFCBD5E1), width: 1.0),
         ),
       ),
       child: Row(
@@ -600,7 +636,10 @@ class _DriverDashboardState extends State<DriverDashboard> {
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppTheme.navyColor,
                 side: const BorderSide(color: Color(0xFFCBD5E1)),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -669,7 +708,10 @@ class _DriverDashboardState extends State<DriverDashboard> {
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                contentPadding: EdgeInsets.symmetric(
+                  vertical: 10,
+                  horizontal: 12,
+                ),
               ),
             ),
           ),
@@ -685,7 +727,10 @@ class _DriverDashboardState extends State<DriverDashboard> {
             listenable: ChatService.instance,
             builder: (context, _) {
               final userId = auth.currentUser?.id ?? '';
-              final unread = ChatService.instance.getUnreadCount(userId, 'driver');
+              final unread = ChatService.instance.getUnreadCount(
+                userId,
+                'driver',
+              );
               return Stack(
                 clipBehavior: Clip.none,
                 children: [
@@ -707,7 +752,10 @@ class _DriverDashboardState extends State<DriverDashboard> {
                           color: Colors.redAccent,
                           shape: BoxShape.circle,
                         ),
-                        constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
                         child: Center(
                           child: Text(
                             '$unread',
@@ -761,7 +809,9 @@ class _DriverDashboardState extends State<DriverDashboard> {
       case 3:
         return 'Trip Duty History';
       case 4:
-        return _supportSubTab == 1 ? 'Station Admin Desk' : 'AI Support Dispatch';
+        return _supportSubTab == 1
+            ? 'Station Admin Desk'
+            : 'AI Support Dispatch';
       case 5:
         return 'Vehicle & Profile Settings';
       default:
@@ -777,10 +827,24 @@ class _DriverDashboardState extends State<DriverDashboard> {
     final menuItems = [
       {'title': 'Dashboard', 'icon': Icons.home_rounded, 'tab': 0},
       {'title': 'Deliveries Map', 'icon': Icons.map_rounded, 'tab': 1},
-      {'title': 'Gallon Collection', 'icon': Icons.assignment_return_rounded, 'tab': 2},
+      {
+        'title': 'Gallon Collection',
+        'icon': Icons.assignment_return_rounded,
+        'tab': 2,
+      },
       {'title': 'Duty History', 'icon': Icons.history_rounded, 'tab': 3},
-      {'title': 'Station Admin Desk', 'icon': Icons.support_agent_rounded, 'tab': 4, 'subTab': 1},
-      {'title': 'AI Chat Support', 'icon': Icons.smart_toy_rounded, 'tab': 4, 'subTab': 0},
+      {
+        'title': 'Station Admin Desk',
+        'icon': Icons.support_agent_rounded,
+        'tab': 4,
+        'subTab': 1,
+      },
+      {
+        'title': 'AI Chat Support',
+        'icon': Icons.smart_toy_rounded,
+        'tab': 4,
+        'subTab': 0,
+      },
       {'title': 'Settings', 'icon': Icons.settings_rounded, 'tab': 5},
     ];
 
@@ -789,9 +853,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
       height: double.infinity,
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(
-          right: BorderSide(color: Color(0xFFCBD5E1), width: 1),
-        ),
+        border: Border(right: BorderSide(color: Color(0xFFCBD5E1), width: 1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -806,9 +868,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
             ),
             decoration: const BoxDecoration(
               color: Color(0xFFF8FAFC),
-              border: Border(
-                bottom: BorderSide(color: Color(0xFFE2E8F0)),
-              ),
+              border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
             ),
             child: Row(
               children: [
@@ -858,9 +918,9 @@ class _DriverDashboardState extends State<DriverDashboard> {
               builder: (context, _) {
                 final unreadDesk = driverId.isNotEmpty
                     ? ChatService.instance
-                        .getConversationMessages('support_$driverId')
-                        .where((m) => !m.isRead && m.senderRole != 'driver')
-                        .length
+                          .getConversationMessages('support_$driverId')
+                          .where((m) => !m.isRead && m.senderRole != 'driver')
+                          .length
                     : 0;
 
                 return ListView.builder(
@@ -869,11 +929,15 @@ class _DriverDashboardState extends State<DriverDashboard> {
                     final item = menuItems[index];
                     final targetTab = item['tab'] as int;
                     final targetSubTab = item['subTab'] as int?;
-                    final bool isSelected = _activeSidebarMenu == index ||
+                    final bool isSelected =
+                        _activeSidebarMenu == index ||
                         (_selectedTab == targetTab &&
-                            (targetSubTab == null || _supportSubTab == targetSubTab));
+                            (targetSubTab == null ||
+                                _supportSubTab == targetSubTab));
 
-                    final badge = item['title'] == 'Station Admin Desk' ? unreadDesk : null;
+                    final badge = item['title'] == 'Station Admin Desk'
+                        ? unreadDesk
+                        : null;
 
                     return _SidebarItemTile(
                       icon: item['icon'] as IconData,
@@ -889,7 +953,10 @@ class _DriverDashboardState extends State<DriverDashboard> {
                           }
                         });
                         if (targetSubTab == 1 && driverId.isNotEmpty) {
-                          ChatService.instance.markConversationAsRead('support_$driverId', 'driver');
+                          ChatService.instance.markConversationAsRead(
+                            'support_$driverId',
+                            'driver',
+                          );
                           _scrollAdminChatToBottom();
                         }
                         if (isDrawer) {
@@ -1140,12 +1207,18 @@ class _DriverDashboardState extends State<DriverDashboard> {
                   icon: const Icon(Icons.playlist_add_check_rounded, size: 18),
                   label: Text(
                     'Accept All (${availableJobs.length})',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF10B981),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -1207,7 +1280,9 @@ class _DriverDashboardState extends State<DriverDashboard> {
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: 12,
-                              color: isDark ? Colors.white70 : const Color(0xFF475569),
+                              color: isDark
+                                  ? Colors.white70
+                                  : const Color(0xFF475569),
                             ),
                           ),
                         ],
@@ -1217,7 +1292,10 @@ class _DriverDashboardState extends State<DriverDashboard> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryColor,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                       ),
                       onPressed: () => setState(() {
                         _selectedTab = 1;
@@ -1225,7 +1303,10 @@ class _DriverDashboardState extends State<DriverDashboard> {
                       }),
                       child: const Text(
                         'View Map',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],
@@ -1273,13 +1354,20 @@ class _DriverDashboardState extends State<DriverDashboard> {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: (job.isCollectionJob ? const Color(0xFF10B981) : AppTheme.primaryColor)
-                                    .withValues(alpha: 0.12),
+                                color:
+                                    (job.isCollectionJob
+                                            ? const Color(0xFF10B981)
+                                            : AppTheme.primaryColor)
+                                        .withValues(alpha: 0.12),
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(
-                                job.isCollectionJob ? Icons.assignment_return_rounded : Icons.location_on_rounded,
-                                color: job.isCollectionJob ? const Color(0xFF059669) : AppTheme.primaryColor,
+                                job.isCollectionJob
+                                    ? Icons.assignment_return_rounded
+                                    : Icons.location_on_rounded,
+                                color: job.isCollectionJob
+                                    ? const Color(0xFF059669)
+                                    : AppTheme.primaryColor,
                                 size: 18,
                               ),
                             ),
@@ -1295,7 +1383,9 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 15,
-                                      color: isDark ? Colors.white : const Color(0xFF1E293B),
+                                      color: isDark
+                                          ? Colors.white
+                                          : const Color(0xFF1E293B),
                                     ),
                                   ),
                                   Text(
@@ -1303,7 +1393,9 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                     style: TextStyle(
                                       fontSize: 11,
                                       fontWeight: FontWeight.w500,
-                                      color: isDark ? Colors.white54 : const Color(0xFF64748B),
+                                      color: isDark
+                                          ? Colors.white54
+                                          : const Color(0xFF64748B),
                                     ),
                                   ),
                                 ],
@@ -1311,36 +1403,43 @@ class _DriverDashboardState extends State<DriverDashboard> {
                             ),
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
                                 color: job.isCollectionJob
-                                    ? const Color(0xFF10B981).withValues(alpha: 0.12)
+                                    ? const Color(
+                                        0xFF10B981,
+                                      ).withValues(alpha: 0.12)
                                     : (job.paymentMethod == 'GCash'
-                                        ? const Color(0xFFEFF6FF)
-                                        : const Color(0xFFFEF3C7)),
+                                          ? const Color(0xFFEFF6FF)
+                                          : const Color(0xFFFEF3C7)),
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
                                   color: job.isCollectionJob
-                                      ? const Color(0xFF10B981).withValues(alpha: 0.3)
+                                      ? const Color(
+                                          0xFF10B981,
+                                        ).withValues(alpha: 0.3)
                                       : (job.paymentMethod == 'GCash'
-                                          ? const Color(0xFF93C5FD)
-                                          : const Color(0xFFFCD34D)),
+                                            ? const Color(0xFF93C5FD)
+                                            : const Color(0xFFFCD34D)),
                                 ),
                               ),
                               child: Text(
                                 job.isCollectionJob
                                     ? 'Collection'
                                     : (job.paymentMethod == 'GCash'
-                                        ? '₱${orderTotal.toStringAsFixed(2)} • Paid'
-                                        : '₱${orderTotal.toStringAsFixed(2)} • COD'),
+                                          ? '₱${orderTotal.toStringAsFixed(2)} • Paid'
+                                          : '₱${orderTotal.toStringAsFixed(2)} • COD'),
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 11.5,
                                   color: job.isCollectionJob
                                       ? const Color(0xFF047857)
                                       : (job.paymentMethod == 'GCash'
-                                          ? const Color(0xFF1D4ED8)
-                                          : const Color(0xFFB45309)),
+                                            ? const Color(0xFF1D4ED8)
+                                            : const Color(0xFFB45309)),
                                 ),
                               ),
                             ),
@@ -1350,20 +1449,39 @@ class _DriverDashboardState extends State<DriverDashboard> {
                         // Assigned Directly Badge
                         if (job.orderStatus == OrderStatus.assigned &&
                             (job.driverId == driverId ||
-                             (driverName.isNotEmpty && job.driverName != null && job.driverName!.trim().toLowerCase() == driverName.trim().toLowerCase()) ||
-                             (driverEmail.isNotEmpty && (job.driverId == driverEmail || (job.driverName != null && job.driverName!.toLowerCase().contains(driverEmail.split('@').first))))))
+                                (driverName.isNotEmpty &&
+                                    job.driverName != null &&
+                                    job.driverName!.trim().toLowerCase() ==
+                                        driverName.trim().toLowerCase()) ||
+                                (driverEmail.isNotEmpty &&
+                                    (job.driverId == driverEmail ||
+                                        (job.driverName != null &&
+                                            job.driverName!
+                                                .toLowerCase()
+                                                .contains(
+                                                  driverEmail.split('@').first,
+                                                ))))))
                           Container(
                             margin: const EdgeInsets.only(top: 10),
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
                               color: const Color(0xFFFEF3C7),
                               borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: const Color(0xFFF59E0B)),
+                              border: Border.all(
+                                color: const Color(0xFFF59E0B),
+                              ),
                             ),
                             child: const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.star_rounded, size: 13, color: Color(0xFFD97706)),
+                                Icon(
+                                  Icons.star_rounded,
+                                  size: 13,
+                                  color: Color(0xFFD97706),
+                                ),
                                 SizedBox(width: 4),
                                 Text(
                                   'Assigned directly to you by Admin',
@@ -1386,7 +1504,9 @@ class _DriverDashboardState extends State<DriverDashboard> {
                               Icon(
                                 Icons.place_outlined,
                                 size: 14,
-                                color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
+                                color: isDark
+                                    ? Colors.white54
+                                    : const Color(0xFF94A3B8),
                               ),
                               const SizedBox(width: 4),
                               Expanded(
@@ -1397,7 +1517,9 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                   style: TextStyle(
                                     fontSize: 12,
                                     height: 1.3,
-                                    color: isDark ? Colors.white70 : const Color(0xFF475569),
+                                    color: isDark
+                                        ? Colors.white70
+                                        : const Color(0xFF475569),
                                   ),
                                 ),
                               ),
@@ -1412,9 +1534,14 @@ class _DriverDashboardState extends State<DriverDashboard> {
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
                               decoration: BoxDecoration(
-                                color: AppTheme.secondaryColor.withValues(alpha: 0.08),
+                                color: AppTheme.secondaryColor.withValues(
+                                  alpha: 0.08,
+                                ),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
@@ -1428,16 +1555,29 @@ class _DriverDashboardState extends State<DriverDashboard> {
                             ),
                             if (job.isCollectionJob)
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                                  color: const Color(
+                                    0xFF10B981,
+                                  ).withValues(alpha: 0.12),
                                   borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                                  border: Border.all(
+                                    color: const Color(
+                                      0xFF10B981,
+                                    ).withValues(alpha: 0.3),
+                                  ),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.assignment_return_rounded, size: 12, color: Color(0xFF059669)),
+                                    const Icon(
+                                      Icons.assignment_return_rounded,
+                                      size: 12,
+                                      color: Color(0xFF059669),
+                                    ),
                                     const SizedBox(width: 4),
                                     Text(
                                       'Weekly Collection • ${(job.borrowedSlimCount ?? 0) > 0 ? '${job.borrowedSlimCount} Slim ' : ''}${(job.borrowedRoundCount ?? 0) > 0 ? '${job.borrowedRoundCount} Round ' : ''}Target',
@@ -1450,18 +1590,29 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                   ],
                                 ),
                               )
-                            else if (job.isBorrowingContainers || (job.borrowedSlimCount ?? 0) > 0 || (job.borrowedRoundCount ?? 0) > 0)
+                            else if (job.isBorrowingContainers ||
+                                (job.borrowedSlimCount ?? 0) > 0 ||
+                                (job.borrowedRoundCount ?? 0) > 0)
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
                                 decoration: BoxDecoration(
                                   color: Colors.amber.withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+                                  border: Border.all(
+                                    color: Colors.amber.withValues(alpha: 0.4),
+                                  ),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.people_alt_rounded, size: 11, color: Colors.amber),
+                                    const Icon(
+                                      Icons.people_alt_rounded,
+                                      size: 11,
+                                      color: Colors.amber,
+                                    ),
                                     const SizedBox(width: 4),
                                     Text(
                                       'Borrowing: ${_formatBorrowSummary(job)}',
@@ -1476,7 +1627,10 @@ class _DriverDashboardState extends State<DriverDashboard> {
                               )
                             else
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
                                 decoration: BoxDecoration(
                                   color: Colors.blue.withValues(alpha: 0.08),
                                   borderRadius: BorderRadius.circular(6),
@@ -1500,7 +1654,9 @@ class _DriverDashboardState extends State<DriverDashboard> {
                           child: ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 10),
-                              backgroundColor: job.isCollectionJob ? const Color(0xFF10B981) : AppTheme.primaryColor,
+                              backgroundColor: job.isCollectionJob
+                                  ? const Color(0xFF10B981)
+                                  : AppTheme.primaryColor,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
@@ -1509,11 +1665,15 @@ class _DriverDashboardState extends State<DriverDashboard> {
                             ),
                             onPressed: () => _acceptDeliveryJob(job),
                             icon: Icon(
-                              job.isCollectionJob ? Icons.assignment_turned_in_rounded : Icons.check_circle_rounded,
+                              job.isCollectionJob
+                                  ? Icons.assignment_turned_in_rounded
+                                  : Icons.check_circle_rounded,
                               size: 16,
                             ),
                             label: Text(
-                              job.isCollectionJob ? 'Accept Task' : 'Accept Job',
+                              job.isCollectionJob
+                                  ? 'Accept Task'
+                                  : 'Accept Job',
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
@@ -1627,7 +1787,10 @@ class _DriverDashboardState extends State<DriverDashboard> {
                     }
                   });
                   if (act['subTab'] == 1 && driverId.isNotEmpty) {
-                    ChatService.instance.markConversationAsRead('support_$driverId', 'driver');
+                    ChatService.instance.markConversationAsRead(
+                      'support_$driverId',
+                      'driver',
+                    );
                     _scrollAdminChatToBottom();
                   }
                 },
@@ -1648,25 +1811,29 @@ class _DriverDashboardState extends State<DriverDashboard> {
                       Stack(
                         clipBehavior: Clip.none,
                         children: [
-                          Icon(
-                            act['icon'] as IconData,
-                            color: color,
-                            size: 24,
-                          ),
+                          Icon(act['icon'] as IconData, color: color, size: 24),
                           if (isMessageAdmin && driverId.isNotEmpty)
                             AnimatedBuilder(
                               animation: ChatService.instance,
                               builder: (context, _) {
                                 final unread = ChatService.instance
-                                    .getConversationMessages('support_$driverId')
-                                    .where((m) => !m.isRead && m.senderRole != 'driver')
+                                    .getConversationMessages(
+                                      'support_$driverId',
+                                    )
+                                    .where(
+                                      (m) =>
+                                          !m.isRead && m.senderRole != 'driver',
+                                    )
                                     .length;
                                 if (unread == 0) return const SizedBox.shrink();
                                 return Positioned(
                                   top: -4,
                                   right: -10,
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 5,
+                                      vertical: 1.5,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFFEF4444),
                                       borderRadius: BorderRadius.circular(10),
@@ -1920,8 +2087,8 @@ class _DriverDashboardState extends State<DriverDashboard> {
     final mapHeaderTitle = (hasCollections && !hasDeliveries)
         ? 'Active Collection Route (${activeJobs.length} Stops)'
         : (hasCollections && hasDeliveries)
-            ? 'Active Route (${activeJobs.length} Stops: Collections & Deliveries)'
-            : 'Active Deliveries (${activeJobs.length})';
+        ? 'Active Route (${activeJobs.length} Stops: Collections & Deliveries)'
+        : 'Active Deliveries (${activeJobs.length})';
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -1932,8 +2099,12 @@ class _DriverDashboardState extends State<DriverDashboard> {
           Row(
             children: [
               Icon(
-                hasCollections ? Icons.assignment_return_rounded : Icons.navigation_rounded,
-                color: hasCollections ? const Color(0xFF059669) : AppTheme.primaryColor,
+                hasCollections
+                    ? Icons.assignment_return_rounded
+                    : Icons.navigation_rounded,
+                color: hasCollections
+                    ? const Color(0xFF059669)
+                    : AppTheme.primaryColor,
                 size: 20,
               ),
               const SizedBox(width: 8),
@@ -1989,15 +2160,23 @@ class _DriverDashboardState extends State<DriverDashboard> {
                       'Stop ${idx + 1} ($prefix): ${job.customerName}',
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight: isFocused ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: isFocused
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                         color: isFocused
                             ? Colors.white
-                            : (isDark ? Colors.white70 : const Color(0xFF334155)),
+                            : (isDark
+                                  ? Colors.white70
+                                  : const Color(0xFF334155)),
                       ),
                     ),
                     selected: isFocused,
-                    selectedColor: job.isCollectionJob ? const Color(0xFF10B981) : AppTheme.primaryColor,
-                    backgroundColor: isDark ? Colors.white10 : const Color(0xFFF1F5F9),
+                    selectedColor: job.isCollectionJob
+                        ? const Color(0xFF10B981)
+                        : AppTheme.primaryColor,
+                    backgroundColor: isDark
+                        ? Colors.white10
+                        : const Color(0xFFF1F5F9),
                     onSelected: (selected) {
                       if (selected) {
                         setState(() {
@@ -2089,7 +2268,9 @@ class _DriverDashboardState extends State<DriverDashboard> {
                     boxShadow: isFocused
                         ? [
                             BoxShadow(
-                              color: AppTheme.primaryColor.withValues(alpha: 0.12),
+                              color: AppTheme.primaryColor.withValues(
+                                alpha: 0.12,
+                              ),
                               blurRadius: 8,
                               offset: const Offset(0, 3),
                             ),
@@ -2105,17 +2286,27 @@ class _DriverDashboardState extends State<DriverDashboard> {
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
                               color: job.isCollectionJob
-                                  ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                                  ? const Color(
+                                      0xFF10B981,
+                                    ).withValues(alpha: 0.15)
                                   : (isFocused
-                                      ? AppTheme.primaryColor.withValues(alpha: 0.15)
-                                      : (isDark ? Colors.white10 : const Color(0xFFF1F5F9))),
+                                        ? AppTheme.primaryColor.withValues(
+                                            alpha: 0.15,
+                                          )
+                                        : (isDark
+                                              ? Colors.white10
+                                              : const Color(0xFFF1F5F9))),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
-                              job.isCollectionJob ? Icons.assignment_return_rounded : Icons.location_on_rounded,
+                              job.isCollectionJob
+                                  ? Icons.assignment_return_rounded
+                                  : Icons.location_on_rounded,
                               color: job.isCollectionJob
                                   ? const Color(0xFF059669)
-                                  : (isFocused ? AppTheme.primaryColor : Colors.grey),
+                                  : (isFocused
+                                        ? AppTheme.primaryColor
+                                        : Colors.grey),
                               size: 20,
                             ),
                           ),
@@ -2136,17 +2327,24 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 14,
-                                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                          color: isDark
+                                              ? Colors.white
+                                              : const Color(0xFF0F172A),
                                         ),
                                       ),
                                     ),
                                     const SizedBox(width: 6),
                                     if (job.isCollectionJob)
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
                                         decoration: BoxDecoration(
                                           color: const Color(0xFF10B981),
-                                          borderRadius: BorderRadius.circular(4),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
                                         ),
                                         child: const Text(
                                           'COLLECTION TASK',
@@ -2159,10 +2357,15 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                       )
                                     else if (isFocused)
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
                                         decoration: BoxDecoration(
                                           color: AppTheme.primaryColor,
-                                          borderRadius: BorderRadius.circular(4),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
                                         ),
                                         child: const Text(
                                           'NAVIGATING',
@@ -2182,7 +2385,9 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: isDark ? Colors.white70 : const Color(0xFF475569),
+                                    color: isDark
+                                        ? Colors.white70
+                                        : const Color(0xFF475569),
                                   ),
                                 ),
                               ],
@@ -2197,10 +2402,16 @@ class _DriverDashboardState extends State<DriverDashboard> {
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
-                              color: (job.isCollectionJob ? const Color(0xFF10B981) : AppTheme.secondaryColor)
-                                  .withValues(alpha: 0.1),
+                              color:
+                                  (job.isCollectionJob
+                                          ? const Color(0xFF10B981)
+                                          : AppTheme.secondaryColor)
+                                      .withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -2208,7 +2419,9 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                   ? 'Task: ${job.itemsSummary} • Dist: ${job.distance}'
                                   : 'Items: ${job.itemsSummary} • Dist: ${job.distance}',
                               style: TextStyle(
-                                color: job.isCollectionJob ? const Color(0xFF047857) : AppTheme.secondaryColor,
+                                color: job.isCollectionJob
+                                    ? const Color(0xFF047857)
+                                    : AppTheme.secondaryColor,
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -2216,7 +2429,10 @@ class _DriverDashboardState extends State<DriverDashboard> {
                           ),
                           if (!job.isCollectionJob)
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
                                 color: job.paymentMethod == 'GCash'
                                     ? const Color(0xFFEFF6FF)
@@ -2243,9 +2459,14 @@ class _DriverDashboardState extends State<DriverDashboard> {
                             )
                           else
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                                color: const Color(
+                                  0xFF10B981,
+                                ).withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: const Text(
@@ -2262,16 +2483,29 @@ class _DriverDashboardState extends State<DriverDashboard> {
                       const SizedBox(height: 6),
                       if (job.isCollectionJob)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                            color: const Color(
+                              0xFF10B981,
+                            ).withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.4)),
+                            border: Border.all(
+                              color: const Color(
+                                0xFF10B981,
+                              ).withValues(alpha: 0.4),
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.assignment_return_rounded, size: 12, color: Color(0xFF059669)),
+                              const Icon(
+                                Icons.assignment_return_rounded,
+                                size: 12,
+                                color: Color(0xFF059669),
+                              ),
                               const SizedBox(width: 4),
                               Text(
                                 '🔄 Gallon Retrieval • Target: ${(job.borrowedSlimCount ?? 0) > 0 ? '${job.borrowedSlimCount} Slim ' : ''}${(job.borrowedRoundCount ?? 0) > 0 ? '${job.borrowedRoundCount} Round ' : ''}${job.quantity > 0 && (job.borrowedSlimCount ?? 0) == 0 && (job.borrowedRoundCount ?? 0) == 0 ? '${job.quantity} Jugs' : ''}',
@@ -2284,18 +2518,29 @@ class _DriverDashboardState extends State<DriverDashboard> {
                             ],
                           ),
                         )
-                      else if (job.isBorrowingContainers || (job.borrowedSlimCount ?? 0) > 0 || (job.borrowedRoundCount ?? 0) > 0)
+                      else if (job.isBorrowingContainers ||
+                          (job.borrowedSlimCount ?? 0) > 0 ||
+                          (job.borrowedRoundCount ?? 0) > 0)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.amber.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+                            border: Border.all(
+                              color: Colors.amber.withValues(alpha: 0.4),
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.people_alt_rounded, size: 12, color: Colors.amber),
+                              const Icon(
+                                Icons.people_alt_rounded,
+                                size: 12,
+                                color: Colors.amber,
+                              ),
                               const SizedBox(width: 4),
                               Text(
                                 'Borrowing: ${_formatBorrowSummary(job)}',
@@ -2310,7 +2555,10 @@ class _DriverDashboardState extends State<DriverDashboard> {
                         )
                       else
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.blue.withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(6),
@@ -2324,7 +2572,8 @@ class _DriverDashboardState extends State<DriverDashboard> {
                             ),
                           ),
                         ),
-                      if (job.deliveryNote != null && job.deliveryNote!.trim().isNotEmpty) ...[
+                      if (job.deliveryNote != null &&
+                          job.deliveryNote!.trim().isNotEmpty) ...[
                         const SizedBox(height: 6),
                         Container(
                           padding: const EdgeInsets.all(6),
@@ -2344,19 +2593,30 @@ class _DriverDashboardState extends State<DriverDashboard> {
                           ),
                         ),
                       ],
-                      if (job.deliveryNote?.contains('[SWAP_REPLACEMENT:') == true) ...[
+                      if (job.deliveryNote?.contains('[SWAP_REPLACEMENT:') ==
+                          true) ...[
                         const SizedBox(height: 6),
                         Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFF3E8FF),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0xFFC084FC), width: 1.5),
+                            border: Border.all(
+                              color: const Color(0xFFC084FC),
+                              width: 1.5,
+                            ),
                           ),
                           child: const Row(
                             children: [
-                              Icon(Icons.swap_horizontal_circle_rounded, color: Color(0xFF7E22CE), size: 18),
+                              Icon(
+                                Icons.swap_horizontal_circle_rounded,
+                                color: Color(0xFF7E22CE),
+                                size: 18,
+                              ),
                               SizedBox(width: 8),
                               Expanded(
                                 child: Text(
@@ -2386,10 +2646,16 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                   _selectedActiveOrderId = job.id;
                                 });
                               },
-                              icon: const Icon(Icons.center_focus_strong_rounded, size: 14),
+                              icon: const Icon(
+                                Icons.center_focus_strong_rounded,
+                                size: 14,
+                              ),
                               label: const Text('Focus Map'),
                               style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
                                 textStyle: const TextStyle(fontSize: 11),
                                 visualDensity: VisualDensity.compact,
                               ),
@@ -2407,13 +2673,22 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                 phone: job.customerPhone,
                               );
                             },
-                            icon: const Icon(Icons.navigation_rounded, size: 14),
+                            icon: const Icon(
+                              Icons.navigation_rounded,
+                              size: 14,
+                            ),
                             label: const Text('Navigate'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF1D63B8),
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              textStyle: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
                               visualDensity: VisualDensity.compact,
                             ),
                           ),
@@ -2424,7 +2699,13 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                 final matchingBorrow = borrows.firstWhere(
                                   (b) =>
                                       (b['customerId'] == job.customerId ||
-                                       b['customerName']?.toString().trim().toLowerCase() == job.customerName.trim().toLowerCase()) &&
+                                          b['customerName']
+                                                  ?.toString()
+                                                  .trim()
+                                                  .toLowerCase() ==
+                                              job.customerName
+                                                  .trim()
+                                                  .toLowerCase()) &&
                                       b['isReturned'] == false,
                                   orElse: () => {
                                     'orderId': job.id,
@@ -2432,32 +2713,60 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                     'customerName': job.customerName,
                                     'customerPhone': job.customerPhone,
                                     'deliveryAddress': job.deliveryAddress,
-                                    'gallonType': (job.borrowedRoundCount ?? 0) > 0 ? '5-Gallon Round' : '5-Gallon Slim',
-                                    'quantity': job.quantity > 0 ? job.quantity : ((job.borrowedSlimCount ?? 0) + (job.borrowedRoundCount ?? 0)),
+                                    'gallonType':
+                                        (job.borrowedRoundCount ?? 0) > 0
+                                        ? '5-Gallon Round'
+                                        : '5-Gallon Slim',
+                                    'quantity': job.quantity > 0
+                                        ? job.quantity
+                                        : ((job.borrowedSlimCount ?? 0) +
+                                              (job.borrowedRoundCount ?? 0)),
                                   },
                                 );
-                                _showCollectGallonsDialog(context, matchingBorrow, collectionJob: job);
+                                _showCollectGallonsDialog(
+                                  context,
+                                  matchingBorrow,
+                                  collectionJob: job,
+                                );
                               },
-                              icon: const Icon(Icons.assignment_return_rounded, size: 14),
+                              icon: const Icon(
+                                Icons.assignment_return_rounded,
+                                size: 14,
+                              ),
                               label: const Text('Collect Gallons'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF10B981),
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                textStyle: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
                                 visualDensity: VisualDensity.compact,
                               ),
                             )
                           else
                             ElevatedButton.icon(
                               onPressed: () => _completeActiveJob(job),
-                              icon: const Icon(Icons.check_circle_rounded, size: 14),
+                              icon: const Icon(
+                                Icons.check_circle_rounded,
+                                size: 14,
+                              ),
                               label: const Text('Delivered'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF10B981),
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
+                                textStyle: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
                                 visualDensity: VisualDensity.compact,
                               ),
                             ),
@@ -2495,37 +2804,64 @@ class _DriverDashboardState extends State<DriverDashboard> {
     final orderProvider = Provider.of<OrderProvider>(context);
     final driverName = auth.currentUser?.name ?? 'Driver';
     final currentDriverId = auth.currentUser?.id ?? '';
-    final currentDriverName = (auth.currentUser?.name ?? '').trim().toLowerCase();
-    final currentDriverEmail = (auth.currentUser?.email ?? '').trim().toLowerCase();
+    final currentDriverName = (auth.currentUser?.name ?? '')
+        .trim()
+        .toLowerCase();
+    final currentDriverEmail = (auth.currentUser?.email ?? '')
+        .trim()
+        .toLowerCase();
 
     bool driverMatchesOrder(OrderModel o) {
       final cleanId = currentDriverId.trim();
       final cleanName = currentDriverName;
       final cleanEmail = currentDriverEmail;
 
-      if (cleanId.isNotEmpty && o.driverId != null && o.driverId == cleanId) return true;
+      if (cleanId.isNotEmpty && o.driverId != null && o.driverId == cleanId) {
+        return true;
+      }
       if (cleanName.isNotEmpty && o.driverName != null) {
         final oName = o.driverName!.trim().toLowerCase();
-        if (oName == cleanName || oName.contains(cleanName) || cleanName.contains(oName)) return true;
+        if (oName == cleanName ||
+            oName.contains(cleanName) ||
+            cleanName.contains(oName)) {
+          return true;
+        }
       }
       if (cleanEmail.isNotEmpty) {
-        if (o.driverId != null && o.driverId!.trim().toLowerCase() == cleanEmail) return true;
+        if (o.driverId != null &&
+            o.driverId!.trim().toLowerCase() == cleanEmail) {
+          return true;
+        }
         final emailPrefix = cleanEmail.split('@').first;
         if (emailPrefix.length >= 3 && o.driverName != null) {
-          if (o.driverName!.toLowerCase().replaceAll(' ', '').contains(emailPrefix)) return true;
+          if (o.driverName!
+              .toLowerCase()
+              .replaceAll(' ', '')
+              .contains(emailPrefix)) {
+            return true;
+          }
         }
       }
       return false;
     }
 
     final activeCollectionJobs = orderProvider.orders
-        .where((o) => o.isCollectionJob && driverMatchesOrder(o) && o.orderStatus != OrderStatus.cancelled && o.orderStatus != OrderStatus.completed)
+        .where(
+          (o) =>
+              o.isCollectionJob &&
+              driverMatchesOrder(o) &&
+              o.orderStatus != OrderStatus.cancelled &&
+              o.orderStatus != OrderStatus.completed,
+        )
         .toList();
     final int assignedRouteCount = activeCollectionJobs.length;
 
     final borrows = orderProvider.customerBorrows;
-    final activeBorrows = borrows.where((b) => b['isReturned'] == false).toList();
-    final dailyCollectedCount = orderProvider.getDriverDailyCollectedGallonsCount(driverName);
+    final activeBorrows = borrows
+        .where((b) => b['isReturned'] == false)
+        .toList();
+    final dailyCollectedCount = orderProvider
+        .getDriverDailyCollectedGallonsCount(driverName);
     final totalActiveBorrows = orderProvider.totalActiveBorrowedGallons;
 
     final query = _gallonSearchController.text.trim().toLowerCase();
@@ -2536,7 +2872,11 @@ class _DriverDashboardState extends State<DriverDashboard> {
       final addr = (b['deliveryAddress'] as String? ?? '').toLowerCase();
       final txn = (b['txnId'] as String? ?? '').toLowerCase();
       final gType = (b['gallonType'] as String? ?? '').toLowerCase();
-      return name.contains(query) || phone.contains(query) || addr.contains(query) || txn.contains(query) || gType.contains(query);
+      return name.contains(query) ||
+          phone.contains(query) ||
+          addr.contains(query) ||
+          txn.contains(query) ||
+          gType.contains(query);
     }).toList();
 
     final cardBgColor = isDark ? AppTheme.darkSurface : Colors.white;
@@ -2580,7 +2920,8 @@ class _DriverDashboardState extends State<DriverDashboard> {
               );
               final card2 = _buildGallonStatCard(
                 title: 'Active Customers with Jugs',
-                value: '${activeBorrows.length} Customer${activeBorrows.length == 1 ? '' : 's'}',
+                value:
+                    '${activeBorrows.length} Customer${activeBorrows.length == 1 ? '' : 's'}',
                 subtitle: 'Customers with outstanding gallons',
                 icon: Icons.assignment_ind_rounded,
                 color: const Color(0xFF2563EB),
@@ -2643,7 +2984,10 @@ class _DriverDashboardState extends State<DriverDashboard> {
                         },
                       )
                     : null,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
               ),
             ),
           ),
@@ -2657,7 +3001,9 @@ class _DriverDashboardState extends State<DriverDashboard> {
               decoration: BoxDecoration(
                 color: const Color(0xFF10B981).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.4)),
+                border: Border.all(
+                  color: const Color(0xFF10B981).withValues(alpha: 0.4),
+                ),
               ),
               child: Row(
                 children: [
@@ -2667,7 +3013,11 @@ class _DriverDashboardState extends State<DriverDashboard> {
                       color: Color(0xFF10B981),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.local_shipping_rounded, color: Colors.white, size: 20),
+                    child: const Icon(
+                      Icons.local_shipping_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -2676,11 +3026,20 @@ class _DriverDashboardState extends State<DriverDashboard> {
                       children: [
                         Text(
                           '🌟 Weekly Route Active • $assignedRouteCount Dispatched Customers',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF065F46)),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: Color(0xFF065F46),
+                          ),
                         ),
                         Text(
                           'Dispatched by Admin • All customer collection buttons are unlocked for real-time returns.',
-                          style: TextStyle(fontSize: 11, color: isDark ? Colors.white70 : const Color(0xFF047857)),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDark
+                                ? Colors.white70
+                                : const Color(0xFF047857),
+                          ),
                         ),
                       ],
                     ),
@@ -2701,7 +3060,11 @@ class _DriverDashboardState extends State<DriverDashboard> {
               ),
               child: Column(
                 children: [
-                  const Icon(Icons.check_circle_outline_rounded, size: 48, color: Color(0xFF10B981)),
+                  const Icon(
+                    Icons.check_circle_outline_rounded,
+                    size: 48,
+                    color: Color(0xFF10B981),
+                  ),
                   const SizedBox(height: 12),
                   Text(
                     activeBorrows.isEmpty
@@ -2724,7 +3087,8 @@ class _DriverDashboardState extends State<DriverDashboard> {
                 final b = filteredBorrows[index];
                 final custName = b['customerName'] as String? ?? 'Customer';
                 final phone = b['customerPhone'] as String? ?? 'No phone';
-                final rawAddress = b['deliveryAddress'] as String? ?? 'No address';
+                final rawAddress =
+                    b['deliveryAddress'] as String? ?? 'No address';
                 final address = rawAddress
                     .replaceAll(RegExp(r'\[BORROWED_[A-Z]+:\d+\]'), '')
                     .replaceAll('[GALLONS_RETURNED]', '')
@@ -2759,9 +3123,13 @@ class _DriverDashboardState extends State<DriverDashboard> {
                         children: [
                           CircleAvatar(
                             radius: 20,
-                            backgroundColor: (isSlim ? Colors.indigo : Colors.deepPurple).withValues(alpha: 0.12),
+                            backgroundColor:
+                                (isSlim ? Colors.indigo : Colors.deepPurple)
+                                    .withValues(alpha: 0.12),
                             child: Icon(
-                              isSlim ? Icons.local_drink_rounded : Icons.crop_portrait_rounded,
+                              isSlim
+                                  ? Icons.local_drink_rounded
+                                  : Icons.crop_portrait_rounded,
                               color: isSlim ? Colors.indigo : Colors.deepPurple,
                               size: 20,
                             ),
@@ -2781,15 +3149,26 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 15,
-                                        color: isDark ? Colors.white : const Color(0xFF1E293B),
+                                        color: isDark
+                                            ? Colors.white
+                                            : const Color(0xFF1E293B),
                                       ),
                                     ),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
                                       decoration: BoxDecoration(
-                                        color: Colors.amber.withValues(alpha: 0.15),
+                                        color: Colors.amber.withValues(
+                                          alpha: 0.15,
+                                        ),
                                         borderRadius: BorderRadius.circular(6),
-                                        border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+                                        border: Border.all(
+                                          color: Colors.amber.withValues(
+                                            alpha: 0.4,
+                                          ),
+                                        ),
                                       ),
                                       child: Text(
                                         'Owes $qty $gType',
@@ -2809,7 +3188,9 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                     Icon(
                                       Icons.location_on_rounded,
                                       size: 14,
-                                      color: isDark ? Colors.white54 : const Color(0xFF64748B),
+                                      color: isDark
+                                          ? Colors.white54
+                                          : const Color(0xFF64748B),
                                     ),
                                     const SizedBox(width: 4),
                                     Expanded(
@@ -2817,7 +3198,9 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                         address,
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color: isDark ? Colors.white70 : const Color(0xFF475569),
+                                          color: isDark
+                                              ? Colors.white70
+                                              : const Color(0xFF475569),
                                         ),
                                       ),
                                     ),
@@ -2835,7 +3218,9 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                         Icon(
                                           Icons.phone_rounded,
                                           size: 13,
-                                          color: isDark ? Colors.white54 : const Color(0xFF64748B),
+                                          color: isDark
+                                              ? Colors.white54
+                                              : const Color(0xFF64748B),
                                         ),
                                         const SizedBox(width: 4),
                                         Text(
@@ -2843,7 +3228,9 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                           style: TextStyle(
                                             fontSize: 11,
                                             fontWeight: FontWeight.w500,
-                                            color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                                            color: isDark
+                                                ? Colors.white70
+                                                : const Color(0xFF64748B),
                                           ),
                                         ),
                                       ],
@@ -2852,7 +3239,9 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                       '• Ref: $txnId',
                                       style: TextStyle(
                                         fontSize: 11,
-                                        color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
+                                        color: isDark
+                                            ? Colors.white54
+                                            : const Color(0xFF94A3B8),
                                       ),
                                     ),
                                   ],
@@ -2867,50 +3256,101 @@ class _DriverDashboardState extends State<DriverDashboard> {
                         builder: (context) {
                           final custId = b['customerId'] as String? ?? '';
                           final currentDriverId = auth.currentUser?.id ?? '';
-                          final currentDriverName = (auth.currentUser?.name ?? '').trim().toLowerCase();
-                          final currentDriverEmail = (auth.currentUser?.email ?? '').trim().toLowerCase();
+                          final currentDriverName =
+                              (auth.currentUser?.name ?? '')
+                                  .trim()
+                                  .toLowerCase();
+                          final currentDriverEmail =
+                              (auth.currentUser?.email ?? '')
+                                  .trim()
+                                  .toLowerCase();
 
-                          final driverCollectionJob = orderProvider.orders.cast<OrderModel?>().firstWhere(
-                            (o) {
-                              if (o == null) return false;
-                              if (!o.isCollectionJob) return false;
-                              if (o.orderStatus == OrderStatus.cancelled || o.orderStatus == OrderStatus.completed) return false;
+                          final driverCollectionJob = orderProvider.orders
+                              .cast<OrderModel?>()
+                              .firstWhere((o) {
+                                if (o == null) return false;
+                                if (!o.isCollectionJob) return false;
+                                if (o.orderStatus == OrderStatus.cancelled ||
+                                    o.orderStatus == OrderStatus.completed) {
+                                  return false;
+                                }
 
-                              final matchesDriver = (currentDriverId.isNotEmpty && o.driverId == currentDriverId) ||
-                                  (currentDriverName.isNotEmpty && o.driverName != null &&
-                                      (o.driverName!.trim().toLowerCase() == currentDriverName ||
-                                       o.driverName!.trim().toLowerCase().contains(currentDriverName) ||
-                                       currentDriverName.contains(o.driverName!.trim().toLowerCase()))) ||
-                                  (currentDriverEmail.isNotEmpty &&
-                                      (o.driverId == currentDriverEmail ||
-                                       (o.driverName != null && o.driverName!.toLowerCase().contains(currentDriverEmail.split('@').first))));
+                                final matchesDriver =
+                                    (currentDriverId.isNotEmpty &&
+                                        o.driverId == currentDriverId) ||
+                                    (currentDriverName.isNotEmpty &&
+                                        o.driverName != null &&
+                                        (o.driverName!.trim().toLowerCase() ==
+                                                currentDriverName ||
+                                            o.driverName!
+                                                .trim()
+                                                .toLowerCase()
+                                                .contains(currentDriverName) ||
+                                            currentDriverName.contains(
+                                              o.driverName!
+                                                  .trim()
+                                                  .toLowerCase(),
+                                            ))) ||
+                                    (currentDriverEmail.isNotEmpty &&
+                                        (o.driverId == currentDriverEmail ||
+                                            (o.driverName != null &&
+                                                o.driverName!
+                                                    .toLowerCase()
+                                                    .contains(
+                                                      currentDriverEmail
+                                                          .split('@')
+                                                          .first,
+                                                    ))));
 
-                              if (!matchesDriver) return false;
+                                if (!matchesDriver) return false;
 
-                              final matchesCust = (custId.isNotEmpty && o.customerId == custId) ||
-                                  (custName.isNotEmpty &&
-                                      (o.customerName.trim().toLowerCase() == custName.trim().toLowerCase() ||
-                                       o.customerName.trim().toLowerCase().contains(custName.trim().toLowerCase()) ||
-                                       custName.trim().toLowerCase().contains(o.customerName.trim().toLowerCase()))) ||
-                                  (txnId.isNotEmpty && (o.deliveryNote?.contains(txnId) ?? false));
+                                final matchesCust =
+                                    (custId.isNotEmpty &&
+                                        o.customerId == custId) ||
+                                    (custName.isNotEmpty &&
+                                        (o.customerName.trim().toLowerCase() ==
+                                                custName.trim().toLowerCase() ||
+                                            o.customerName
+                                                .trim()
+                                                .toLowerCase()
+                                                .contains(
+                                                  custName.trim().toLowerCase(),
+                                                ) ||
+                                            custName
+                                                .trim()
+                                                .toLowerCase()
+                                                .contains(
+                                                  o.customerName
+                                                      .trim()
+                                                      .toLowerCase(),
+                                                ))) ||
+                                    (txnId.isNotEmpty &&
+                                        (o.deliveryNote?.contains(txnId) ??
+                                            false));
 
-                              return matchesCust;
-                            },
-                            orElse: () => null,
-                          );
+                                return matchesCust;
+                              }, orElse: () => null);
 
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              if (driverCollectionJob != null || assignedRouteCount > 0)
+                              if (driverCollectionJob != null ||
+                                  assignedRouteCount > 0)
                                 Container(
                                   margin: const EdgeInsets.only(bottom: 10),
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                                    color: const Color(
+                                      0xFF10B981,
+                                    ).withValues(alpha: 0.12),
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
-                                      color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                                      color: const Color(
+                                        0xFF10B981,
+                                      ).withValues(alpha: 0.3),
                                     ),
                                   ),
                                   child: const Row(
@@ -2936,11 +3376,17 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                 ),
                               SizedBox(
                                 width: double.infinity,
-                                child: (driverCollectionJob != null || assignedRouteCount > 0)
+                                child:
+                                    (driverCollectionJob != null ||
+                                        assignedRouteCount > 0)
                                     ? ElevatedButton.icon(
                                         onPressed: () {
-                                          if (driverCollectionJob != null && driverCollectionJob.orderStatus != OrderStatus.onDelivery) {
-                                            _acceptDeliveryJob(driverCollectionJob);
+                                          if (driverCollectionJob != null &&
+                                              driverCollectionJob.orderStatus !=
+                                                  OrderStatus.onDelivery) {
+                                            _acceptDeliveryJob(
+                                              driverCollectionJob,
+                                            );
                                           }
                                           _showCollectGallonsDialog(
                                             context,
@@ -2948,14 +3394,30 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                             collectionJob: driverCollectionJob,
                                           );
                                         },
-                                        icon: const Icon(Icons.assignment_return_rounded, size: 16),
-                                        label: const Text('Log Return / Collect Gallons'),
+                                        icon: const Icon(
+                                          Icons.assignment_return_rounded,
+                                          size: 16,
+                                        ),
+                                        label: const Text(
+                                          'Log Return / Collect Gallons',
+                                        ),
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: const Color(0xFF10B981),
+                                          backgroundColor: const Color(
+                                            0xFF10B981,
+                                          ),
                                           foregroundColor: Colors.white,
-                                          padding: const EdgeInsets.symmetric(vertical: 12),
-                                          textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 12,
+                                          ),
+                                          textStyle: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                          ),
                                           elevation: 0,
                                         ),
                                       )
@@ -2966,14 +3428,32 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                             'Awaiting Admin job order. The Admin has not scheduled a weekly collection route for your account yet.',
                                           );
                                         },
-                                        icon: const Icon(Icons.lock_outline_rounded, size: 16),
-                                        label: const Text('🔒 Awaiting Admin Job Order'),
+                                        icon: const Icon(
+                                          Icons.lock_outline_rounded,
+                                          size: 16,
+                                        ),
+                                        label: const Text(
+                                          '🔒 Awaiting Admin Job Order',
+                                        ),
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: isDark ? Colors.white10 : const Color(0xFFF1F5F9),
-                                          foregroundColor: isDark ? Colors.white54 : const Color(0xFF64748B),
-                                          padding: const EdgeInsets.symmetric(vertical: 12),
-                                          textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                          backgroundColor: isDark
+                                              ? Colors.white10
+                                              : const Color(0xFFF1F5F9),
+                                          foregroundColor: isDark
+                                              ? Colors.white54
+                                              : const Color(0xFF64748B),
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 12,
+                                          ),
+                                          textStyle: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                          ),
                                           elevation: 0,
                                         ),
                                       ),
@@ -3057,7 +3537,11 @@ class _DriverDashboardState extends State<DriverDashboard> {
     );
   }
 
-  void _showCollectGallonsDialog(BuildContext context, Map<String, dynamic> borrow, {OrderModel? collectionJob}) {
+  void _showCollectGallonsDialog(
+    BuildContext context,
+    Map<String, dynamic> borrow, {
+    OrderModel? collectionJob,
+  }) {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
     final driverName = auth.currentUser?.name ?? 'Driver';
@@ -3070,15 +3554,21 @@ class _DriverDashboardState extends State<DriverDashboard> {
     final isSlim = gType.toLowerCase().contains('slim');
     final isRound = gType.toLowerCase().contains('round');
 
-    final slimController = TextEditingController(text: isSlim ? owedQty.toString() : '0');
-    final roundController = TextEditingController(text: isRound ? owedQty.toString() : '0');
+    final slimController = TextEditingController(
+      text: isSlim ? owedQty.toString() : '0',
+    );
+    final roundController = TextEditingController(
+      text: isRound ? owedQty.toString() : '0',
+    );
     final notesController = TextEditingController();
 
     showDialog(
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Row(
             children: [
               Container(
@@ -3087,7 +3577,11 @@ class _DriverDashboardState extends State<DriverDashboard> {
                   color: Colors.blue.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.assignment_return_rounded, color: Colors.blue, size: 22),
+                child: const Icon(
+                  Icons.assignment_return_rounded,
+                  color: Colors.blue,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -3096,7 +3590,10 @@ class _DriverDashboardState extends State<DriverDashboard> {
                   children: [
                     const Text(
                       'Collect Returned Gallons',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     Text(
                       'From: $custName',
@@ -3119,16 +3616,25 @@ class _DriverDashboardState extends State<DriverDashboard> {
                     decoration: BoxDecoration(
                       color: Colors.amber.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+                      border: Border.all(
+                        color: Colors.amber.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.info_outline_rounded, color: Colors.amber, size: 20),
+                        const Icon(
+                          Icons.info_outline_rounded,
+                          color: Colors.amber,
+                          size: 20,
+                        ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             'Customer currently owes $owedQty $gType gallon(s). Enter the quantity of empty containers handed over to your vehicle.',
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
                       ],
@@ -3140,7 +3646,10 @@ class _DriverDashboardState extends State<DriverDashboard> {
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
                       labelText: '5-Gallon Slim Containers Collected',
-                      prefixIcon: Icon(Icons.local_drink_rounded, color: Colors.indigo),
+                      prefixIcon: Icon(
+                        Icons.local_drink_rounded,
+                        color: Colors.indigo,
+                      ),
                       helperText: 'Number of empty Slim jugs received',
                     ),
                   ),
@@ -3150,7 +3659,10 @@ class _DriverDashboardState extends State<DriverDashboard> {
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
                       labelText: '5-Gallon Round Containers Collected',
-                      prefixIcon: Icon(Icons.crop_portrait_rounded, color: Colors.deepPurple),
+                      prefixIcon: Icon(
+                        Icons.crop_portrait_rounded,
+                        color: Colors.deepPurple,
+                      ),
                       helperText: 'Number of empty Round jugs received',
                     ),
                   ),
@@ -3175,9 +3687,14 @@ class _DriverDashboardState extends State<DriverDashboard> {
             ElevatedButton.icon(
               onPressed: () async {
                 final slimCount = int.tryParse(slimController.text.trim()) ?? 0;
-                final roundCount = int.tryParse(roundController.text.trim()) ?? 0;
+                final roundCount =
+                    int.tryParse(roundController.text.trim()) ?? 0;
                 if (slimCount <= 0 && roundCount <= 0) {
-                  Helpers.showSnackBar(context, 'Please enter at least 1 collected gallon.', isError: true);
+                  Helpers.showSnackBar(
+                    context,
+                    'Please enter at least 1 collected gallon.',
+                    isError: true,
+                  );
                   return;
                 }
 
@@ -3187,7 +3704,9 @@ class _DriverDashboardState extends State<DriverDashboard> {
                   slimCount: slimCount,
                   roundCount: roundCount,
                   driverName: driverName,
-                  notes: notesController.text.trim().isNotEmpty ? notesController.text.trim() : null,
+                  notes: notesController.text.trim().isNotEmpty
+                      ? notesController.text.trim()
+                      : null,
                 );
 
                 if (collectionJob != null) {
@@ -3348,119 +3867,198 @@ class _DriverDashboardState extends State<DriverDashboard> {
         ? const Color(0xFF0284C7)
         : const Color(0xFF10B981);
     final statusLabel = isCollection ? 'Collected' : 'Delivered';
-    final completedStr =
-        (job.completedAt ?? job.createdAt).toString().split('.')[0];
+    final completedStr = (job.completedAt ?? job.createdAt).toString().split(
+      '.',
+    )[0];
     final cleanAddress = job.deliveryAddress
         .replaceAll(RegExp(r'\[BORROWED_[^\]]+\]'), '')
         .trim();
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: const Color(0xFFCBD5E1),
-          width: 1.2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ListTile(
-        onTap: () {
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: Text('${job.customerName} (${job.id})'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Type: ${isCollection ? "Gallon Collection" : "Delivery"}'),
-                  const SizedBox(height: 6),
-                  Text('Items: ${job.itemsSummary}'),
-                  const SizedBox(height: 6),
-                  Text('Payment: ${job.paymentMethod}'),
-                  const SizedBox(height: 6),
-                  Text('Destination: ${cleanAddress.isEmpty ? "Pinned GPS Location" : cleanAddress}'),
-                  const SizedBox(height: 6),
-                  Text('Completed: $completedStr'),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: const Text('Close'),
+    return InkWell(
+      onTap: () {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text('${job.customerName} (${job.id})'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Type: ${isCollection ? "Gallon Collection" : "Delivery"}',
                 ),
+                const SizedBox(height: 6),
+                Text('Items: ${job.itemsSummary}'),
+                const SizedBox(height: 6),
+                Text('Payment: ${job.paymentMethod}'),
+                const SizedBox(height: 6),
+                Text(
+                  'Destination: ${cleanAddress.isEmpty ? "Pinned GPS Location" : cleanAddress}',
+                ),
+                const SizedBox(height: 6),
+                Text('Completed: $completedStr'),
               ],
             ),
-          );
-        },
-        leading: CircleAvatar(
-          backgroundColor: color.withValues(alpha: 0.08),
-          child: Icon(
-            isCollection
-                ? Icons.recycling_rounded
-                : Icons.local_shipping_rounded,
-            color: color,
-          ),
-        ),
-        title: Text(
-          '${job.customerName} (${job.id})',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF0F172A),
-            fontSize: 14.5,
-          ),
-        ),
-        subtitle: Text(
-          '${job.itemsSummary} • ${job.paymentMethod}\nCompleted: $completedStr',
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: Color(0xFF475569),
-            fontSize: 12,
-            height: 1.4,
-          ),
-        ),
-        isThreeLine: true,
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              '₱${job.totalAmount.toStringAsFixed(2)}',
-              style: const TextStyle(
-                fontWeight: FontWeight.w900,
-                fontSize: 14,
-                color: Color(0xFF0F172A),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Close'),
               ),
-            ),
-            const SizedBox(height: 4),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                statusLabel,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+            ],
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFCBD5E1), width: 1.2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
             ),
           ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.08),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      isCollection
+                          ? Icons.recycling_rounded
+                          : Icons.check_circle_rounded,
+                      color: color,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              job.id,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.primaryColor,
+                                fontSize: 13,
+                              ),
+                            ),
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: color.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                statusLabel,
+                                style: TextStyle(
+                                  color: color,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          job.customerName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14.5,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                job.itemsSummary,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF334155),
+                ),
+              ),
+              if (cleanAddress.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.location_on_outlined,
+                      size: 14,
+                      color: Color(0xFF64748B),
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        cleanAddress,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              const Divider(height: 18, color: Color(0xFFE2E8F0)),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${job.paymentMethod} • $completedStr',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '₱${job.totalAmount.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 14.5,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -3494,561 +4092,635 @@ class _DriverDashboardState extends State<DriverDashboard> {
             clipBehavior: Clip.antiAlias,
             child: Column(
               children: [
-            // Dynamic Gradient Header (AquaBot vs Station Admin Desk)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: _supportSubTab == 1
-                      ? [const Color(0xFF1E293B), const Color(0xFFD97706)]
-                      : [AppTheme.navyColor, AppTheme.primaryColor],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.15),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    padding: const EdgeInsets.all(2),
-                    child: ClipOval(
-                      child: _supportSubTab == 1
-                          ? const Icon(
-                              Icons.support_agent_rounded,
-                              color: Color(0xFFD97706),
-                              size: 24,
-                            )
-                          : Image.asset(
-                              'assets/images/logo_icon.jpg',
-                              fit: BoxFit.cover,
-                              errorBuilder: (ctx, err, stack) => const Icon(
-                                Icons.water_drop_rounded,
-                                color: AppTheme.primaryColor,
-                                size: 20,
-                              ),
-                            ),
+                // Dynamic Gradient Header (AquaBot vs Station Admin Desk)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 14.0,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: _supportSubTab == 1
+                          ? [const Color(0xFF1E293B), const Color(0xFFD97706)]
+                          : [AppTheme.navyColor, AppTheme.primaryColor],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _supportSubTab == 1
-                              ? 'Station Admin Dispatch Desk'
-                              : 'AquaBot AI Assistant',
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 15,
-                            color: Colors.white,
-                            letterSpacing: 0.2,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            const DecoratedBox(
-                              decoration: BoxDecoration(
-                                color: Color(0xFF10B981),
-                                shape: BoxShape.circle,
-                              ),
-                              child: SizedBox(width: 7, height: 7),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.15),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
                             ),
-                            const SizedBox(width: 5),
-                            Expanded(
-                              child: Text(
-                                _supportSubTab == 1
-                                    ? 'Direct Station Administrator Link • Live'
-                                    : 'JJAASS Water Market • Online',
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: Color(0xFFBAE6FD),
-                                  fontWeight: FontWeight.w600,
+                          ],
+                        ),
+                        padding: const EdgeInsets.all(2),
+                        child: ClipOval(
+                          child: _supportSubTab == 1
+                              ? const Icon(
+                                  Icons.support_agent_rounded,
+                                  color: Color(0xFFD97706),
+                                  size: 24,
+                                )
+                              : Image.asset(
+                                  'assets/images/logo_icon.jpg',
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (ctx, err, stack) => const Icon(
+                                    Icons.water_drop_rounded,
+                                    color: AppTheme.primaryColor,
+                                    size: 20,
+                                  ),
+                                ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _supportSubTab == 1
+                                  ? 'Station Admin Dispatch Desk'
+                                  : 'AquaBot AI Assistant',
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 15,
+                                color: Colors.white,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              children: [
+                                const DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    color: Color(0xFF10B981),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: SizedBox(width: 7, height: 7),
+                                ),
+                                const SizedBox(width: 5),
+                                Expanded(
+                                  child: Text(
+                                    _supportSubTab == 1
+                                        ? 'Direct Station Administrator Link • Live'
+                                        : 'JJAASS Water Market • Online',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Color(0xFFBAE6FD),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: _supportSubTab == 1
+                            ? 'Scroll to Latest'
+                            : 'Reset Chat',
+                        icon: Icon(
+                          _supportSubTab == 1
+                              ? Icons.arrow_downward_rounded
+                              : Icons.refresh_rounded,
+                          color: Colors.white70,
+                          size: 20,
+                        ),
+                        onPressed: () {
+                          if (_supportSubTab == 1) {
+                            _scrollAdminChatToBottom();
+                          } else {
+                            setState(() {
+                              _supportMessages.clear();
+                              _supportMessages.add({
+                                'sender': 'AquaBot',
+                                'message':
+                                    "Hello! I'm **AquaBot 💧**, your JJAASS Water Market driver dispatch assistant.\n\nTap any topic in the **Quick Inquiry Guide** above, or type your question below for instant delivery, route, or gallon collection guidance!",
+                              });
+                            });
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Sub-Tab Switcher: [ AquaBot AI Guide ] vs [ Station Admin Desk ]
+                Container(
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF8FAFC),
+                    border: Border(
+                      bottom: BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => setState(() => _supportSubTab = 0),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: _supportSubTab == 0
+                                  ? Colors.white
+                                  : Colors.transparent,
+                              border: Border(
+                                bottom: BorderSide(
+                                  color: _supportSubTab == 0
+                                      ? AppTheme.primaryColor
+                                      : Colors.transparent,
+                                  width: 2.5,
                                 ),
                               ),
                             ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: _supportSubTab == 1 ? 'Scroll to Latest' : 'Reset Chat',
-                    icon: Icon(
-                      _supportSubTab == 1 ? Icons.arrow_downward_rounded : Icons.refresh_rounded,
-                      color: Colors.white70,
-                      size: 20,
-                    ),
-                    onPressed: () {
-                      if (_supportSubTab == 1) {
-                        _scrollAdminChatToBottom();
-                      } else {
-                        setState(() {
-                          _supportMessages.clear();
-                          _supportMessages.add({
-                            'sender': 'AquaBot',
-                            'message':
-                                "Hello! I'm **AquaBot 💧**, your JJAASS Water Market driver dispatch assistant.\n\nTap any topic in the **Quick Inquiry Guide** above, or type your question below for instant delivery, route, or gallon collection guidance!",
-                          });
-                        });
-                      }
-                    },
-                  ),
-                ],
-              ),
-            ),
-
-            // Sub-Tab Switcher: [ AquaBot AI Guide ] vs [ Station Admin Desk ]
-            Container(
-              decoration: const BoxDecoration(
-                color: Color(0xFFF8FAFC),
-                border: Border(
-                  bottom: BorderSide(color: Color(0xFFE2E8F0)),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => setState(() => _supportSubTab = 0),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        decoration: BoxDecoration(
-                          color: _supportSubTab == 0
-                              ? Colors.white
-                              : Colors.transparent,
-                          border: Border(
-                            bottom: BorderSide(
-                              color: _supportSubTab == 0
-                                  ? AppTheme.primaryColor
-                                  : Colors.transparent,
-                              width: 2.5,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.smart_toy_rounded,
+                                  size: 16,
+                                  color: _supportSubTab == 0
+                                      ? AppTheme.primaryColor
+                                      : const Color(0xFF64748B),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'AquaBot AI Guide',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: _supportSubTab == 0
+                                        ? AppTheme.primaryColor
+                                        : const Color(0xFF64748B),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.smart_toy_rounded,
-                              size: 16,
-                              color: _supportSubTab == 0
-                                  ? AppTheme.primaryColor
-                                  : const Color(0xFF64748B),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'AquaBot AI Guide',
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.bold,
-                                color: _supportSubTab == 0
-                                    ? AppTheme.primaryColor
-                                    : const Color(0xFF64748B),
+                      ),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () {
+                            setState(() => _supportSubTab = 1);
+                            final auth = Provider.of<AuthProvider>(
+                              context,
+                              listen: false,
+                            );
+                            final driverId = auth.currentUser?.id ?? '';
+                            if (driverId.isNotEmpty) {
+                              ChatService.instance.markConversationAsRead(
+                                'support_$driverId',
+                                'driver',
+                              );
+                              _scrollAdminChatToBottom();
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: _supportSubTab == 1
+                                  ? Colors.white
+                                  : Colors.transparent,
+                              border: Border(
+                                bottom: BorderSide(
+                                  color: _supportSubTab == 1
+                                      ? const Color(0xFFD97706)
+                                      : Colors.transparent,
+                                  width: 2.5,
+                                ),
                               ),
                             ),
-                          ],
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.support_agent_rounded,
+                                  size: 16,
+                                  color: _supportSubTab == 1
+                                      ? const Color(0xFFD97706)
+                                      : const Color(0xFF64748B),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Station Admin Desk',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: _supportSubTab == 1
+                                        ? const Color(0xFFD97706)
+                                        : const Color(0xFF64748B),
+                                  ),
+                                ),
+                                AnimatedBuilder(
+                                  animation: ChatService.instance,
+                                  builder: (context, _) {
+                                    final auth = Provider.of<AuthProvider>(
+                                      context,
+                                      listen: false,
+                                    );
+                                    final driverId = auth.currentUser?.id ?? '';
+                                    final unread = driverId.isNotEmpty
+                                        ? ChatService.instance
+                                              .getConversationMessages(
+                                                'support_$driverId',
+                                              )
+                                              .where(
+                                                (m) =>
+                                                    !m.isRead &&
+                                                    m.senderRole != 'driver',
+                                              )
+                                              .length
+                                        : 0;
+                                    if (unread == 0) {
+                                      return const SizedBox.shrink();
+                                    }
+                                    return Container(
+                                      margin: const EdgeInsets.only(left: 6),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 5,
+                                        vertical: 1.5,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFEF4444),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Text(
+                                        '$unread',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                if (_supportSubTab == 0) ...[
+                  // Collapsible Quick Inquiry FAQ Accordion
+                  Container(
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF8FAFC),
+                      border: Border(
+                        bottom: BorderSide(color: Color(0xFFE2E8F0)),
+                      ),
+                    ),
+                    child: Theme(
+                      data: Theme.of(
+                        context,
+                      ).copyWith(dividerColor: Colors.transparent),
+                      child: ExpansionTile(
+                        initiallyExpanded: false,
+                        tilePadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 0,
+                        ),
+                        childrenPadding: const EdgeInsets.fromLTRB(
+                          10,
+                          0,
+                          10,
+                          8,
+                        ),
+                        leading: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryColor.withValues(
+                              alpha: 0.12,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.quiz_rounded,
+                            color: AppTheme.navyColor,
+                            size: 18,
+                          ),
+                        ),
+                        title: const Text(
+                          'Quick Inquiry Guide (FAQs)',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.navyColor,
+                          ),
+                        ),
+                        subtitle: const Text(
+                          'Tap to browse 4 driver topics for instant answers',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                        children: [
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxHeight: maxAccordionHeight,
+                            ),
+                            child: Scrollbar(
+                              controller: _faqScrollController,
+                              thumbVisibility: true,
+                              child: SingleChildScrollView(
+                                controller: _faqScrollController,
+                                primary: false,
+                                padding: const EdgeInsets.only(right: 6),
+                                physics: const BouncingScrollPhysics(),
+                                child: Column(
+                                  children: [
+                                    _buildInquiryCategoryTile(
+                                      title: '🚚 Dispatch & Live Navigation',
+                                      color: const Color(0xFF0284C7),
+                                      questions: [
+                                        'How do I mark an assigned order as out for delivery?',
+                                        'How do I navigate using the customer pinned GPS location?',
+                                        'What should I do if the customer is not at the delivery address?',
+                                      ],
+                                    ),
+                                    _buildInquiryCategoryTile(
+                                      title: '🔄 Gallon Collection & Returns',
+                                      color: const Color(0xFF10B981),
+                                      questions: [
+                                        'How do I log collected borrowed gallons from a customer?',
+                                        'How are returned Slim and Round containers restocked automatically?',
+                                        'What if the customer only returns 3 out of 5 borrowed gallons?',
+                                      ],
+                                    ),
+                                    _buildInquiryCategoryTile(
+                                      title: '💳 Cash & GCash Collection',
+                                      color: const Color(0xFF0F2B5C),
+                                      questions: [
+                                        'How do I confirm payment received for Cash on Delivery (COD)?',
+                                        'How do I verify if an order was already paid online via GCash?',
+                                      ],
+                                    ),
+                                    _buildInquiryCategoryTile(
+                                      title: '⛽ Vehicle Stock & Driver Status',
+                                      color: const Color(0xFFD97706),
+                                      questions: [
+                                        'How do I check my vehicle gallon loading capacity?',
+                                        'How do I switch between Available and On Delivery status?',
+                                      ],
+                                    ),
+                                    _buildInquiryCategoryTile(
+                                      title: '🛡️ Defect Swaps, Routes & Roles',
+                                      color: const Color(0xFF7C3AED),
+                                      questions: [
+                                        'Optimize route sequence for my active deliveries',
+                                        'How do customer defect photo claims and free gallon swaps work?',
+                                        'What can Driver, Admin, and Customer roles do in the system?',
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
+
+                  // Message List
                   Expanded(
-                    child: InkWell(
-                      onTap: () {
-                        setState(() => _supportSubTab = 1);
-                        final auth = Provider.of<AuthProvider>(context, listen: false);
-                        final driverId = auth.currentUser?.id ?? '';
-                        if (driverId.isNotEmpty) {
-                          ChatService.instance.markConversationAsRead('support_$driverId', 'driver');
-                          _scrollAdminChatToBottom();
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        decoration: BoxDecoration(
-                          color: _supportSubTab == 1
-                              ? Colors.white
-                              : Colors.transparent,
-                          border: Border(
-                            bottom: BorderSide(
-                              color: _supportSubTab == 1
-                                  ? const Color(0xFFD97706)
-                                  : Colors.transparent,
-                              width: 2.5,
-                            ),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.support_agent_rounded,
-                              size: 16,
-                              color: _supportSubTab == 1
-                                  ? const Color(0xFFD97706)
-                                  : const Color(0xFF64748B),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Station Admin Desk',
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.bold,
-                                color: _supportSubTab == 1
-                                    ? const Color(0xFFD97706)
-                                    : const Color(0xFF64748B),
-                              ),
-                            ),
-                            AnimatedBuilder(
-                              animation: ChatService.instance,
-                              builder: (context, _) {
-                                final auth = Provider.of<AuthProvider>(context, listen: false);
-                                final driverId = auth.currentUser?.id ?? '';
-                                final unread = driverId.isNotEmpty
-                                    ? ChatService.instance
-                                        .getConversationMessages('support_$driverId')
-                                        .where((m) => !m.isRead && m.senderRole != 'driver')
-                                        .length
-                                    : 0;
-                                if (unread == 0) return const SizedBox.shrink();
-                                return Container(
-                                  margin: const EdgeInsets.only(left: 6),
-                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFEF4444),
-                                    borderRadius: BorderRadius.circular(10),
+                    child: ListView.builder(
+                      controller: _chatScrollController,
+                      padding: const EdgeInsets.all(14.0),
+                      itemCount: _supportMessages.length,
+                      itemBuilder: (context, index) {
+                        final msg = _supportMessages[index];
+                        final isBot = msg['sender'] == 'AquaBot';
+                        return Align(
+                          alignment: isBot
+                              ? Alignment.centerLeft
+                              : Alignment.centerRight,
+                          child: isBot
+                              ? Container(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  padding: const EdgeInsets.all(12),
+                                  constraints: BoxConstraints(
+                                    maxWidth:
+                                        MediaQuery.of(context).size.width *
+                                        0.85,
                                   ),
-                                  child: Text(
-                                    '$unread',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 9.5,
-                                      fontWeight: FontWeight.bold,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: const BorderRadius.only(
+                                      topLeft: Radius.circular(4),
+                                      topRight: Radius.circular(16),
+                                      bottomLeft: Radius.circular(16),
+                                      bottomRight: Radius.circular(16),
+                                    ),
+                                    border: Border.all(
+                                      color: const Color(0xFFBAE6FD),
+                                      width: 1.2,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(
+                                          0xFF0284C7,
+                                        ).withValues(alpha: 0.06),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(
+                                            Icons.smart_toy_rounded,
+                                            size: 13,
+                                            color: AppTheme.primaryColor,
+                                          ),
+                                          const SizedBox(width: 5),
+                                          const Text(
+                                            'AquaBot',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w800,
+                                              color: AppTheme.primaryColor,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+                                      SelectableText(
+                                        msg['message'] as String,
+                                        style: const TextStyle(
+                                          color: Color(0xFF0F2B5C),
+                                          fontSize: 12.5,
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : Container(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 10,
+                                  ),
+                                  constraints: BoxConstraints(
+                                    maxWidth:
+                                        MediaQuery.of(context).size.width *
+                                        0.82,
+                                  ),
+                                  decoration: const BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        AppTheme.primaryColor,
+                                        AppTheme.navyColor,
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.only(
+                                      topLeft: Radius.circular(16),
+                                      topRight: Radius.circular(4),
+                                      bottomLeft: Radius.circular(16),
+                                      bottomRight: Radius.circular(16),
                                     ),
                                   ),
-                                );
-                              },
+                                  child: Text(
+                                    msg['message'] as String,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w500,
+                                      height: 1.35,
+                                    ),
+                                  ),
+                                ),
+                        );
+                      },
+                    ),
+                  ),
+
+                  // Chat Input Bar
+                  Container(
+                    padding: const EdgeInsets.all(12.0),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _supportInputController,
+                            onSubmitted: _sendSupportMessage,
+                            style: const TextStyle(fontSize: 13),
+                            decoration: InputDecoration(
+                              hintText:
+                                  'Type dispatch query or ask anything...',
+                              hintStyle: const TextStyle(
+                                color: Color(0xFF94A3B8),
+                                fontSize: 13,
+                              ),
+                              filled: true,
+                              fillColor: const Color(0xFFF8FAFC),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 10,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFFE2E8F0),
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: const BorderSide(
+                                  color: AppTheme.primaryColor,
+                                  width: 1.5,
+                                ),
+                              ),
                             ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            if (_supportSubTab == 0) ...[
-
-            // Collapsible Quick Inquiry FAQ Accordion
-            Container(
-              decoration: const BoxDecoration(
-                color: Color(0xFFF8FAFC),
-                border: Border(
-                  bottom: BorderSide(color: Color(0xFFE2E8F0)),
-                ),
-              ),
-              child: Theme(
-                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-                child: ExpansionTile(
-                  initiallyExpanded: false,
-                  tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
-                  childrenPadding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
-                  leading: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.quiz_rounded,
-                      color: AppTheme.navyColor,
-                      size: 18,
-                    ),
-                  ),
-                  title: const Text(
-                    'Quick Inquiry Guide (FAQs)',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      color: AppTheme.navyColor,
-                    ),
-                  ),
-                  subtitle: const Text(
-                    'Tap to browse 4 driver topics for instant answers',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                  children: [
-                    ConstrainedBox(
-                      constraints: BoxConstraints(maxHeight: maxAccordionHeight),
-                      child: Scrollbar(
-                        controller: _faqScrollController,
-                        thumbVisibility: true,
-                        child: SingleChildScrollView(
-                          controller: _faqScrollController,
-                          primary: false,
-                          padding: const EdgeInsets.only(right: 6),
-                          physics: const BouncingScrollPhysics(),
-                          child: Column(
-                            children: [
-                              _buildInquiryCategoryTile(
-                                title: '🚚 Dispatch & Live Navigation',
-                                color: const Color(0xFF0284C7),
-                                questions: [
-                                  'How do I mark an assigned order as out for delivery?',
-                                  'How do I navigate using the customer pinned GPS location?',
-                                  'What should I do if the customer is not at the delivery address?',
-                                ],
-                              ),
-                              _buildInquiryCategoryTile(
-                                title: '🔄 Gallon Collection & Returns',
-                                color: const Color(0xFF10B981),
-                                questions: [
-                                  'How do I log collected borrowed gallons from a customer?',
-                                  'How are returned Slim and Round containers restocked automatically?',
-                                  'What if the customer only returns 3 out of 5 borrowed gallons?',
-                                ],
-                              ),
-                              _buildInquiryCategoryTile(
-                                title: '💳 Cash & GCash Collection',
-                                color: const Color(0xFF0F2B5C),
-                                questions: [
-                                  'How do I confirm payment received for Cash on Delivery (COD)?',
-                                  'How do I verify if an order was already paid online via GCash?',
-                                ],
-                              ),
-                              _buildInquiryCategoryTile(
-                                title: '⛽ Vehicle Stock & Driver Status',
-                                color: const Color(0xFFD97706),
-                                questions: [
-                                  'How do I check my vehicle gallon loading capacity?',
-                                  'How do I switch between Available and On Delivery status?',
-                                ],
-                              ),
-                              _buildInquiryCategoryTile(
-                                title: '🛡️ Defect Swaps, Routes & Roles',
-                                color: const Color(0xFF7C3AED),
-                                questions: [
-                                  'Optimize route sequence for my active deliveries',
-                                  'How do customer defect photo claims and free gallon swaps work?',
-                                  'What can Driver, Admin, and Customer roles do in the system?',
-                                ],
-                              ),
-                            ],
                           ),
                         ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Message List
-            Expanded(
-              child: ListView.builder(
-                controller: _chatScrollController,
-                padding: const EdgeInsets.all(14.0),
-                itemCount: _supportMessages.length,
-                itemBuilder: (context, index) {
-                  final msg = _supportMessages[index];
-                  final isBot = msg['sender'] == 'AquaBot';
-                  return Align(
-                    alignment: isBot ? Alignment.centerLeft : Alignment.centerRight,
-                    child: isBot
-                        ? Container(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            padding: const EdgeInsets.all(12),
-                            constraints: BoxConstraints(
-                              maxWidth: MediaQuery.of(context).size.width * 0.85,
-                            ),
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: _isChatLoading
+                              ? null
+                              : () => _sendSupportMessage(
+                                  _supportInputController.text,
+                                ),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.all(11),
                             decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: const BorderRadius.only(
-                                topLeft: Radius.circular(4),
-                                topRight: Radius.circular(16),
-                                bottomLeft: Radius.circular(16),
-                                bottomRight: Radius.circular(16),
+                              gradient: const LinearGradient(
+                                colors: [
+                                  AppTheme.primaryColor,
+                                  AppTheme.navyColor,
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               ),
-                              border: Border.all(
-                                color: const Color(0xFFBAE6FD),
-                                width: 1.2,
-                              ),
+                              borderRadius: BorderRadius.circular(10),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFF0284C7).withValues(alpha: 0.06),
+                                  color: AppTheme.navyColor.withValues(
+                                    alpha: 0.25,
+                                  ),
                                   blurRadius: 6,
                                   offset: const Offset(0, 2),
                                 ),
                               ],
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.smart_toy_rounded,
-                                      size: 13,
-                                      color: AppTheme.primaryColor,
+                            child: _isChatLoading
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
                                     ),
-                                    const SizedBox(width: 5),
-                                    const Text(
-                                      'AquaBot',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w800,
-                                        color: AppTheme.primaryColor,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                SelectableText(
-                                  msg['message'] as String,
-                                  style: const TextStyle(
-                                    color: Color(0xFF0F2B5C),
-                                    fontSize: 12.5,
-                                    height: 1.4,
+                                  )
+                                : const Icon(
+                                    Icons.send_rounded,
+                                    color: Colors.white,
+                                    size: 18,
                                   ),
-                                ),
-                              ],
-                            ),
-                          )
-                        : Container(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            constraints: BoxConstraints(
-                              maxWidth: MediaQuery.of(context).size.width * 0.82,
-                            ),
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [AppTheme.primaryColor, AppTheme.navyColor],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.only(
-                                topLeft: Radius.circular(16),
-                                topRight: Radius.circular(4),
-                                bottomLeft: Radius.circular(16),
-                                bottomRight: Radius.circular(16),
-                              ),
-                            ),
-                            child: Text(
-                              msg['message'] as String,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w500,
-                                height: 1.35,
-                              ),
-                            ),
                           ),
-                  );
-                },
-              ),
-            ),
-
-            // Chat Input Bar
-            Container(
-              padding: const EdgeInsets.all(12.0),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _supportInputController,
-                      onSubmitted: _sendSupportMessage,
-                      style: const TextStyle(fontSize: 13),
-                      decoration: InputDecoration(
-                        hintText: 'Type dispatch query or ask anything...',
-                        hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
-                        filled: true,
-                        fillColor: const Color(0xFFF8FAFC),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                         ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(color: AppTheme.primaryColor, width: 1.5),
-                        ),
-                      ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  InkWell(
-                    onTap: _isChatLoading ? null : () => _sendSupportMessage(_supportInputController.text),
-                    borderRadius: BorderRadius.circular(10),
-                    child: Container(
-                      padding: const EdgeInsets.all(11),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [AppTheme.primaryColor, AppTheme.navyColor],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(10),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.navyColor.withValues(alpha: 0.25),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: _isChatLoading
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(
-                              Icons.send_rounded,
-                              color: Colors.white,
-                              size: 18,
-                            ),
-                    ),
-                  ),
+                ] else ...[
+                  Expanded(child: _buildStationAdminChatSection(isDark)),
                 ],
-              ),
+              ],
             ),
-          ] else ...[
-            Expanded(
-              child: _buildStationAdminChatSection(isDark),
-            ),
-          ],
-        ],
-      ),
-    ),
-  );
+          ),
+        );
       },
     );
   }
@@ -4092,14 +4764,25 @@ class _DriverDashboardState extends State<DriverDashboard> {
                   initialConversationId: conversationId,
                 ),
                 style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                icon: const Icon(Icons.open_in_new_rounded, size: 14, color: AppTheme.primaryColor),
+                icon: const Icon(
+                  Icons.open_in_new_rounded,
+                  size: 14,
+                  color: AppTheme.primaryColor,
+                ),
                 label: const Text(
                   'Full Modal',
-                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryColor,
+                  ),
                 ),
               ),
             ],
@@ -4111,7 +4794,9 @@ class _DriverDashboardState extends State<DriverDashboard> {
           child: AnimatedBuilder(
             animation: ChatService.instance,
             builder: (context, _) {
-              final messages = ChatService.instance.getConversationMessages(conversationId);
+              final messages = ChatService.instance.getConversationMessages(
+                conversationId,
+              );
 
               if (messages.isEmpty) {
                 return Center(
@@ -4158,16 +4843,31 @@ class _DriverDashboardState extends State<DriverDashboard> {
                           alignment: WrapAlignment.center,
                           children: [
                             ActionChip(
-                              label: const Text('🚨 Traffic Delay Alert', style: TextStyle(fontSize: 11.5)),
-                              onPressed: () => _sendAdminChatMessage('Station Admin: Heavy traffic along delivery route, completing stops shortly.'),
+                              label: const Text(
+                                '🚨 Traffic Delay Alert',
+                                style: TextStyle(fontSize: 11.5),
+                              ),
+                              onPressed: () => _sendAdminChatMessage(
+                                'Station Admin: Heavy traffic along delivery route, completing stops shortly.',
+                              ),
                             ),
                             ActionChip(
-                              label: const Text('📍 Clarify Address', style: TextStyle(fontSize: 11.5)),
-                              onPressed: () => _sendAdminChatMessage('Station Admin: Need assistance clarifying customer landmark/pinned location.'),
+                              label: const Text(
+                                '📍 Clarify Address',
+                                style: TextStyle(fontSize: 11.5),
+                              ),
+                              onPressed: () => _sendAdminChatMessage(
+                                'Station Admin: Need assistance clarifying customer landmark/pinned location.',
+                              ),
                             ),
                             ActionChip(
-                              label: const Text('💧 Need Refill Stock', style: TextStyle(fontSize: 11.5)),
-                              onPressed: () => _sendAdminChatMessage('Station Admin: Heading back to refilling station to reload gallon inventory.'),
+                              label: const Text(
+                                '💧 Need Refill Stock',
+                                style: TextStyle(fontSize: 11.5),
+                              ),
+                              onPressed: () => _sendAdminChatMessage(
+                                'Station Admin: Heading back to refilling station to reload gallon inventory.',
+                              ),
                             ),
                           ],
                         ),
@@ -4186,15 +4886,22 @@ class _DriverDashboardState extends State<DriverDashboard> {
                   final isMe = msg.senderRole == 'driver';
 
                   return Align(
-                    alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                    alignment: isMe
+                        ? Alignment.centerRight
+                        : Alignment.centerLeft,
                     child: Container(
                       margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       constraints: BoxConstraints(
                         maxWidth: MediaQuery.of(context).size.width * 0.78,
                       ),
                       decoration: BoxDecoration(
-                        color: isMe ? AppTheme.navyColor : const Color(0xFFF1F5F9),
+                        color: isMe
+                            ? AppTheme.navyColor
+                            : const Color(0xFFF1F5F9),
                         borderRadius: BorderRadius.only(
                           topLeft: const Radius.circular(14),
                           topRight: const Radius.circular(14),
@@ -4202,21 +4909,31 @@ class _DriverDashboardState extends State<DriverDashboard> {
                           bottomRight: Radius.circular(isMe ? 2 : 14),
                         ),
                         border: Border.all(
-                          color: isMe ? AppTheme.navyColor : const Color(0xFFCBD5E1),
+                          color: isMe
+                              ? AppTheme.navyColor
+                              : const Color(0xFFCBD5E1),
                         ),
                       ),
                       child: Column(
-                        crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                        crossAxisAlignment: isMe
+                            ? CrossAxisAlignment.end
+                            : CrossAxisAlignment.start,
                         children: [
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                isMe ? 'You (Driver)' : (msg.senderName.isNotEmpty ? msg.senderName : 'Station Admin'),
+                                isMe
+                                    ? 'You (Driver)'
+                                    : (msg.senderName.isNotEmpty
+                                          ? msg.senderName
+                                          : 'Station Admin'),
                                 style: TextStyle(
                                   fontSize: 10.5,
                                   fontWeight: FontWeight.bold,
-                                  color: isMe ? const Color(0xFF93C5FD) : const Color(0xFF0F766E),
+                                  color: isMe
+                                      ? const Color(0xFF93C5FD)
+                                      : const Color(0xFF0F766E),
                                 ),
                               ),
                               const SizedBox(width: 6),
@@ -4224,7 +4941,9 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                 '${msg.createdAt.hour.toString().padLeft(2, '0')}:${msg.createdAt.minute.toString().padLeft(2, '0')}',
                                 style: TextStyle(
                                   fontSize: 9.5,
-                                  color: isMe ? Colors.white60 : const Color(0xFF94A3B8),
+                                  color: isMe
+                                      ? Colors.white60
+                                      : const Color(0xFF94A3B8),
                                 ),
                               ),
                             ],
@@ -4234,7 +4953,9 @@ class _DriverDashboardState extends State<DriverDashboard> {
                             msg.message,
                             style: TextStyle(
                               fontSize: 13,
-                              color: isMe ? Colors.white : const Color(0xFF0F172A),
+                              color: isMe
+                                  ? Colors.white
+                                  : const Color(0xFF0F172A),
                               height: 1.35,
                             ),
                           ),
@@ -4261,10 +4982,16 @@ class _DriverDashboardState extends State<DriverDashboard> {
                 child: TextField(
                   controller: _adminChatInputController,
                   onSubmitted: (_) => _sendAdminChatMessage(),
-                  style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A)),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF0F172A),
+                  ),
                   decoration: InputDecoration(
                     hintText: 'Type message to Station Admin...',
-                    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+                    hintStyle: const TextStyle(
+                      color: Color(0xFF94A3B8),
+                      fontSize: 13,
+                    ),
                     prefixIcon: const Icon(
                       Icons.chat_bubble_outline_rounded,
                       size: 18,
@@ -4272,14 +4999,20 @@ class _DriverDashboardState extends State<DriverDashboard> {
                     ),
                     filled: true,
                     fillColor: const Color(0xFFF8FAFC),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: Color(0xFFD97706), width: 1.5),
+                      borderSide: const BorderSide(
+                        color: Color(0xFFD97706),
+                        width: 1.5,
+                      ),
                     ),
                   ),
                 ),
@@ -4347,7 +5080,10 @@ class _DriverDashboardState extends State<DriverDashboard> {
               borderRadius: BorderRadius.circular(6),
               child: Container(
                 margin: const EdgeInsets.symmetric(vertical: 3),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 7,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF0F9FF),
                   borderRadius: BorderRadius.circular(6),
@@ -4482,7 +5218,6 @@ class _DriverDashboardState extends State<DriverDashboard> {
   }
 }
 
-
 class _SidebarItemTile extends StatefulWidget {
   final IconData icon;
   final String title;
@@ -4561,7 +5296,10 @@ class _SidebarItemTileState extends State<_SidebarItemTile> {
           ),
           trailing: widget.badgeCount != null && widget.badgeCount! > 0
               ? Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFEF4444),
                     borderRadius: BorderRadius.circular(10),

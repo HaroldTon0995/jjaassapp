@@ -511,7 +511,7 @@ extension _AdminInventory on _AdminDashboardState {
                                 OutlinedButton.icon(
                                   onPressed: () async {
                                     final picked =
-                                        await LaptopFilePicker.pickImage();
+                                        await LaptopFilePicker.pickCompressedImage();
                                     if (picked != null) {
                                       setDialogState(() {
                                         selectedImageUrl = picked.dataUrl;
@@ -3535,19 +3535,41 @@ extension _AdminInventory on _AdminDashboardState {
                             Expanded(
                               child: Row(
                                 children: [
-                                  Container(
-                                    width: 40,
-                                    height: 40,
-                                    decoration: BoxDecoration(
-                                      color: color.withValues(alpha: 0.12),
+                                  Tooltip(
+                                    message: 'Click to change product photo',
+                                    child: InkWell(
+                                      onTap: () async {
+                                        final picked =
+                                            await LaptopFilePicker.pickCompressedImage();
+                                        if (picked != null && context.mounted) {
+                                          orderProvider.updateProductImage(
+                                            prod['id'] as String,
+                                            picked.dataUrl,
+                                          );
+                                          Helpers.showSnackBar(
+                                            context,
+                                            'Updated photo for "$name"!',
+                                          );
+                                        }
+                                      },
                                       borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    clipBehavior: Clip.antiAlias,
-                                    child: _buildInventoryImageWidget(
-                                      prod['image_url'] as String?,
-                                      imagePath,
-                                      icon,
-                                      color,
+                                      child: Container(
+                                        width: 40,
+                                        height: 40,
+                                        decoration: BoxDecoration(
+                                          color: color.withValues(alpha: 0.12),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        clipBehavior: Clip.antiAlias,
+                                        child: _buildInventoryImageWidget(
+                                          prod['image_url'] as String?,
+                                          imagePath,
+                                          icon,
+                                          color,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(width: 10),

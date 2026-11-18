@@ -3013,7 +3013,43 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                           final name = prod['name'] as String;
                           final price = (prod['price'] as num).toDouble();
                           final desc = (prod['description'] as String?) ?? '';
+                          final imageUrl =
+                              (prod['image_url']?.toString() ?? '').trim();
                           final isSelected = _selectedWaterType == name;
+
+                          Widget? buildWaterThumb() {
+                            if (imageUrl.isEmpty) return null;
+                            if (imageUrl.startsWith('data:image')) {
+                              try {
+                                return Image.memory(
+                                  base64Decode(
+                                    imageUrl
+                                        .split(',')
+                                        .last
+                                        .replaceAll(RegExp(r'\s+'), ''),
+                                  ),
+                                  fit: BoxFit.cover,
+                                  width: 48,
+                                  height: 48,
+                                );
+                              } catch (_) {
+                                return null;
+                              }
+                            }
+                            if (imageUrl.startsWith('http')) {
+                              return Image.network(
+                                imageUrl,
+                                fit: BoxFit.cover,
+                                width: 48,
+                                height: 48,
+                                errorBuilder: (_, _, _) =>
+                                    const SizedBox.shrink(),
+                              );
+                            }
+                            return null;
+                          }
+
+                          final waterThumb = buildWaterThumb();
 
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 10),
@@ -3045,6 +3081,13 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
+                                    if (waterThumb != null) ...[
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(10),
+                                        child: waterThumb,
+                                      ),
+                                      const SizedBox(width: 12),
+                                    ],
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3311,7 +3354,12 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                                   if (imageUrl.startsWith('data:image')) {
                                     try {
                                       return Image.memory(
-                                        base64Decode(imageUrl.split(',').last),
+                                        base64Decode(
+                                          imageUrl
+                                              .split(',')
+                                              .last
+                                              .replaceAll(RegExp(r'\s+'), ''),
+                                        ),
                                         fit: BoxFit.cover,
                                         width: double.infinity,
                                         height: double.infinity,
@@ -3975,39 +4023,52 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  key: ValueKey('payment_$_selectedPaymentMethod'),
-                  initialValue: _selectedPaymentMethod,
-                  isExpanded: true,
-                  style: const TextStyle(
-                    color: AppTheme.navyColor,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
-                  decoration: _boxedInputDecoration(),
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'Cash on Delivery',
-                      child: Text(
-                        'Cash on Delivery (COD)',
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                LayoutBuilder(
+                  builder: (ctx, box) => PopupMenuButton<String>(
+                    position: PopupMenuPosition.under,
+                    color: Colors.white,
+                    constraints: BoxConstraints(
+                      minWidth: box.maxWidth,
+                      maxWidth: box.maxWidth,
                     ),
-                    DropdownMenuItem(
-                      value: 'GCash',
-                      child: Text(
-                        'GCash Mobile Payment',
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) {
+                    onSelected: (val) {
                       setState(() {
                         _selectedPaymentMethod = val;
                       });
-                    }
-                  },
+                    },
+                    itemBuilder: (context) => const [
+                      PopupMenuItem<String>(
+                        value: 'Cash on Delivery',
+                        child: Text(
+                          'Cash on Delivery (COD)',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'GCash',
+                        child: Text(
+                          'GCash Mobile Payment',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                    child: InputDecorator(
+                      decoration: _boxedInputDecoration().copyWith(
+                        suffixIcon: const Icon(Icons.arrow_drop_down_rounded),
+                      ),
+                      child: Text(
+                        _selectedPaymentMethod == 'GCash'
+                            ? 'GCash Mobile Payment'
+                            : 'Cash on Delivery (COD)',
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppTheme.navyColor,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 24),
 
@@ -5477,7 +5538,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Invoices & Transactions History',
+            'Transactions History',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 14),
@@ -5502,7 +5563,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                       // Division 2: Settled & Paid Transactions
                       if (completedPayments.isNotEmpty) ...[
                         _buildDivisionHeader(
-                          'Settled & Paid Invoices',
+                          'Settled & Paid Transactions',
                           Icons.verified_rounded,
                           const Color(0xFF10B981),
                           completedPayments.length,

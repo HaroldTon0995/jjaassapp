@@ -147,6 +147,16 @@ class OrderProvider extends ChangeNotifier {
     }
   }
 
+  void updateProductImage(String id, String imageUrl) {
+    final idx = _inventoryItems.indexWhere((p) => p['id'] == id);
+    if (idx != -1) {
+      _inventoryItems[idx]['image_url'] = imageUrl;
+      notifyListeners();
+      InventoryStorage.saveInventory(_inventoryItems);
+      _syncInventoryToSupabase(_inventoryItems[idx], action: 'update');
+    }
+  }
+
   void setAllInventoryLevels(
     List<Map<String, dynamic>> itemsList, {
     int? emptyReserves,
@@ -1225,7 +1235,17 @@ class OrderProvider extends ChangeNotifier {
         try {
           await client.from('inventory').upsert(payload);
         } catch (e) {
-          // If remote table does not have image_url, is_refill, or is_active column yet, fall back gracefully
+          // If remote table does not have image_url, is_refill, or is_active column yet,
+          // embed image_url safely inside description so Customer app still receives it.
+          final rawImg = (item['image_url']?.toString() ?? '').trim();
+          if (rawImg.isNotEmpty) {
+            final cleanDesc = (item['description']?.toString() ?? '')
+                .replaceAll(RegExp(r'\s*\[IMG:[^\]]+\]'), '')
+                .trim();
+            payload['description'] = cleanDesc.isEmpty
+                ? '[IMG:$rawImg]'
+                : '$cleanDesc [IMG:$rawImg]';
+          }
           payload.remove('image_url');
           payload.remove('is_refill');
           payload.remove('is_active');
@@ -1332,10 +1352,15 @@ class OrderProvider extends ChangeNotifier {
       final newName = isPurified ? 'Purified Water' : (row['name']?.toString() ?? '');
       final newUnit = isPurified ? 'Gallons' : (row['unit']?.toString() ?? 'Units');
       final newCat = row['category']?.toString() ?? 'water';
-      final newDesc = isPurified
+      final rawDesc = isPurified
           ? 'Purified drinking water refill (Always available)'
           : (row['description']?.toString() ?? '');
-      final newImageUrl = row['image_url']?.toString() ?? '';
+      final imgTagMatch = RegExp(r'\[IMG:([^\]]+)\]').firstMatch(rawDesc);
+      final newDesc = rawDesc.replaceAll(RegExp(r'\s*\[IMG:[^\]]+\]'), '').trim();
+      final colImageUrl = (row['image_url']?.toString() ?? '').trim();
+      final newImageUrl = colImageUrl.isNotEmpty
+          ? colImageUrl
+          : (imgTagMatch?.group(1)?.trim() ?? '');
       final newIsActive = row['is_active'] is bool ? row['is_active'] as bool : true;
       final newIsRefill = row['is_refill'] is bool
           ? row['is_refill'] as bool
