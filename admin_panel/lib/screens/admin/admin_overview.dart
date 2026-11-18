@@ -1643,33 +1643,23 @@ extension _AdminOverview on _AdminDashboardState {
                         controller: phoneController,
                         keyboardType: TextInputType.phone,
                         decoration: const InputDecoration(
-                          labelText: 'Contact Phone Number (Optional)',
-                          hintText: 'Optional — e.g. +63 912 345 6789',
+                          labelText: 'Contact Phone Number',
+                          hintText: 'e.g. +63 912 345 6789',
                           prefixIcon: Icon(Icons.phone),
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: addressController,
-                        enabled: isDelivery,
-                        decoration: InputDecoration(
-                          labelText: isDelivery
-                              ? 'Delivery Address (Albay 1st District) *'
-                              : 'Pickup Location',
-                          hintText: isDelivery
-                              ? 'e.g. Purok 1, Tabaco City, Albay'
-                              : null,
-                          prefixIcon: Icon(
-                            isDelivery
-                                ? Icons.location_on
-                                : Icons.storefront_rounded,
-                          ),
-                          helperText: !isDelivery
-                              ? 'Store pickup orders are collected at the station'
-                              : 'Service Scope: Tabaco City, Bacacay, Malilipot, Malinao, Santo Domingo, Tiwi',
-                        ),
-                      ),
                       if (isDelivery) ...[
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: addressController,
+                          decoration: const InputDecoration(
+                            labelText: 'Delivery Address (Albay 1st District) *',
+                            hintText: 'e.g. Purok 1, Tabaco City, Albay',
+                            prefixIcon: Icon(Icons.location_on),
+                            helperText:
+                                'Service Scope: Tabaco City, Bacacay, Malilipot, Malinao, Santo Domingo, Tiwi',
+                          ),
+                        ),
                         const SizedBox(height: 8),
                         Wrap(
                           spacing: 6,
