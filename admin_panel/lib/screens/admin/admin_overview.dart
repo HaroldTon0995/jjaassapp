@@ -1642,10 +1642,14 @@ extension _AdminOverview on _AdminDashboardState {
                       TextField(
                         controller: phoneController,
                         keyboardType: TextInputType.phone,
-                        decoration: const InputDecoration(
-                          labelText: 'Contact Phone Number',
-                          hintText: 'e.g. +63 912 345 6789',
-                          prefixIcon: Icon(Icons.phone),
+                        decoration: InputDecoration(
+                          labelText: isRegistered
+                              ? 'Contact Phone Number'
+                              : 'Contact Phone Number (Optional)',
+                          hintText: isRegistered
+                              ? 'e.g. +63 912 345 6789'
+                              : 'Optional — e.g. +63 912 345 6789',
+                          prefixIcon: const Icon(Icons.phone),
                         ),
                       ),
                       if (isDelivery) ...[
