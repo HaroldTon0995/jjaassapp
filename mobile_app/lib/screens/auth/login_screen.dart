@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/helpers.dart';
@@ -21,10 +23,32 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  StreamSubscription<AuthState>? _authSub;
 
   @override
   void initState() {
     super.initState();
+    try {
+      _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((
+        data,
+      ) async {
+        if (data.event == AuthChangeEvent.signedIn && mounted) {
+          final authProvider = Provider.of<AuthProvider>(
+            context,
+            listen: false,
+          );
+          if (authProvider.currentUser != null) return;
+          final ok = await authProvider.completeOAuthSession();
+          if (!mounted) return;
+          if (ok && authProvider.currentUser != null) {
+            Helpers.showSnackBar(context, 'Login successful! Welcome back.');
+            _routeToDashboard(authProvider.currentUser!.role);
+          } else if (authProvider.errorMessage != null) {
+            _showRoleRestrictionNotification(authProvider.errorMessage!);
+          }
+        }
+      });
+    } catch (_) {}
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -37,6 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
+    _authSub?.cancel();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -295,13 +320,105 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 12),
             Consumer<AuthProvider>(
               builder: (context, auth, _) {
-                return CustomButton(
-                  text: 'Sign In',
-                  isLoading: auth.isLoading,
-                  onPressed: _handleLogin,
-                  gradientColors: const [
-                    AppTheme.navyColor,
-                    AppTheme.primaryColor,
+                return Column(
+                  children: [
+                    CustomButton(
+                      text: 'Sign In',
+                      isLoading: auth.isLoading,
+                      onPressed: _handleLogin,
+                      gradientColors: const [
+                        AppTheme.navyColor,
+                        AppTheme.primaryColor,
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Divider(
+                            color: Colors.grey.shade300,
+                            thickness: 1,
+                          ),
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 12),
+                          child: Text(
+                            'OR',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.mutedText,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Divider(
+                            color: Colors.grey.shade300,
+                            thickness: 1,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: OutlinedButton(
+                        onPressed: auth.isLoading
+                            ? null
+                            : () async {
+                                final ok = await auth.signInWithGoogle();
+                                if (!ok && context.mounted) {
+                                  Helpers.showSnackBar(
+                                    context,
+                                    auth.errorMessage ??
+                                        'Google Sign-In failed.',
+                                    isError: true,
+                                  );
+                                }
+                              },
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          side: BorderSide(color: Colors.grey.shade300),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 22,
+                              height: 22,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF4285F4).withValues(
+                                  alpha: 0.12,
+                                ),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Text(
+                                'G',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 14,
+                                  color: Color(0xFF4285F4),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            const Text(
+                              'Continue with Google',
+                              style: TextStyle(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF1E293B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 );
               },

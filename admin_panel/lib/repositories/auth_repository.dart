@@ -12,6 +12,7 @@ abstract class AuthRepository {
     required UserRole role,
   });
   Future<void> logout();
+  Future<void> signInWithGoogle();
   Future<UserModel?> getCurrentUser();
   Future<void> sendPasswordResetOtp(String email);
   Future<void> resetPasswordWithOtp({
@@ -93,6 +94,13 @@ class MockAuthRepository implements AuthRepository {
   @override
   Future<void> logout() async {
     await Future.delayed(const Duration(milliseconds: 300));
+  }
+
+  @override
+  Future<void> signInWithGoogle() async {
+    throw Exception(
+      'Google Sign-In requires Supabase Auth configuration.',
+    );
   }
 
   @override
@@ -215,6 +223,20 @@ class SupabaseAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<void> signInWithGoogle() async {
+    final redirectUrl = kIsWeb
+        ? Uri.base.origin
+        : 'io.supabase.jjaassapp://login-callback';
+    await _client.auth.signInWithOAuth(
+      OAuthProvider.google,
+      redirectTo: redirectUrl,
+      authScreenLaunchMode: kIsWeb
+          ? LaunchMode.platformDefault
+          : LaunchMode.externalApplication,
+    );
+  }
+
+  @override
   Future<UserModel?> getCurrentUser() async {
     try {
       final session = _client.auth.currentSession;
@@ -231,12 +253,28 @@ class SupabaseAuthRepository implements AuthRepository {
         return UserModel.fromJson(profile);
       } catch (e) {
         final email = user.email ?? '';
-        return UserModel(
+        final metaName =
+            (user.userMetadata?['full_name'] ?? user.userMetadata?['name'] ?? '')
+                .toString()
+                .trim();
+        final resolvedName = metaName.isNotEmpty
+            ? metaName
+            : (email.contains('@') ? email.split('@').first : 'User');
+        final fallbackUser = UserModel(
           id: user.id,
-          name: email.split('@').first,
+          name: resolvedName,
           email: email,
           role: UserRole.customer,
         );
+        try {
+          await _client.from('profiles').upsert({
+            'id': fallbackUser.id,
+            'name': fallbackUser.name,
+            'email': fallbackUser.email,
+            'role': fallbackUser.role.name,
+          });
+        } catch (_) {}
+        return fallbackUser;
       }
     } catch (e) {
       return null;

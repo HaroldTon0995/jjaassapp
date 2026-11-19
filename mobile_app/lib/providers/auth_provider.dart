@@ -208,4 +208,45 @@ class AuthProvider extends ChangeNotifier {
       return false;
     }
   }
+
+  Future<bool> signInWithGoogle() async {
+    _setLoading(true);
+    _clearError();
+    try {
+      await _authRepository.signInWithGoogle();
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _setLoading(false);
+      return false;
+    }
+  }
+
+  Future<bool> completeOAuthSession() async {
+    _setLoading(true);
+    _clearError();
+    try {
+      final user = await _authRepository.getCurrentUser();
+      if (user == null) {
+        _setLoading(false);
+        return false;
+      }
+      if (user.role == UserRole.admin) {
+        await _authRepository.logout();
+        _currentUser = null;
+        _errorMessage =
+            'Admin accounts cannot log in to the mobile application. Only Customer and Driver accounts can log in here.';
+        _setLoading(false);
+        return false;
+      }
+      _currentUser = user;
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _setLoading(false);
+      return false;
+    }
+  }
 }

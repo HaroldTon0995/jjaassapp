@@ -107,6 +107,20 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> signInWithGoogle() async {
+    _setLoading(true);
+    _clearError();
+    try {
+      await _authRepository.signInWithGoogle();
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _setLoading(false);
+      return false;
+    }
+  }
+
   // Password Reset Methods (100% Free Supabase OTP)
   Future<bool> sendPasswordResetOtp(String email) async {
     _setLoading(true);
