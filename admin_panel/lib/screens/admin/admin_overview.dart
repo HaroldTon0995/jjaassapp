@@ -150,15 +150,19 @@ extension _AdminOverview on _AdminDashboardState {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Text(
                   title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: isDark
                         ? const Color(0xFF94A3B8)
@@ -167,80 +171,81 @@ extension _AdminOverview on _AdminDashboardState {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 6),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    value,
-                    style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w900,
-                      color: isDark ? Colors.white : const Color(0xFF0F172A),
-                      letterSpacing: -0.5,
-                    ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: isDark ? 0.2 : 0.1),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: color.withValues(alpha: isDark ? 0.4 : 0.2),
                   ),
                 ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
+                child: Icon(icon, color: color, size: 16),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                letterSpacing: -0.5,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 8,
+              vertical: 3,
+            ),
+            decoration: BoxDecoration(
+              color: isUpTrend
+                  ? const Color(
+                      0xFF10B981,
+                    ).withValues(alpha: isDark ? 0.2 : 0.1)
+                  : Colors.red.withValues(alpha: isDark ? 0.2 : 0.1),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isUpTrend
+                    ? const Color(
+                        0xFF10B981,
+                      ).withValues(alpha: isDark ? 0.45 : 0.25)
+                    : Colors.red.withValues(alpha: isDark ? 0.45 : 0.25),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isUpTrend
+                      ? Icons.arrow_upward_rounded
+                      : Icons.arrow_downward_rounded,
+                  color: isUpTrend ? const Color(0xFF10B981) : Colors.red,
+                  size: 12,
+                ),
+                const SizedBox(width: 3),
+                Text(
+                  trend,
+                  style: TextStyle(
                     color: isUpTrend
-                        ? const Color(
-                            0xFF10B981,
-                          ).withValues(alpha: isDark ? 0.2 : 0.1)
-                        : Colors.red.withValues(alpha: isDark ? 0.2 : 0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: isUpTrend
-                          ? const Color(
-                              0xFF10B981,
-                            ).withValues(alpha: isDark ? 0.45 : 0.25)
-                          : Colors.red.withValues(alpha: isDark ? 0.45 : 0.25),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        isUpTrend
-                            ? Icons.arrow_upward_rounded
-                            : Icons.arrow_downward_rounded,
-                        color: isUpTrend ? const Color(0xFF10B981) : Colors.red,
-                        size: 12,
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        trend,
-                        style: TextStyle(
-                          color: isUpTrend
-                              ? (isDark
-                                    ? const Color(0xFF34D399)
-                                    : const Color(0xFF047857))
-                              : Colors.red,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+                        ? (isDark
+                              ? const Color(0xFF34D399)
+                              : const Color(0xFF047857))
+                        : Colors.red,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
             ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: isDark ? 0.2 : 0.1),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: color.withValues(alpha: isDark ? 0.4 : 0.2),
-              ),
-            ),
-            child: Icon(icon, color: color, size: 24),
           ),
         ],
       ),
