@@ -773,8 +773,8 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
       onPaymentSuccess: () {
         if (mounted) {
           setState(() {
-            _selectedTab = 2; // Switch to My Deliveries
-            _activeSidebarMenu = 2;
+            _selectedTab = 1; // Return to Order Water page
+            _activeSidebarMenu = 1;
           });
         }
       },

@@ -793,11 +793,16 @@ class _GCashPaymentModalState extends State<GCashPaymentModal>
 
         SizedBox(
           height: 46,
-          child: ElevatedButton(
+          child: ElevatedButton.icon(
             onPressed: () {
               Navigator.of(context).pop();
               widget.onPaymentSuccess?.call();
             },
+            icon: const Icon(Icons.storefront_rounded, size: 18),
+            label: const Text(
+              'Back to Merchant',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryColor,
               foregroundColor: Colors.white,
@@ -805,10 +810,6 @@ class _GCashPaymentModalState extends State<GCashPaymentModal>
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-            ),
-            child: const Text(
-              'Done',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
             ),
           ),
         ),
