@@ -111,18 +111,24 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
         actions: [
-          ElevatedButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              Navigator.of(
+                context,
+              ).pushNamedAndRemoveUntil(AppRoutes.login, (route) => false);
+            },
+            icon: const Icon(Icons.arrow_back_rounded, size: 18),
+            label: const Text(
+              'Back to Login',
+              style: TextStyle(fontWeight: FontWeight.w800),
+            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.navyColor,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
-            ),
-            child: const Text(
-              'Understood',
-              style: TextStyle(fontWeight: FontWeight.w800),
             ),
           ),
         ],
