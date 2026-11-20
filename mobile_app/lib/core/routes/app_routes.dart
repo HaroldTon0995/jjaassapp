@@ -15,8 +15,8 @@ class AppRoutes {
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     final routeName = settings.name ?? '';
-    if (routeName.startsWith('/?code=') ||
-        routeName.startsWith('/login-callback')) {
+    if (routeName.contains('code=') ||
+        routeName.contains('login-callback')) {
       return MaterialPageRoute(builder: (_) => const LoginScreen());
     }
     switch (settings.name) {
