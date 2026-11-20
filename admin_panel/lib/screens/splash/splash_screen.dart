@@ -37,7 +37,7 @@ class _SplashScreenState extends State<SplashScreen> {
     }
   }
 
-  void _routeToDashboard(UserRole? role) {
+  Future<void> _routeToDashboard(UserRole? role) async {
     if (!mounted) return;
     if (role == null) {
       Navigator.of(context).pushReplacementNamed(AppRoutes.login);
@@ -46,9 +46,13 @@ class _SplashScreenState extends State<SplashScreen> {
 
     switch (role) {
       case UserRole.customer:
+        await Provider.of<AuthProvider>(context, listen: false).logout();
+        if (!mounted) return;
         Navigator.of(context).pushReplacementNamed(AppRoutes.customerDashboard);
         break;
       case UserRole.driver:
+        await Provider.of<AuthProvider>(context, listen: false).logout();
+        if (!mounted) return;
         Navigator.of(context).pushReplacementNamed(AppRoutes.driverDashboard);
         break;
       case UserRole.admin:
