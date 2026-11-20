@@ -14,6 +14,11 @@ class AppRoutes {
   static const String adminDashboard = '/admin';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
+    final routeName = settings.name ?? '';
+    if (routeName.startsWith('/?code=') ||
+        routeName.startsWith('/login-callback')) {
+      return MaterialPageRoute(builder: (_) => const LoginScreen());
+    }
     switch (settings.name) {
       case splash:
         return MaterialPageRoute(builder: (_) => const SplashScreen());
