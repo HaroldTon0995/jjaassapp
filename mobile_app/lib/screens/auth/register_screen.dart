@@ -49,6 +49,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'Account created successfully! Welcome to JJAASS Water Market.',
       );
       _routeToDashboard(UserRole.customer);
+    } else if (authProvider.requiresEmailVerification) {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.mark_email_unread_rounded, color: AppTheme.primaryColor),
+              SizedBox(width: 10),
+              Expanded(child: Text('Verify Your Gmail')),
+            ],
+          ),
+          content: Text(
+            'We sent a verification link to ${_emailController.text.trim()}.\n\nPlease open your Gmail inbox and click the confirmation link before signing in.',
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                Navigator.of(context).pushNamedAndRemoveUntil(
+                  AppRoutes.login,
+                  (route) => false,
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.navyColor,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Back to Login'),
+            ),
+          ],
+        ),
+      );
     } else {
       Helpers.showSnackBar(
         context,

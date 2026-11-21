@@ -177,6 +177,12 @@ class SupabaseAuthRepository implements AuthRepository {
     if (user == null) {
       throw Exception('Login failed: User record is empty.');
     }
+    if (user.emailConfirmedAt == null) {
+      await _client.auth.signOut();
+      throw Exception(
+        'Please verify your Gmail address first. Check your inbox for the confirmation link.',
+      );
+    }
 
     final metaName = user.userMetadata?['name'] as String?;
 
@@ -279,6 +285,10 @@ class SupabaseAuthRepository implements AuthRepository {
       if (session == null) return null;
       final user = _client.auth.currentUser;
       if (user == null) return null;
+      if (user.emailConfirmedAt == null) {
+        await _client.auth.signOut();
+        return null;
+      }
 
       final metaName = user.userMetadata?['name'] as String?;
 

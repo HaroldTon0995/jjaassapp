@@ -13,10 +13,12 @@ class AuthProvider extends ChangeNotifier {
 
   UserModel? _currentUser;
   bool _isLoading = false;
+  bool _requiresEmailVerification = false;
   String? _errorMessage;
 
   UserModel? get currentUser => _currentUser;
   bool get isLoading => _isLoading;
+  bool get requiresEmailVerification => _requiresEmailVerification;
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _currentUser != null;
 
@@ -117,14 +119,23 @@ class AuthProvider extends ChangeNotifier {
     }
     _setLoading(true);
     _clearError();
+    _requiresEmailVerification = false;
 
     try {
-      _currentUser = await _authRepository.signUp(
+      final created = await _authRepository.signUp(
         name: name,
         email: email,
         password: password,
         role: role,
       );
+      if (_authRepository is SupabaseAuthRepository &&
+          Supabase.instance.client.auth.currentSession == null) {
+        _currentUser = null;
+        _requiresEmailVerification = true;
+        _setLoading(false);
+        return false;
+      }
+      _currentUser = created;
       _setLoading(false);
       return true;
     } catch (e) {
