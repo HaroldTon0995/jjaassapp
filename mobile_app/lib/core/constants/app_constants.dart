@@ -33,8 +33,7 @@ class AppConstants {
       supabaseUrl.isNotEmpty && !supabaseUrl.contains('YOUR_SUPABASE');
 
   // PayMongo Keys Configuration
-  // Replace these with your actual keys from the PayMongo dashboard settings
-  static const String paymongoSecretKey = 'sk_test_ktY7QC25rmHyB3Qt1jAnHtLt';
+  // Secret key is stored server-side in Supabase Edge Function secrets (PAYMONGO_SECRET_KEY).
   static const String paymongoPublicKey = 'pk_test_Y2Rq8RD2whVztowJYaEaAo7p';
 
   // Gemini API Configuration for AquaBot Support

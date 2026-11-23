@@ -41,210 +41,95 @@ class PaymentService {
     return 'Basic ${base64Encode(utf8.encode("$key:"))}';
   }
 
-  /// Initiates a GCash / E-Wallet payment via PayMongo Links or Sources API.
+  /// Initiates a GCash / E-Wallet payment via Supabase Edge Function (PayMongo) or Public Key Sources API.
   Future<PaymentResponse> initiateGCashPayment({
     required String orderId,
     required double amount,
     required String role,
   }) async {
-    final secretKey = AppConstants.paymongoSecretKey;
     final publicKey = AppConstants.paymongoPublicKey;
+    final successUrl = kIsWeb
+        ? Uri.base.origin
+        : 'io.supabase.jjaassapp://payment-success?order_id=$orderId';
+    final cancelUrl = kIsWeb
+        ? Uri.base.origin
+        : 'io.supabase.jjaassapp://payment-cancel?order_id=$orderId';
 
-    // 1. Try PayMongo Checkout Sessions API (supports custom success_url / Back to Merchant)
-    if (secretKey.isNotEmpty && !secretKey.contains('your_secret_key_here')) {
+    // 1. Try secure Supabase Edge Function (holds PAYMONGO_SECRET_KEY server-side)
+    if (AppConstants.isSupabaseConfigured) {
       try {
-        final amountInCentavos = (amount * 100).round();
-        final successUrl = kIsWeb
-            ? Uri.base.origin
-            : 'io.supabase.jjaassapp://payment-success?order_id=$orderId';
-        final cancelUrl = kIsWeb
-            ? Uri.base.origin
-            : 'io.supabase.jjaassapp://payment-cancel?order_id=$orderId';
-        final checkoutEndpoints = kIsWeb
-            ? [
-                'https://api.allorigins.win/raw?url=https://api.paymongo.com/v1/checkout_sessions',
-                'https://corsproxy.io/?https://api.paymongo.com/v1/checkout_sessions',
-                'https://api.paymongo.com/v1/checkout_sessions',
-              ]
-            : ['https://api.paymongo.com/v1/checkout_sessions'];
-
-        for (final url in checkoutEndpoints) {
-          try {
-            final response = await _client.post(
-              Uri.parse(url),
-              headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'Authorization': _getAuthHeader(secretKey),
-              },
-              body: jsonEncode({
-                'data': {
-                  'attributes': {
-                    'send_email_receipt': false,
-                    'show_description': true,
-                    'show_line_items': true,
-                    'description': 'JJAASS Water Order #$orderId',
-                    'line_items': [
-                      {
-                        'currency': 'PHP',
-                        'amount': amountInCentavos,
-                        'name': 'JJAASS Water Order #$orderId',
-                        'quantity': 1,
-                      }
-                    ],
-                    'payment_method_types': ['gcash'],
-                    'success_url': successUrl,
-                    'cancel_url': cancelUrl,
-                  }
-                }
-              }),
-            );
-
-            if (response.statusCode == 200 || response.statusCode == 201) {
-              final json = jsonDecode(response.body);
-              final sessionId = json['data']['id'] ?? '';
-              final checkoutUrl =
-                  json['data']['attributes']['checkout_url'] ?? '';
-              final status =
-                  json['data']['attributes']['status'] ?? 'active';
-
-              if (checkoutUrl.isNotEmpty) {
-                return PaymentResponse(
-                  orderId: orderId,
-                  paymentIntentId: sessionId,
-                  redirectUrl: checkoutUrl,
-                  status: status,
-                  qrCodeUrl: getQrCodeUrl(checkoutUrl),
-                  isMock: false,
-                );
-              }
-            }
-          } catch (endpointErr) {
-            debugPrint(
-              'PayMongo Checkout Session attempt failed on $url: $endpointErr',
-            );
-          }
+        final fnRes = await Supabase.instance.client.functions.invoke(
+          'paymongo-checkout',
+          body: {
+            'action': 'initiate',
+            'orderId': orderId,
+            'amount': amount,
+            'role': role,
+            'successUrl': successUrl,
+            'cancelUrl': cancelUrl,
+          },
+        );
+        final data = fnRes.data;
+        if (data is Map<String, dynamic> &&
+            (data['redirect_url']?.toString().isNotEmpty ?? false)) {
+          final checkoutUrl = data['redirect_url'].toString();
+          return PaymentResponse(
+            orderId: orderId,
+            paymentIntentId: (data['payment_intent_id'] ?? '').toString(),
+            redirectUrl: checkoutUrl,
+            status: (data['status'] ?? 'active').toString(),
+            qrCodeUrl: getQrCodeUrl(checkoutUrl),
+            isMock: false,
+          );
         }
       } catch (e) {
-        debugPrint('PayMongo Checkout Sessions API error: $e');
+        debugPrint('PayMongo Edge Function initiate failed: $e');
       }
     }
 
-    // 2. Fallback: PayMongo Payment Links API
-    if (secretKey.isNotEmpty && !secretKey.contains('your_secret_key_here')) {
-      try {
-        final amountInCentavos = (amount * 100).round();
-        final endpoints = kIsWeb
-            ? [
-                'https://api.allorigins.win/raw?url=https://api.paymongo.com/v1/links',
-                'https://corsproxy.io/?https://api.paymongo.com/v1/links',
-                'https://api.paymongo.com/v1/links',
-              ]
-            : ['https://api.paymongo.com/v1/links'];
-
-        for (final url in endpoints) {
-          try {
-            final response = await _client.post(
-              Uri.parse(url),
-              headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'Authorization': _getAuthHeader(secretKey),
-              },
-              body: jsonEncode({
-                'data': {
-                  'attributes': {
-                    'amount': amountInCentavos,
-                    'description': 'JJAASS Water Order #$orderId',
-                    'remarks': 'Order #$orderId ($role)',
-                  }
-                }
-              }),
-            );
-
-            if (response.statusCode == 200 || response.statusCode == 201) {
-              final json = jsonDecode(response.body);
-              final linkId = json['data']['id'] ?? '';
-              final checkoutUrl = json['data']['attributes']['checkout_url'] ?? '';
-              final status = json['data']['attributes']['status'] ?? 'unpaid';
-
-              if (checkoutUrl.isNotEmpty) {
-                return PaymentResponse(
-                  orderId: orderId,
-                  paymentIntentId: linkId,
-                  redirectUrl: checkoutUrl,
-                  status: status,
-                  qrCodeUrl: getQrCodeUrl(checkoutUrl),
-                  isMock: false,
-                );
-              }
-            }
-          } catch (endpointErr) {
-            debugPrint('PayMongo Links attempt failed on $url: $endpointErr');
-          }
-        }
-      } catch (e) {
-        debugPrint('PayMongo Links API error: $e');
-      }
-    }
-
-    // 2. Try PayMongo Sources API with Public Key
+    // 2. Fallback: PayMongo Sources API with Public Key (no secret key, no third-party CORS proxies)
     if (publicKey.isNotEmpty && !publicKey.contains('your_public_key_here')) {
       try {
         final amountInCentavos = (amount * 100).round();
-        final endpoints = kIsWeb
-            ? [
-                'https://api.allorigins.win/raw?url=https://api.paymongo.com/v1/sources',
-                'https://corsproxy.io/?https://api.paymongo.com/v1/sources',
-                'https://api.paymongo.com/v1/sources',
-              ]
-            : ['https://api.paymongo.com/v1/sources'];
-
-        for (final url in endpoints) {
-          try {
-            final response = await _client.post(
-              Uri.parse(url),
-              headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'Authorization': _getAuthHeader(publicKey),
-              },
-              body: jsonEncode({
-                'data': {
-                  'attributes': {
-                    'type': 'gcash',
-                    'amount': amountInCentavos,
-                    'currency': 'PHP',
-                    'redirect': {
-                      'success': 'https://jjaass-water.web.app/payment-success?orderId=$orderId',
-                      'failed': 'https://jjaass-water.web.app/payment-failed?orderId=$orderId'
-                    },
-                    'metadata': {
-                      'orderId': orderId,
-                    }
-                  }
+        final response = await _client.post(
+          Uri.parse('https://api.paymongo.com/v1/sources'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': _getAuthHeader(publicKey),
+          },
+          body: jsonEncode({
+            'data': {
+              'attributes': {
+                'type': 'gcash',
+                'amount': amountInCentavos,
+                'currency': 'PHP',
+                'redirect': {
+                  'success': 'https://jjaass-water.web.app/payment-success?orderId=$orderId',
+                  'failed': 'https://jjaass-water.web.app/payment-failed?orderId=$orderId'
+                },
+                'metadata': {
+                  'orderId': orderId,
                 }
-              }),
-            );
-
-            if (response.statusCode == 200 || response.statusCode == 201) {
-              final json = jsonDecode(response.body);
-              final sourceId = json['data']['id'];
-              final checkoutUrl = json['data']['attributes']['redirect']['checkout_url'];
-              final status = json['data']['attributes']['status'];
-
-              return PaymentResponse(
-                orderId: orderId,
-                paymentIntentId: sourceId,
-                redirectUrl: checkoutUrl,
-                status: status,
-                qrCodeUrl: getQrCodeUrl(checkoutUrl),
-                isMock: false,
-              );
+              }
             }
-          } catch (endpointErr) {
-            debugPrint('PayMongo Sources attempt failed on $url: $endpointErr');
-          }
+          }),
+        );
+
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          final json = jsonDecode(response.body);
+          final sourceId = json['data']['id'];
+          final checkoutUrl = json['data']['attributes']['redirect']['checkout_url'];
+          final status = json['data']['attributes']['status'];
+
+          return PaymentResponse(
+            orderId: orderId,
+            paymentIntentId: sourceId,
+            redirectUrl: checkoutUrl,
+            status: status,
+            qrCodeUrl: getQrCodeUrl(checkoutUrl),
+            isMock: false,
+          );
         }
       } catch (e) {
         debugPrint('PayMongo Sources API error: $e');
@@ -256,165 +141,35 @@ class PaymentService {
     return _mockInitiateGCashPayment(orderId, amount);
   }
 
-  /// Polls or checks either PayMongo directly (Links or Sources API) or the Supabase DB
+  /// Polls or checks PayMongo via Supabase Edge Function or checks the Supabase DB
   Future<bool> checkPaymentStatus(String identifier) async {
-    final secretKey = AppConstants.paymongoSecretKey;
-
-    // Check PayMongo Checkout Sessions API (cs_xxxx)
-    if (identifier.startsWith('cs_')) {
-      if (secretKey.isEmpty || secretKey.contains('your_secret_key_here')) {
-        return false;
-      }
-      try {
-        final endpoints = kIsWeb
-            ? [
-                'https://api.allorigins.win/raw?url=https://api.paymongo.com/v1/checkout_sessions/$identifier',
-                'https://corsproxy.io/?https://api.paymongo.com/v1/checkout_sessions/$identifier',
-                'https://api.paymongo.com/v1/checkout_sessions/$identifier',
-              ]
-            : ['https://api.paymongo.com/v1/checkout_sessions/$identifier'];
-
-        for (final url in endpoints) {
-          try {
-            final response = await _client.get(
-              Uri.parse(url),
-              headers: {
-                'Accept': 'application/json',
-                'Authorization': _getAuthHeader(secretKey),
-              },
-            );
-
-            if (response.statusCode == 200) {
-              final json = jsonDecode(response.body);
-              final attrs = json['data']?['attributes'] as Map<String, dynamic>?;
-              if (attrs != null) {
-                final piStatus =
-                    attrs['payment_intent']?['attributes']?['status'];
-                if (piStatus == 'succeeded') return true;
-                final payments = attrs['payments'] as List<dynamic>?;
-                if (payments != null &&
-                    payments.any(
-                      (p) => p['attributes']?['status'] == 'paid',
-                    )) {
-                  return true;
-                }
-              }
-            }
-          } catch (_) {}
-        }
-      } catch (e) {
-        debugPrint('Error retrieving checkout session status: $e');
-      }
-      return false;
-    }
-
-    // Check PayMongo Links API (link_xxxx)
-    if (identifier.startsWith('link_')) {
-      if (secretKey.isEmpty || secretKey.contains('your_secret_key_here')) {
-        return false;
-      }
-      try {
-        final endpoints = kIsWeb
-            ? [
-                'https://api.allorigins.win/raw?url=https://api.paymongo.com/v1/links/$identifier',
-                'https://corsproxy.io/?https://api.paymongo.com/v1/links/$identifier',
-                'https://api.paymongo.com/v1/links/$identifier',
-              ]
-            : ['https://api.paymongo.com/v1/links/$identifier'];
-
-        for (final url in endpoints) {
-          try {
-            final response = await _client.get(
-              Uri.parse(url),
-              headers: {
-                'Accept': 'application/json',
-                'Authorization': _getAuthHeader(secretKey),
-              },
-            );
-
-            if (response.statusCode == 200) {
-              final json = jsonDecode(response.body);
-              final status = json['data']['attributes']['status'];
-              if (status == 'paid') {
-                return true;
-              }
-            }
-          } catch (_) {}
-        }
-      } catch (e) {
-        debugPrint('Error retrieving link status from PayMongo: $e');
-      }
-      return false;
-    }
-
-    // Check PayMongo Sources API (src_xxxx)
-    if (identifier.startsWith('src_') && !identifier.startsWith('src_mock_')) {
-      if (secretKey.isEmpty || secretKey.contains('your_secret_key_here')) {
-        return false;
-      }
-      try {
-        final url = kIsWeb
-            ? 'https://corsproxy.io/?https://api.paymongo.com/v1/sources/$identifier'
-            : 'https://api.paymongo.com/v1/sources/$identifier';
-
-        final response = await _client.get(
-          Uri.parse(url),
-          headers: {
-            'Accept': 'application/json',
-            'Authorization': _getAuthHeader(secretKey),
-          },
-        );
-
-        if (response.statusCode == 200) {
-          final json = jsonDecode(response.body);
-          final status = json['data']['attributes']['status'];
-
-          if (status == 'chargeable') {
-            final amount = json['data']['attributes']['amount'];
-            final currency = json['data']['attributes']['currency'];
-
-            final payUrl = kIsWeb
-                ? 'https://corsproxy.io/?https://api.paymongo.com/v1/payments'
-                : 'https://api.paymongo.com/v1/payments';
-
-            final payResponse = await _client.post(
-              Uri.parse(payUrl),
-              headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'Authorization': _getAuthHeader(secretKey),
-              },
-              body: jsonEncode({
-                'data': {
-                  'attributes': {
-                    'amount': amount,
-                    'currency': currency,
-                    'source': {
-                      'id': identifier,
-                      'type': 'source',
-                    }
-                  }
-                }
-              }),
-            );
-
-            if (payResponse.statusCode == 200) {
-              final payJson = jsonDecode(payResponse.body);
-              final payStatus = payJson['data']['attributes']['status'];
-              return payStatus == 'succeeded' || payStatus == 'paid';
-            }
-          } else if (status == 'charged') {
-            return true;
-          }
-        }
-      } catch (e) {
-        debugPrint('Error retrieving source status from PayMongo: $e');
-      }
-      return false;
-    }
-
     // Mock Mode identifiers
     if (identifier.startsWith('mock_') || identifier.startsWith('src_mock_')) {
+      return false;
+    }
+
+    // Check PayMongo Checkout Sessions, Links, or Sources via server-side Edge Function
+    if (identifier.startsWith('cs_') ||
+        identifier.startsWith('link_') ||
+        identifier.startsWith('src_')) {
+      if (!AppConstants.isSupabaseConfigured) {
+        return false;
+      }
+      try {
+        final fnRes = await Supabase.instance.client.functions.invoke(
+          'paymongo-checkout',
+          body: {
+            'action': 'check_status',
+            'identifier': identifier,
+          },
+        );
+        final data = fnRes.data;
+        if (data is Map && data['paid'] == true) {
+          return true;
+        }
+      } catch (e) {
+        debugPrint('PayMongo Edge Function status check failed: $e');
+      }
       return false;
     }
 

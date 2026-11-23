@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/constants/app_constants.dart';
 import '../models/order_model.dart';
 import '../providers/order_provider.dart';
@@ -18,27 +19,16 @@ class AiSupportService {
   static const double _depotLat = 14.5995;
   static const double _depotLng = 120.9842;
 
-  // Runtime Gemini API key override (can be set in-app or via chat)
-  static String _runtimeApiKey = '';
-
   // Multi-turn conversation memory per user role/session
   static final Map<String, List<Map<String, dynamic>>> _conversationHistory = {};
 
-  static String get activeApiKey {
-    if (_runtimeApiKey.trim().isNotEmpty) {
-      return _runtimeApiKey.trim();
-    }
-    return AppConstants.geminiApiKey.trim();
-  }
+  static String get activeApiKey => AppConstants.geminiApiKey.trim();
 
-  static bool get hasConfiguredApiKey => activeApiKey.isNotEmpty;
+  static bool get hasConfiguredApiKey =>
+      AppConstants.isSupabaseConfigured || activeApiKey.isNotEmpty;
 
-  static void setApiKey(String key) {
-    _runtimeApiKey = key.trim();
-  }
-
-  /// Fetches response from Gemini AI support engine.
-  /// Falls back to a comprehensive omniscient role-aware engine if Gemini API key is not set or network fails.
+  /// Fetches response from Gemini AI support engine (via Supabase Edge Function or compile-time key).
+  /// Falls back to a comprehensive omniscient role-aware engine if unavailable.
   static Future<String> getChatResponse({
     required String query,
     required bool isDriver,
@@ -49,15 +39,6 @@ class AiSupportService {
   }) async {
     final trimmed = query.trim();
     final cleanQuery = trimmed.toLowerCase();
-
-    // Allow setting Gemini API key directly in chat by pasting an AIza... key
-    final apiKeyMatch =
-        RegExp(r'(AIza[0-9A-Za-z\-_]{31,45})').firstMatch(trimmed);
-    if (apiKeyMatch != null) {
-      final extractedKey = apiKeyMatch.group(1)!;
-      setApiKey(extractedKey);
-      return "✅ **Gemini AI Key Activated!**\n\nAquaBot is now connected to **Google Gemini (`gemini-2.5-flash`)** with full live knowledge of **Admin, Driver, and Customer** workflows. Ask me anything about orders, inventory, deliveries, defect claims, permits, or station operations!";
-    }
 
     // Quick intercept for route optimization if requested by driver or admin
     if ((isDriver || isAdmin) &&
@@ -153,6 +134,46 @@ class AiSupportService {
         ],
       },
     ];
+
+    // 1. Prefer Supabase Edge Function proxy (keeps GEMINI_API_KEY server-side)
+    if (AppConstants.isSupabaseConfigured) {
+      try {
+        final fnRes = await Supabase.instance.client.functions
+            .invoke(
+              'aquabot-chat',
+              body: {
+                'systemInstruction': systemInstructions,
+                'contents': contents,
+              },
+            )
+            .timeout(const Duration(seconds: 12));
+        final data = fnRes.data;
+        if (data is Map && data['reply'] != null) {
+          final reply = data['reply'].toString().trim();
+          if (reply.isNotEmpty) {
+            history.add({
+              "role": "user",
+              "parts": [
+                {"text": query}
+              ],
+            });
+            history.add({
+              "role": "model",
+              "parts": [
+                {"text": reply}
+              ],
+            });
+            return reply;
+          }
+        }
+      } catch (e) {
+        debugPrint('AquaBot Edge Function fallback: $e');
+      }
+    }
+
+    if (activeApiKey.isEmpty) {
+      throw Exception('No server-side or compile-time Gemini API key available.');
+    }
 
     Exception? lastError;
 
