@@ -3,7 +3,7 @@ import '../core/theme/app_theme.dart';
 
 class CustomButton extends StatelessWidget {
   final String text;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final bool isLoading;
   final List<Color>? gradientColors;
 
@@ -17,6 +17,7 @@ class CustomButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDisabled = isLoading || onPressed == null;
     final colors = gradientColors ?? [
       AppTheme.navyColor,
       AppTheme.primaryColor,
@@ -27,12 +28,12 @@ class CustomButton extends StatelessWidget {
       height: 54,
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: isLoading ? [Colors.grey.shade400, Colors.grey.shade500] : colors,
+          colors: isDisabled ? [Colors.grey.shade400, Colors.grey.shade500] : colors,
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
         borderRadius: BorderRadius.circular(14),
-        boxShadow: isLoading
+        boxShadow: isDisabled
             ? []
             : [
                 BoxShadow(
@@ -50,7 +51,7 @@ class CustomButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
           ),
         ),
-        onPressed: isLoading ? null : onPressed,
+        onPressed: isDisabled ? null : onPressed,
         child: isLoading
             ? const SizedBox(
                 width: 24,
