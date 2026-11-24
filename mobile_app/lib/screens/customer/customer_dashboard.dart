@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/data/ph_provinces.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/helpers.dart';
@@ -86,13 +85,12 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     return '0 Jugs';
   }
   String? _selectedProvince = 'Albay';
-  String? _selectedCityCode;
+  String? _selectedCityCode = '050501000';
   String? _selectedBarangayCode;
   List<PsgcPlace> _cities = List<PsgcPlace>.from(
     PsgcService.albayFirstDistrictMunicipalities,
   );
   List<PsgcPlace> _barangays = [];
-  bool _loadingCities = false;
   bool _loadingBarangays = false;
   final TextEditingController _deliveryNoteController = TextEditingController();
   final TextEditingController _orderAddressController = TextEditingController();
@@ -175,6 +173,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
 
     _loadDashboardData();
     _loadSavedCustomerLocation();
+    _onCityChanged('050501000');
   }
 
   void _onDeliveryIssuesChanged() {
@@ -467,35 +466,6 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     );
   }
 
-  Future<void> _onProvinceChanged(String? provinceName) async {
-    if (provinceName == null) return;
-    final province = phProvinces.firstWhere((p) => p.name == provinceName);
-    setState(() {
-      _selectedProvince = provinceName;
-      _selectedCityCode = null;
-      _selectedBarangayCode = null;
-      _cities = [];
-      _barangays = [];
-      _loadingCities = true;
-    });
-    try {
-      final cities = await PsgcService.getCitiesMunicipalities(province.code);
-      if (!mounted || _selectedProvince != provinceName) return;
-      setState(() {
-        _cities = cities;
-        _loadingCities = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _loadingCities = false);
-      Helpers.showSnackBar(
-        context,
-        'Could not load cities/municipalities. Check your internet connection.',
-        isError: true,
-      );
-    }
-  }
-
   Future<void> _onCityChanged(String? cityCode) async {
     if (cityCode == null) return;
     setState(() {
@@ -566,14 +536,15 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     _borrowedRoundQty = 0;
     _selectedAddonQuantities.clear();
     _selectedProvince = 'Albay';
-    _selectedCityCode = null;
+    _selectedCityCode = '050501000';
     _selectedBarangayCode = null;
     _cities = List<PsgcPlace>.from(
       PsgcService.albayFirstDistrictMunicipalities,
     );
-    _barangays = [];
-    _loadingCities = false;
     _loadingBarangays = false;
+    if (_barangays.isEmpty) {
+      _onCityChanged('050501000');
+    }
     _orderAddressController.clear();
     _deliveryNoteController.clear();
     // Do NOT clear _pinnedLocation: customer's permanent pinned location is retained!
@@ -3879,65 +3850,43 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                   ),
                 ],
 
-                // Manual dropdowns: Shown if not pinned, OR if customer explicitly expanded manual address
+                // Manual address fields: Auto-locked to Bacacay, Albay (Mainland & Island Barangays)
                 if (_pinnedLocation == null || _showManualAddressFields) ...[
                   const SizedBox(height: 12),
-                  const Text(
-                    'Province',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF475569),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: AppTheme.secondaryColor.withValues(alpha: 0.4),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  DropdownButtonFormField<String>(
-                    key: ValueKey('province_$_selectedProvince'),
-                    initialValue: _selectedProvince,
-                    isExpanded: true,
-                    decoration: _boxedInputDecoration(hint: 'Select Province'),
-                    items: phProvincesSorted
-                        .map(
-                          (p) => DropdownMenuItem(
-                            value: p.name,
-                            child: Text(p.name, overflow: TextOverflow.ellipsis),
+                    child: const Row(
+                      children: [
+                        Icon(
+                          Icons.location_city_rounded,
+                          size: 16,
+                          color: AppTheme.navyColor,
+                        ),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Service Area: Bacacay, Albay (Mainland & Island Barangays)',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.navyColor,
+                            ),
                           ),
-                        )
-                        .toList(),
-                    onChanged: _onProvinceChanged,
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'City / Municipality',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF475569),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  DropdownButtonFormField<String>(
-                    key: ValueKey('city_${_selectedProvince}_${_cities.length}'),
-                    initialValue: _selectedCityCode,
-                    isExpanded: true,
-                    decoration: _boxedInputDecoration(
-                      hint: _loadingCities
-                          ? 'Loading cities/municipalities...'
-                          : 'Select City / Municipality',
-                    ),
-                    items: _cities
-                        .map(
-                          (c) => DropdownMenuItem(
-                            value: c.code,
-                            child: Text(c.name, overflow: TextOverflow.ellipsis),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: _cities.isEmpty ? null : _onCityChanged,
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Barangay',
+                    'Barangay (Bacacay Mainland & Island)',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,

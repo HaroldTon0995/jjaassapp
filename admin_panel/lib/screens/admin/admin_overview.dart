@@ -1250,6 +1250,10 @@ extension _AdminOverview on _AdminDashboardState {
     final nameController = TextEditingController();
     final phoneController = TextEditingController();
     final addressController = TextEditingController();
+    String? selectedBarangay;
+    List<PsgcPlace> bacacayBarangays = [];
+    bool loadingBarangays = true;
+    bool barangaysRequested = false;
     final qtyController = TextEditingController(text: '1');
     bool isBorrowingContainers = false;
     final slimBorrowController = TextEditingController(text: '0');
@@ -1362,6 +1366,22 @@ extension _AdminOverview on _AdminDashboardState {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Builder(
+                        builder: (ctx) {
+                          if (!barangaysRequested) {
+                            barangaysRequested = true;
+                            PsgcService.getBarangays('050501000').then((list) {
+                              if (ctx.mounted) {
+                                setDialogState(() {
+                                  bacacayBarangays = list;
+                                  loadingBarangays = false;
+                                });
+                              }
+                            });
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
                       // 1. FULFILLMENT TYPE TOGGLE (Delivery vs Store Pickup)
                       Text(
                         'ORDER FULFILLMENT TYPE',
@@ -1704,14 +1724,45 @@ extension _AdminOverview on _AdminDashboardState {
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                if (!lockAddress) ...[
+                                  DropdownButtonFormField<String>(
+                                    initialValue: selectedBarangay,
+                                    isExpanded: true,
+                                    decoration: InputDecoration(
+                                      labelText:
+                                          'Bacacay Barangay (Mainland & Island) *',
+                                      hintText: loadingBarangays
+                                          ? 'Loading Bacacay barangays...'
+                                          : 'Select Barangay in Bacacay',
+                                      prefixIcon: const Icon(Icons.map_outlined),
+                                    ),
+                                    items: bacacayBarangays
+                                        .map(
+                                          (b) => DropdownMenuItem<String>(
+                                            value: b.name,
+                                            child: Text(
+                                              b.name,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        )
+                                        .toList(),
+                                    onChanged: loadingBarangays
+                                        ? null
+                                        : (val) => setDialogState(
+                                            () => selectedBarangay = val,
+                                          ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                ],
                                 TextField(
                                   controller: addressController,
                                   readOnly: lockAddress,
                                   decoration: InputDecoration(
                                     labelText:
-                                        'Delivery Address (Bacacay, Albay) *',
+                                        'House No. / Purok / Street (Bacacay, Albay) *',
                                     hintText:
-                                        'e.g. Purok 1, Brgy. Hindi, Bacacay, Albay',
+                                        'e.g. Purok 1 (Bacacay, Albay is added automatically)',
                                     prefixIcon: const Icon(Icons.location_on),
                                     filled: lockAddress,
                                     fillColor: lockAddress
@@ -1732,44 +1783,9 @@ extension _AdminOverview on _AdminDashboardState {
                                         : null,
                                     helperText: lockAddress
                                         ? 'Saved address from registered customer account'
-                                        : 'Service Scope: Bacacay, Albay only',
+                                        : 'Service Scope: Bacacay, Albay (Mainland & Island Barangays)',
                                   ),
                                 ),
-                                if (!lockAddress) ...[
-                                  const SizedBox(height: 8),
-                                  Wrap(
-                                    spacing: 6,
-                                    runSpacing: 6,
-                                    children:
-                                        const [
-                                          'Bacacay',
-                                        ].map((mun) {
-                                          return ActionChip(
-                                            visualDensity:
-                                                VisualDensity.compact,
-                                            label: Text(
-                                              mun,
-                                              style: const TextStyle(
-                                                fontSize: 11,
-                                              ),
-                                            ),
-                                            onPressed: () {
-                                              setDialogState(() {
-                                                final current =
-                                                    addressController.text
-                                                        .trim();
-                                                if (!current.contains(mun)) {
-                                                  addressController.text =
-                                                      current.isEmpty
-                                                      ? '$mun, Albay'
-                                                      : '$current, $mun, Albay';
-                                                }
-                                              });
-                                            },
-                                          );
-                                        }).toList(),
-                                  ),
-                                ],
                               ],
                             );
                           },
@@ -2340,6 +2356,28 @@ extension _AdminOverview on _AdminDashboardState {
                             isError: true,
                           );
                           return;
+                        }
+                        final hasLockedAddress = isRegistered &&
+                            (selectedCustomer?.address.trim().isNotEmpty ??
+                                false);
+                        if (isDelivery && !hasLockedAddress) {
+                          if (selectedBarangay == null &&
+                              !address.toLowerCase().contains('bacacay')) {
+                            Helpers.showSnackBar(
+                              context,
+                              'Please select a Bacacay barangay (mainland or island).',
+                              isError: true,
+                            );
+                            return;
+                          }
+                          if (selectedBarangay != null) {
+                            address = address.isNotEmpty
+                                ? '$address, Brgy. $selectedBarangay, Bacacay, Albay'
+                                : 'Brgy. $selectedBarangay, Bacacay, Albay';
+                          } else if (address.isNotEmpty &&
+                              !address.toLowerCase().contains('bacacay')) {
+                            address = '$address, Bacacay, Albay';
+                          }
                         }
                         if (isDelivery && address.isEmpty) {
                           Helpers.showSnackBar(

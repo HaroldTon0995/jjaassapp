@@ -21,6 +21,7 @@ import '../../services/ai_support_service.dart';
 import '../../services/chat_service.dart';
 import '../../services/delivery_issue_service.dart';
 import '../../services/compliance_permit_service.dart';
+import '../../services/psgc_service.dart';
 import '../../core/utils/laptop_file_picker.dart';
 import '../../widgets/water_widgets.dart';
 import '../../widgets/gcash_payment_modal.dart';
@@ -1230,6 +1231,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final passwordController = TextEditingController(text: 'Pass1234!');
     final phoneController = TextEditingController();
     final addressController = TextEditingController();
+    String? selectedBarangay;
+    List<PsgcPlace> bacacayBarangays = [];
+    bool loadingBarangays = true;
+    bool barangaysRequested = false;
     bool isSubmitting = false;
     bool obscurePassword = true;
 
@@ -1238,6 +1243,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (subContext, setDialogState) {
+            if (!barangaysRequested) {
+              barangaysRequested = true;
+              PsgcService.getBarangays('050501000').then((list) {
+                if (subContext.mounted) {
+                  setDialogState(() {
+                    bacacayBarangays = list;
+                    loadingBarangays = false;
+                  });
+                }
+              });
+            }
             final isAdmin = selectedRole == UserRole.admin;
             final isDriver = selectedRole == UserRole.driver;
             final activeColor = isAdmin
@@ -1532,47 +1548,54 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       ),
                       const SizedBox(height: 14),
 
-                      // Address / Fleet Station (Bacacay, Albay Scope)
+                      // Address / Fleet Station (Bacacay, Albay Scope — Mainland & Island Barangays)
+                      if (selectedRole != UserRole.admin) ...[
+                        DropdownButtonFormField<String>(
+                          initialValue: selectedBarangay,
+                          isExpanded: true,
+                          decoration: InputDecoration(
+                            labelText: selectedRole == UserRole.driver
+                                ? 'Bacacay Route / Barangay (Optional)'
+                                : 'Bacacay Barangay (Mainland & Island) *',
+                            hintText: loadingBarangays
+                                ? 'Loading Bacacay barangays...'
+                                : 'Select Barangay in Bacacay',
+                            prefixIcon: const Icon(Icons.map_outlined),
+                          ),
+                          items: bacacayBarangays
+                              .map(
+                                (b) => DropdownMenuItem<String>(
+                                  value: b.name,
+                                  child: Text(
+                                    b.name,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: loadingBarangays
+                              ? null
+                              : (val) => setDialogState(
+                                  () => selectedBarangay = val,
+                                ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                       TextField(
                         controller: addressController,
                         decoration: InputDecoration(
                           labelText: selectedRole == UserRole.driver
                               ? 'Assigned Area (Bacacay, Albay) / Vehicle'
-                              : 'Delivery Address (Bacacay, Albay)',
+                              : 'House No. / Purok / Street (Bacacay, Albay)',
                           hintText: selectedRole == UserRole.driver
                               ? 'e.g. Bacacay Poblacion / Cagraray Route'
-                              : 'e.g. Purok 2, Brgy. Hindi, Bacacay, Albay',
+                              : 'e.g. Purok 2 (Bacacay, Albay is added automatically)',
                           prefixIcon: Icon(
                             selectedRole == UserRole.driver
                                 ? Icons.two_wheeler_rounded
                                 : Icons.location_on_outlined,
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children:
-                            const [
-                              'Bacacay',
-                            ].map((mun) {
-                              return ActionChip(
-                                visualDensity: VisualDensity.compact,
-                                label: Text(
-                                  mun,
-                                  style: const TextStyle(fontSize: 11),
-                                ),
-                                onPressed: () {
-                                  final current = addressController.text.trim();
-                                  if (!current.contains(mun)) {
-                                    addressController.text = current.isEmpty
-                                        ? '$mun, Albay'
-                                        : '$current, $mun, Albay';
-                                  }
-                                },
-                              );
-                            }).toList(),
                       ),
                     ],
                   ),
@@ -1593,7 +1616,26 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           final email = emailController.text.trim();
                           final password = passwordController.text.trim();
                           final phone = phoneController.text.trim();
-                          final address = addressController.text.trim();
+                          final rawStreet = addressController.text.trim();
+                          String address = rawStreet;
+                          if (selectedRole == UserRole.customer &&
+                              selectedBarangay == null &&
+                              !rawStreet.toLowerCase().contains('bacacay')) {
+                            Helpers.showSnackBar(
+                              context,
+                              'Please select a Bacacay barangay (mainland or island).',
+                              isError: true,
+                            );
+                            return;
+                          }
+                          if (selectedBarangay != null) {
+                            address = rawStreet.isNotEmpty
+                                ? '$rawStreet, Brgy. $selectedBarangay, Bacacay, Albay'
+                                : 'Brgy. $selectedBarangay, Bacacay, Albay';
+                          } else if (rawStreet.isNotEmpty &&
+                              !rawStreet.toLowerCase().contains('bacacay')) {
+                            address = '$rawStreet, Bacacay, Albay';
+                          }
 
                           if (name.isEmpty) {
                             Helpers.showSnackBar(
