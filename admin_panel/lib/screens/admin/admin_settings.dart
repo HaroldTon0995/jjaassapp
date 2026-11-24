@@ -772,7 +772,7 @@ extension _AdminSettings on _AdminDashboardState {
                       SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Business Scope: Albay 1st District Exclusively (Tabaco City, Bacacay, Malilipot, Malinao, Santo Domingo, Tiwi)',
+                          'Business Scope: Bacacay, Albay Exclusively',
                           style: TextStyle(
                             fontSize: 11.5,
                             fontWeight: FontWeight.bold,

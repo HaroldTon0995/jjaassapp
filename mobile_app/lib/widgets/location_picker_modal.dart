@@ -1,12 +1,14 @@
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
 import '../core/constants/app_constants.dart';
 import '../core/theme/app_theme.dart';
 
 /// Modal dialog for customers to pin their exact delivery house/building location
-/// within Albay 1st District (Tabaco City, Bacacay, Malilipot, Malinao, Santo Domingo, Tiwi).
+/// within Bacacay, Albay (mainland and island barangays, blocking open sea pins).
 class LocationPickerModal extends StatefulWidget {
   final LatLng? initialLocation;
 
@@ -38,19 +40,21 @@ class _LocationPickerModalState extends State<LocationPickerModal> {
   static LatLng get _defaultLocation =>
       LatLng(AppConstants.stationLat, AppConstants.stationLng);
 
-  static Map<String, LatLng> get _albayFirstDistrictCenters => {
+  static Map<String, LatLng> get _bacacayCenters => {
         'Bacacay (HQ)': LatLng(AppConstants.stationLat, AppConstants.stationLng),
-        'Tabaco City': const LatLng(13.3583, 123.7336),
-        'Malilipot': const LatLng(13.3189, 123.7397),
-        'Malinao': const LatLng(13.4025, 123.7042),
-        'Santo Domingo': const LatLng(13.2356, 123.7764),
-        'Tiwi': const LatLng(13.4586, 123.6806),
+        'Bacacay Poblacion': const LatLng(13.2925, 123.7917),
+        'Cagraray Island': const LatLng(13.2903, 123.8647),
+        'Batan Island': const LatLng(13.2375, 123.9722),
       };
 
   late LatLng _selectedLocation;
   late LatLng _mapCenter;
   int _zoom = 15;
+  double _baseZoom = 15.0;
   bool _isLocating = false;
+  bool _isValidatingPin = false;
+  String? _pinError;
+  int _validationToken = 0;
 
   @override
   void initState() {
@@ -60,6 +64,10 @@ class _LocationPickerModalState extends State<LocationPickerModal> {
     if (widget.initialLocation == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _getCurrentLocation();
+      });
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _validatePinLocation(_selectedLocation);
       });
     }
   }
@@ -86,11 +94,111 @@ class _LocationPickerModalState extends State<LocationPickerModal> {
     return 180.0 / pi * atan(0.5 * (exp(n) - exp(-n)));
   }
 
-  bool _isWithinAlbayFirstDistrict(LatLng pos) {
-    return pos.latitude >= 13.15 &&
-        pos.latitude <= 13.55 &&
-        pos.longitude >= 123.55 &&
-        pos.longitude <= 123.95;
+  bool _isWithinBacacayBounds(LatLng pos) {
+    return pos.latitude >= 13.20 &&
+        pos.latitude <= 13.38 &&
+        pos.longitude >= 123.73 &&
+        pos.longitude <= 124.06;
+  }
+
+  Future<void> _validatePinLocation(LatLng pos) async {
+    final token = ++_validationToken;
+    if (!_isWithinBacacayBounds(pos)) {
+      if (!mounted) return;
+      setState(() {
+        _isValidatingPin = false;
+        _pinError =
+            'Location is outside Bacacay, Albay. Please select a pin within Bacacay.';
+      });
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        _isValidatingPin = true;
+        _pinError = null;
+      });
+    }
+
+    String? errorMsg;
+    try {
+      // 1. Primary check: Nominatim reverse geocoding (distinguishes sea/water vs Bacacay land)
+      final nomUrl = Uri.parse(
+        'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${pos.latitude}&lon=${pos.longitude}&zoom=14&addressdetails=1',
+      );
+      final nomRes = await http
+          .get(
+            nomUrl,
+            headers: const {
+              'User-Agent': 'JJAASSWaterMarket/1.0 (water delivery app)',
+            },
+          )
+          .timeout(const Duration(seconds: 6));
+
+      if (nomRes.statusCode == 200) {
+        final data = jsonDecode(nomRes.body) as Map<String, dynamic>;
+        final hasError = data.containsKey('error');
+        final category = (data['category'] ?? '').toString().toLowerCase();
+        final type = (data['type'] ?? '').toString().toLowerCase();
+        final displayName = (data['display_name'] ?? '').toString().toLowerCase();
+        final address = data['address'] as Map<String, dynamic>?;
+        final isWaterType = category == 'natural' &&
+            (type == 'water' ||
+                type == 'bay' ||
+                type == 'strait' ||
+                type == 'sea' ||
+                type == 'coastline');
+        final hasRoadOrPlace = address != null &&
+            (address.containsKey('road') ||
+                address.containsKey('village') ||
+                address.containsKey('suburb') ||
+                address.containsKey('neighbourhood') ||
+                address.containsKey('hamlet') ||
+                address.containsKey('island') ||
+                address.containsKey('town') ||
+                address.containsKey('municipality'));
+
+        if (hasError || isWaterType || !hasRoadOrPlace) {
+          errorMsg =
+              'Cannot pin in the sea or open water. Please tap on land within Bacacay, Albay.';
+        } else if (!displayName.contains('bacacay')) {
+          errorMsg =
+              'Selected pin is outside Bacacay, Albay. Please select a land address in Bacacay.';
+        }
+      }
+    } catch (_) {
+      // Fallback to Mapbox Geocoding if Nominatim times out
+      if (AppConstants.mapboxAccessToken.isNotEmpty) {
+        try {
+          final mbUrl = Uri.parse(
+            'https://api.mapbox.com/geocoding/v5/mapbox.places/${pos.longitude},${pos.latitude}.json?types=address,poi,neighborhood,locality&limit=2&access_token=${AppConstants.mapboxAccessToken}',
+          );
+          final mbRes = await http.get(mbUrl).timeout(const Duration(seconds: 6));
+          if (mbRes.statusCode == 200) {
+            final data = jsonDecode(mbRes.body) as Map<String, dynamic>;
+            final features = (data['features'] as List<dynamic>?) ?? [];
+            if (features.isEmpty) {
+              errorMsg =
+                  'Cannot pin in the sea or open water. Please tap on land within Bacacay, Albay.';
+            } else {
+              final combined = features
+                  .map((f) => (f['place_name'] ?? '').toString().toLowerCase())
+                  .join(' ');
+              if (!combined.contains('bacacay')) {
+                errorMsg =
+                    'Selected pin is outside Bacacay, Albay. Please select a land address in Bacacay.';
+              }
+            }
+          }
+        } catch (_) {}
+      }
+    }
+
+    if (!mounted || token != _validationToken) return;
+    setState(() {
+      _isValidatingPin = false;
+      _pinError = errorMsg;
+    });
   }
 
   Future<void> _getCurrentLocation() async {
@@ -125,7 +233,7 @@ class _LocationPickerModalState extends State<LocationPickerModal> {
 
       final rawCoord = LatLng(position.latitude, position.longitude);
       final targetCoord =
-          _isWithinAlbayFirstDistrict(rawCoord) ? rawCoord : _defaultLocation;
+          _isWithinBacacayBounds(rawCoord) ? rawCoord : _defaultLocation;
 
       if (mounted) {
         setState(() {
@@ -134,6 +242,7 @@ class _LocationPickerModalState extends State<LocationPickerModal> {
           _zoom = 16;
           _isLocating = false;
         });
+        _validatePinLocation(targetCoord);
       }
     } catch (_) {
       if (mounted) setState(() => _isLocating = false);
@@ -192,7 +301,7 @@ class _LocationPickerModalState extends State<LocationPickerModal> {
                         ),
                         SizedBox(height: 2),
                         Text(
-                          'Albay 1st District • Tap or drag the map to set your exact pin',
+                          'Bacacay, Albay Only • Tap on land & pinch to zoom',
                           style: TextStyle(
                             fontSize: 11,
                             color: Color(0xFF64748B),
@@ -209,7 +318,7 @@ class _LocationPickerModalState extends State<LocationPickerModal> {
               ),
             ),
 
-            // Quick Municipality Selector Bar (Albay 1st District)
+            // Quick Area Selector Bar (Bacacay Only)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -220,7 +329,7 @@ class _LocationPickerModalState extends State<LocationPickerModal> {
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
-                  children: _albayFirstDistrictCenters.entries.map((entry) {
+                  children: _bacacayCenters.entries.map((entry) {
                     final isNear = (_selectedLocation.latitude - entry.value.latitude).abs() < 0.03 &&
                         (_selectedLocation.longitude - entry.value.longitude).abs() < 0.03;
                     return Padding(
@@ -244,6 +353,7 @@ class _LocationPickerModalState extends State<LocationPickerModal> {
                             _mapCenter = entry.value;
                             _zoom = 15;
                           });
+                          _validatePinLocation(entry.value);
                         },
                       ),
                     );
@@ -309,28 +419,44 @@ class _LocationPickerModalState extends State<LocationPickerModal> {
 
                   return GestureDetector(
                     behavior: HitTestBehavior.opaque,
-                    onScaleStart: (_) {},
+                    onScaleStart: (_) {
+                      _baseZoom = _zoom.toDouble();
+                    },
                     onScaleUpdate: (details) {
                       final delta = details.focalPointDelta;
-                      if (delta.dx == 0 && delta.dy == 0) return;
+                      int nextZoom = _zoom;
+                      if (details.pointerCount >= 2 ||
+                          (details.scale - 1.0).abs() > 0.01) {
+                        nextZoom = (_baseZoom + (log(details.scale) / ln2))
+                            .round()
+                            .clamp(11, 18);
+                      }
+                      if (delta.dx == 0 && delta.dy == 0 && nextZoom == _zoom) {
+                        return;
+                      }
                       final newWx = _lngToWorldX(_mapCenter.longitude, _zoom) - delta.dx;
                       final newWy = _latToWorldY(_mapCenter.latitude, _zoom) - delta.dy;
                       setState(() {
-                        _mapCenter = LatLng(
-                          _worldYToLat(newWy, _zoom).clamp(13.05, 13.60),
-                          _worldXToLng(newWx, _zoom).clamp(123.45, 124.00),
-                        );
+                        _zoom = nextZoom;
+                        if (delta.dx != 0 || delta.dy != 0) {
+                          _mapCenter = LatLng(
+                            _worldYToLat(newWy, _zoom).clamp(13.15, 13.42),
+                            _worldXToLng(newWx, _zoom).clamp(123.70, 124.08),
+                          );
+                        }
                       });
                     },
                     onTapUp: (details) {
                       final local = details.localPosition;
                       final tappedWx = leftWx + local.dx;
                       final tappedWy = topWy + local.dy;
-                      final tappedLat = _worldYToLat(tappedWy, _zoom).clamp(13.15, 13.55);
-                      final tappedLng = _worldXToLng(tappedWx, _zoom).clamp(123.55, 123.95);
+                      final tappedLat = _worldYToLat(tappedWy, _zoom).clamp(13.15, 13.42);
+                      final tappedLng = _worldXToLng(tappedWx, _zoom).clamp(123.70, 124.08);
+                      final tapped = LatLng(tappedLat, tappedLng);
                       setState(() {
-                        _selectedLocation = LatLng(tappedLat, tappedLng);
+                        _selectedLocation = tapped;
                       });
+                      _validatePinLocation(tapped);
                     },
                     child: Stack(
                       clipBehavior: Clip.hardEdge,
@@ -376,26 +502,12 @@ class _LocationPickerModalState extends State<LocationPickerModal> {
                           ),
                         ),
 
-                        // Zoom Controls
+                        // Recenter Control (Zooming is pinch-to-zoom only)
                         Positioned(
                           right: 16,
                           top: 16,
                           child: Column(
                             children: [
-                              _buildMapControlButton(
-                                icon: Icons.add_rounded,
-                                onTap: () {
-                                  if (_zoom < 18) setState(() => _zoom++);
-                                },
-                              ),
-                              const SizedBox(height: 6),
-                              _buildMapControlButton(
-                                icon: Icons.remove_rounded,
-                                onTap: () {
-                                  if (_zoom > 11) setState(() => _zoom--);
-                                },
-                              ),
-                              const SizedBox(height: 6),
                               _buildMapControlButton(
                                 icon: Icons.center_focus_strong_rounded,
                                 onTap: () {
@@ -485,14 +597,74 @@ class _LocationPickerModalState extends State<LocationPickerModal> {
                       ],
                     ),
                   ),
+                  if (_isValidatingPin) ...[
+                    const SizedBox(height: 8),
+                    const Row(
+                      children: [
+                        SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppTheme.primaryColor,
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          'Verifying land location in Bacacay...',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.primaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ] else if (_pinError != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF2F2),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFFCA5A5)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.warning_amber_rounded,
+                            size: 16,
+                            color: Color(0xFFDC2626),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _pinError!,
+                              style: const TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF991B1B),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
                     height: 46,
                     child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).pop(_selectedLocation);
-                      },
+                      onPressed: (_isValidatingPin || _pinError != null)
+                          ? null
+                          : () {
+                              Navigator.of(context).pop(_selectedLocation);
+                            },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryColor,
                         foregroundColor: Colors.white,

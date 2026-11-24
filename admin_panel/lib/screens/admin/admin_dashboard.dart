@@ -1532,16 +1532,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       ),
                       const SizedBox(height: 14),
 
-                      // Address / Fleet Station (Albay 1st District Scope)
+                      // Address / Fleet Station (Bacacay, Albay Scope)
                       TextField(
                         controller: addressController,
                         decoration: InputDecoration(
                           labelText: selectedRole == UserRole.driver
-                              ? 'Assigned Area (Albay 1st District) / Vehicle'
-                              : 'Delivery Address (Albay 1st District)',
+                              ? 'Assigned Area (Bacacay, Albay) / Vehicle'
+                              : 'Delivery Address (Bacacay, Albay)',
                           hintText: selectedRole == UserRole.driver
-                              ? 'e.g. Tabaco City / Bacacay Route'
-                              : 'e.g. Purok 2, Tabaco City, Albay',
+                              ? 'e.g. Bacacay Poblacion / Cagraray Route'
+                              : 'e.g. Purok 2, Brgy. Hindi, Bacacay, Albay',
                           prefixIcon: Icon(
                             selectedRole == UserRole.driver
                                 ? Icons.two_wheeler_rounded
@@ -1555,12 +1555,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         runSpacing: 6,
                         children:
                             const [
-                              'Tabaco City',
                               'Bacacay',
-                              'Malilipot',
-                              'Malinao',
-                              'Santo Domingo',
-                              'Tiwi',
                             ].map((mun) {
                               return ActionChip(
                                 visualDensity: VisualDensity.compact,

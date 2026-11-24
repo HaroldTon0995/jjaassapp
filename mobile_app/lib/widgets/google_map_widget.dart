@@ -66,13 +66,6 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
     }
     final addr = widget.destinationAddress.toLowerCase();
     if (addr.contains('bacacay')) return const LatLng(13.2925, 123.7917);
-    if (addr.contains('malilipot')) return const LatLng(13.3189, 123.7397);
-    if (addr.contains('malinao')) return const LatLng(13.4025, 123.7042);
-    if (addr.contains('santo domingo') || addr.contains('sto. domingo')) {
-      return const LatLng(13.2356, 123.7764);
-    }
-    if (addr.contains('tiwi')) return const LatLng(13.4586, 123.6806);
-    if (addr.contains('tabaco')) return const LatLng(13.3583, 123.7336);
 
     final hash = widget.destinationAddress.hashCode;
     final latOffset = ((hash % 40) - 20) / 1000.0;
@@ -91,6 +84,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
   int? _mapboxEtaMinutes;
   double? _mapboxDistanceKm;
   int _zoom = 15;
+  double _baseZoom = 15.0;
   bool _isLoadingLocation = false;
   Timer? _mockMovementTimer;
 
@@ -568,17 +562,29 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
 
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onScaleStart: (_) {},
+          onScaleStart: (_) {
+            _baseZoom = _zoom.toDouble();
+          },
           onScaleUpdate: (details) {
             final delta = details.focalPointDelta;
-            if (delta.dx == 0 && delta.dy == 0) return;
+            int nextZoom = _zoom;
+            if (details.pointerCount >= 2 ||
+                (details.scale - 1.0).abs() > 0.01) {
+              nextZoom = (_baseZoom + (log(details.scale) / ln2))
+                  .round()
+                  .clamp(11, 18);
+            }
+            if (delta.dx == 0 && delta.dy == 0 && nextZoom == _zoom) return;
             final newWx = _lngToWorldX(_mapCenter.longitude, _zoom) - delta.dx;
             final newWy = _latToWorldY(_mapCenter.latitude, _zoom) - delta.dy;
             setState(() {
-              _mapCenter = LatLng(
-                _worldYToLat(newWy, _zoom).clamp(13.0, 13.7),
-                _worldXToLng(newWx, _zoom).clamp(123.3, 124.1),
-              );
+              _zoom = nextZoom;
+              if (delta.dx != 0 || delta.dy != 0) {
+                _mapCenter = LatLng(
+                  _worldYToLat(newWy, _zoom).clamp(13.15, 13.42),
+                  _worldXToLng(newWx, _zoom).clamp(123.70, 123.98),
+                );
+              }
             });
           },
           child: Stack(
@@ -857,27 +863,13 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
                 ),
               ),
 
-              // Map Recenter (🎯) & Zoom Controls
+              // Map Recenter (🎯) Control (Zooming is pinch-to-zoom only)
               Positioned(
                 right: 10,
                 bottom: showCards ? (isCompactHeight ? 132 : 172) : 12,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _buildZoomBtn(
-                      icon: Icons.add_rounded,
-                      onTap: () {
-                        if (_zoom < 18) setState(() => _zoom++);
-                      },
-                    ),
-                    const SizedBox(height: 5),
-                    _buildZoomBtn(
-                      icon: Icons.remove_rounded,
-                      onTap: () {
-                        if (_zoom > 11) setState(() => _zoom--);
-                      },
-                    ),
-                    const SizedBox(height: 5),
                     _buildZoomBtn(
                       icon: Icons.gps_fixed_rounded,
                       onTap: _zoomToFitMarkers,

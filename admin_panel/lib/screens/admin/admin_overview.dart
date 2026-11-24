@@ -1709,9 +1709,9 @@ extension _AdminOverview on _AdminDashboardState {
                                   readOnly: lockAddress,
                                   decoration: InputDecoration(
                                     labelText:
-                                        'Delivery Address (Albay 1st District) *',
+                                        'Delivery Address (Bacacay, Albay) *',
                                     hintText:
-                                        'e.g. Purok 1, Tabaco City, Albay',
+                                        'e.g. Purok 1, Brgy. Hindi, Bacacay, Albay',
                                     prefixIcon: const Icon(Icons.location_on),
                                     filled: lockAddress,
                                     fillColor: lockAddress
@@ -1732,7 +1732,7 @@ extension _AdminOverview on _AdminDashboardState {
                                         : null,
                                     helperText: lockAddress
                                         ? 'Saved address from registered customer account'
-                                        : 'Service Scope: Tabaco City, Bacacay, Malilipot, Malinao, Santo Domingo, Tiwi',
+                                        : 'Service Scope: Bacacay, Albay only',
                                   ),
                                 ),
                                 if (!lockAddress) ...[
@@ -1742,12 +1742,7 @@ extension _AdminOverview on _AdminDashboardState {
                                     runSpacing: 6,
                                     children:
                                         const [
-                                          'Tabaco City',
                                           'Bacacay',
-                                          'Malilipot',
-                                          'Malinao',
-                                          'Santo Domingo',
-                                          'Tiwi',
                                         ].map((mun) {
                                           return ActionChip(
                                             visualDensity:

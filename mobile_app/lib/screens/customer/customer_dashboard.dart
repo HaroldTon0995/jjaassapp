@@ -119,7 +119,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     {
       'sender': 'Station Admin',
       'message':
-          'Hello! Welcome to JJAASS Water Market Station Help Desk. Our Albay 1st District branch (Tabaco City, Bacacay, Malilipot, Malinao, Santo Domingo, Tiwi) is here to assist you. Send us any inquiry regarding your deliveries, scheduled refills, or container returns!',
+          'Hello! Welcome to JJAASS Water Market Station Help Desk. Our Bacacay, Albay branch is here to assist you. Send us any inquiry regarding your deliveries, scheduled refills, or container returns!',
       'time': 'Station Desk',
       'isMe': false,
     },
@@ -6253,7 +6253,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  'Direct chat channel with JJAASS Station Manager • Albay 1st District',
+                  'Direct chat channel with JJAASS Station Manager • Bacacay, Albay',
                   style: TextStyle(
                     fontSize: 11,
                     color: Colors.grey.shade700,

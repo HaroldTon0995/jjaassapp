@@ -106,22 +106,7 @@ class AppConstants {
     double targetLng = destLng ?? stationLng;
     if (destLat == null || destLng == null) {
       final addr = deliveryAddress.toLowerCase();
-      if (addr.contains('tabaco')) {
-        targetLat = 13.3583;
-        targetLng = 123.7336;
-      } else if (addr.contains('malilipot')) {
-        targetLat = 13.3189;
-        targetLng = 123.7397;
-      } else if (addr.contains('malinao')) {
-        targetLat = 13.4025;
-        targetLng = 123.7042;
-      } else if (addr.contains('santo domingo') || addr.contains('sto. domingo')) {
-        targetLat = 13.2356;
-        targetLng = 123.7764;
-      } else if (addr.contains('tiwi')) {
-        targetLat = 13.4586;
-        targetLng = 123.6806;
-      } else if (addr.contains('bacacay')) {
+      if (addr.contains('bacacay')) {
         targetLat = 13.2925;
         targetLng = 123.7917;
       }

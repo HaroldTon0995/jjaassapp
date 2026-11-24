@@ -7,20 +7,15 @@ class PsgcPlace {
   const PsgcPlace(this.code, this.name);
 }
 
-/// Fetches cities/municipalities and barangays for Albay 1st District.
-/// Strictly scoped to: Tabaco City, Bacacay, Malilipot, Malinao, Santo Domingo, and Tiwi.
+/// Fetches municipality and barangays for Bacacay, Albay.
+/// Strictly scoped to: Bacacay only.
 class PsgcService {
   static const String _base = 'https://psgc.gitlab.io/api';
   static final Map<String, List<PsgcPlace>> _cache = {};
 
-  /// Official Albay 1st District Cities & Municipalities (PSGC codes).
+  /// Official Bacacay, Albay Municipality (PSGC code).
   static const List<PsgcPlace> albayFirstDistrictMunicipalities = [
-    PsgcPlace('050517000', 'Tabaco City'),
     PsgcPlace('050501000', 'Bacacay'),
-    PsgcPlace('050509000', 'Malilipot'),
-    PsgcPlace('050510000', 'Malinao'),
-    PsgcPlace('050516000', 'Santo Domingo'),
-    PsgcPlace('050518000', 'Tiwi'),
   ];
 
   static const Map<String, List<String>> _fallbackBarangays = {
