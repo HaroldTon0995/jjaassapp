@@ -42,25 +42,27 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  requested_role TEXT;
-  safe_role TEXT;
+  safe_role TEXT := 'customer';
   safe_name TEXT;
+  safe_email TEXT := LOWER(TRIM(COALESCE(NEW.email, '')));
 BEGIN
-  requested_role := LOWER(COALESCE(NEW.raw_user_meta_data->>'role', 'customer'));
-  IF requested_role IN ('customer', 'driver') THEN
-    safe_role := requested_role;
-  ELSE
-    safe_role := 'customer';
+  -- Do NOT create a customer profile until the Gmail address is actually verified
+  IF NEW.email_confirmed_at IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  IF safe_email = '' OR safe_email NOT LIKE '%@gmail.com' THEN
+    RETURN NEW;
   END IF;
 
   safe_name := COALESCE(
     NULLIF(TRIM(NEW.raw_user_meta_data->>'name'), ''),
     NULLIF(TRIM(NEW.raw_user_meta_data->>'full_name'), ''),
-    SPLIT_PART(COALESCE(NEW.email, 'user'), '@', 1)
+    SPLIT_PART(safe_email, '@', 1)
   );
 
   INSERT INTO public.profiles (id, name, email, role)
-  VALUES (NEW.id, safe_name, COALESCE(NEW.email, ''), safe_role)
+  VALUES (NEW.id, safe_name, safe_email, safe_role)
   ON CONFLICT (id) DO NOTHING;
 
   RETURN NEW;
@@ -69,7 +71,7 @@ $$;
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
+  AFTER INSERT OR UPDATE OF email_confirmed_at ON auth.users
   FOR EACH ROW
   EXECUTE FUNCTION public.handle_new_auth_user();
 
@@ -116,7 +118,7 @@ CREATE POLICY "profiles_insert_own_or_admin"
   ON public.profiles FOR INSERT
   TO authenticated
   WITH CHECK (
-    (auth.uid() = id AND role IN ('customer', 'driver'))
+    (auth.uid() = id AND role = 'customer')
     OR public.is_admin()
   );
 

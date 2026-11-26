@@ -184,16 +184,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
             const SizedBox(height: 16),
             CustomTextField(
               controller: _emailController,
-              labelText: 'Email Address',
-              hintText: 'Enter your email address',
+              labelText: 'Gmail Address',
+              hintText: 'Enter your real @gmail.com address',
               prefixIcon: Icons.email_outlined,
               keyboardType: TextInputType.emailAddress,
               validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter your email';
+                if (value == null || value.trim().isEmpty) {
+                  return 'Please enter your Gmail address';
                 }
-                if (!Helpers.isValidEmail(value)) {
-                  return 'Please enter a valid email address';
+                if (!Helpers.isValidGmail(value)) {
+                  return 'Please enter a valid @gmail.com address';
                 }
                 return null;
               },
@@ -218,13 +218,105 @@ class _RegisterScreenState extends State<RegisterScreen> {
             const SizedBox(height: 26),
             Consumer<AuthProvider>(
               builder: (context, auth, _) {
-                return CustomButton(
-                  text: 'Create Account',
-                  isLoading: auth.isLoading,
-                  onPressed: _handleRegister,
-                  gradientColors: const [
-                    AppTheme.navyColor,
-                    AppTheme.primaryColor,
+                return Column(
+                  children: [
+                    CustomButton(
+                      text: 'Create Account',
+                      isLoading: auth.isLoading,
+                      onPressed: _handleRegister,
+                      gradientColors: const [
+                        AppTheme.navyColor,
+                        AppTheme.primaryColor,
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Divider(
+                            color: Colors.grey.shade300,
+                            thickness: 1,
+                          ),
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 12),
+                          child: Text(
+                            'OR',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.mutedText,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Divider(
+                            color: Colors.grey.shade300,
+                            thickness: 1,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: OutlinedButton(
+                        onPressed: auth.isLoading
+                            ? null
+                            : () async {
+                                final ok = await auth.signInWithGoogle();
+                                if (!ok && context.mounted) {
+                                  Helpers.showSnackBar(
+                                    context,
+                                    auth.errorMessage ??
+                                        'Google Sign-Up failed.',
+                                    isError: true,
+                                  );
+                                }
+                              },
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          side: BorderSide(color: Colors.grey.shade300),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 22,
+                              height: 22,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF4285F4).withValues(
+                                  alpha: 0.12,
+                                ),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Text(
+                                'G',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 14,
+                                  color: Color(0xFF4285F4),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            const Text(
+                              'Continue with Google (Verified Gmail)',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF1E293B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 );
               },
@@ -254,6 +346,40 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         fontWeight: FontWeight.w800,
                         fontSize: 14,
                         decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppTheme.secondaryColor.withValues(alpha: 0.4),
+                ),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.info_outline_rounded,
+                    size: 18,
+                    color: AppTheme.navyColor,
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Only Customer accounts can register here. Please contact the system administrator for registration of a new Admin or Driver account.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.4,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.navyColor,
                       ),
                     ),
                   ),

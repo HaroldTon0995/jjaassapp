@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../core/utils/helpers.dart';
 import '../models/user_model.dart';
 import '../services/api_service.dart';
 
@@ -221,9 +222,19 @@ class SupabaseAuthRepository implements AuthRepository {
     required UserRole role,
   }) async {
     final cleanName = name.trim();
+    final cleanEmail = email.trim().toLowerCase();
+    if (!Helpers.isValidGmail(cleanEmail)) {
+      throw Exception(
+        'Only real @gmail.com addresses are allowed for customer registration.',
+      );
+    }
+
     final response = await _client.auth.signUp(
-      email: email.trim(),
+      email: cleanEmail,
       password: password,
+      emailRedirectTo: kIsWeb
+          ? Uri.base.origin
+          : 'io.supabase.jjaassapp://login-callback',
       data: {
         'name': cleanName,
         'full_name': cleanName,
@@ -239,20 +250,22 @@ class SupabaseAuthRepository implements AuthRepository {
     final newUser = UserModel(
       id: user.id,
       name: cleanName,
-      email: email.trim(),
+      email: cleanEmail,
       role: role,
     );
 
-    try {
-      // Upsert user profile into profiles table so DB triggers using 'New User' are overwritten
-      await _client.from('profiles').upsert(newUser.toJson());
-      await _client.from('profiles').update({
-        'name': cleanName,
-        'email': email.trim(),
-        'role': role.name,
-      }).eq('id', user.id);
-    } catch (e) {
-      debugPrint('Profiles table upsert skipped: $e');
+    // Only create a customer profile once the Gmail address is verified
+    if (user.emailConfirmedAt != null) {
+      try {
+        await _client.from('profiles').upsert(newUser.toJson());
+        await _client.from('profiles').update({
+          'name': cleanName,
+          'email': cleanEmail,
+          'role': role.name,
+        }).eq('id', user.id);
+      } catch (e) {
+        debugPrint('Profiles table upsert skipped: $e');
+      }
     }
 
     return newUser;

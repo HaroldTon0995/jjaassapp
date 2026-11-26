@@ -3,7 +3,15 @@ import 'package:flutter/material.dart';
 class Helpers {
   static bool isValidEmail(String email) {
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    return emailRegex.hasMatch(email);
+    return emailRegex.hasMatch(email.trim());
+  }
+
+  static bool isValidGmail(String email) {
+    final gmailRegex = RegExp(
+      r'^[a-zA-Z0-9](?:[a-zA-Z0-9._+-]{0,62}[a-zA-Z0-9])?@gmail\.com$',
+      caseSensitive: false,
+    );
+    return gmailRegex.hasMatch(email.trim());
   }
 
   static String capitalize(String text) {
