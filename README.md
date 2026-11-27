@@ -22,7 +22,7 @@ JJAASSAPP/
 ├── supabase/          # Database & Backend Configurations
 │   └── supabase_tracking.sql
 │
-└── vault/             # Project Documentation & Capstone Notes
+└── JJAASS MANUSCRIPT.pdf  # Project Documentation & Capstone Manuscript
 ```
 
 ## Running the Applications
