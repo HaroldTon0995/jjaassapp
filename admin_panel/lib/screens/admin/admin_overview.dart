@@ -119,6 +119,8 @@ extension _AdminOverview on _AdminDashboardState {
                 _buildAiSupportCard(isDark),
               ],
             ),
+          const SizedBox(height: 20),
+          AppDownloadQrCard(isDark: isDark),
         ],
       ),
     );

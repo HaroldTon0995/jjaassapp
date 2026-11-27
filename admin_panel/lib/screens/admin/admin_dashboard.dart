@@ -25,6 +25,7 @@ import '../../services/psgc_service.dart';
 import '../../core/utils/laptop_file_picker.dart';
 import '../../widgets/water_widgets.dart';
 import '../../widgets/gcash_payment_modal.dart';
+import '../../widgets/app_download_qr_card.dart';
 
 part 'admin_header.dart';
 part 'admin_overview.dart';

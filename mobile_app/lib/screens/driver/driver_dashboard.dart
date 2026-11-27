@@ -13,6 +13,7 @@ import '../../services/chat_service.dart';
 import '../../widgets/realtime_chat_modal.dart';
 import '../../widgets/water_widgets.dart';
 import '../../widgets/google_map_widget.dart';
+import '../../widgets/app_download_qr_card.dart';
 import 'driver_styles.dart';
 
 class DriverDashboard extends StatefulWidget {
@@ -1095,6 +1096,8 @@ class _DriverDashboardState extends State<DriverDashboard> {
                 _buildMiniAiSupportCard(isDark),
               ],
             ),
+          const SizedBox(height: 18),
+          AppDownloadQrCard(isDark: isDark),
         ],
       ),
     );

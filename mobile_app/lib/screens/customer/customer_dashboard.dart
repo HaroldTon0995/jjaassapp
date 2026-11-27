@@ -24,6 +24,7 @@ import '../../widgets/realtime_chat_modal.dart';
 import '../../models/delivery_issue_model.dart';
 import '../../services/delivery_issue_service.dart';
 import '../../widgets/report_delivery_issue_modal.dart';
+import '../../widgets/app_download_qr_card.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'customer_styles.dart';
 
@@ -1780,6 +1781,8 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                 _buildStationComplianceCard(isDark),
               ],
             ),
+          const SizedBox(height: 18),
+          AppDownloadQrCard(isDark: isDark),
         ],
       ),
     );
