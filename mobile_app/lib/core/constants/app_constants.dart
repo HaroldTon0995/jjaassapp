@@ -45,7 +45,7 @@ class AppConstants {
   // Hosted URL of recaptcha.html (used by Android WebView)
   static const String recaptchaBridgeUrl = String.fromEnvironment(
     'RECAPTCHA_BRIDGE_URL',
-    defaultValue: 'https://jjaass-admin.vercel.app/recaptcha.html',
+    defaultValue: 'https://jjaassapp-adminpanel.vercel.app/recaptcha.html',
   );
   static bool get isRecaptchaConfigured => recaptchaSiteKey.trim().isNotEmpty;
 
@@ -104,7 +104,8 @@ class AppConstants {
     double lng2,
   ) {
     const p = 0.017453292519943295;
-    final a = 0.5 -
+    final a =
+        0.5 -
         cos((lat2 - lat1) * p) / 2 +
         cos(lat1 * p) * cos(lat2 * p) * (1 - cos((lng2 - lng1) * p)) / 2;
     return 12742 * asin(sqrt(a));
@@ -124,7 +125,12 @@ class AppConstants {
         targetLng = 123.7917;
       }
     }
-    final km = calculateDistanceKm(stationLat, stationLng, targetLat, targetLng);
+    final km = calculateDistanceKm(
+      stationLat,
+      stationLng,
+      targetLat,
+      targetLng,
+    );
     return '${max(0.2, km).toStringAsFixed(1)} km';
   }
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
 import 'dart:ui_web' as ui_web;
@@ -13,7 +14,7 @@ class RecaptchaWidget extends StatefulWidget {
   const RecaptchaWidget({
     super.key,
     required this.siteKey,
-    required this.bridgeUrl,
+    this.bridgeUrl = '',
     required this.resetTrigger,
     required this.onTokenChanged,
   });
@@ -24,72 +25,118 @@ class RecaptchaWidget extends StatefulWidget {
 
 class _RecaptchaWidgetState extends State<RecaptchaWidget> {
   static int _viewCounter = 0;
-  late String _viewType;
-  web.HTMLIFrameElement? _iframe;
-  JSFunction? _messageListener;
-
-  String get _iframeUrl =>
-      'recaptcha.html?sitekey=${Uri.encodeComponent(widget.siteKey)}&v=${widget.resetTrigger}';
+  late final String _viewType;
+  web.HTMLDivElement? _container;
+  Timer? _initTimer;
+  JSAny? _recaptchaWidgetId;
+  bool _rendered = false;
 
   @override
   void initState() {
     super.initState();
     _registerView();
-    _attachMessageListener();
   }
 
   void _registerView() {
     _viewCounter++;
-    _viewType = 'jjaass-recaptcha-$_viewCounter';
+    _viewType = 'jjaass-recaptcha-div-$_viewCounter';
     ui_web.platformViewRegistry.registerViewFactory(_viewType, (int viewId) {
-      final iframe = web.HTMLIFrameElement()
-        ..src = _iframeUrl
-        ..style.border = 'none'
+      final div = web.HTMLDivElement()
+        ..id = _viewType
         ..style.width = '100%'
         ..style.height = '100%'
-        ..style.backgroundColor = 'transparent';
-      _iframe = iframe;
-      return iframe;
+        ..style.display = 'flex'
+        ..style.justifyContent = 'center'
+        ..style.alignItems = 'center'
+        ..style.overflow = 'visible';
+      _container = div;
+      _scheduleRender();
+      return div;
     });
   }
 
-  void _attachMessageListener() {
-    _messageListener = ((web.Event event) {
-      if (!mounted) return;
-      final msgEvent = event as web.MessageEvent;
-      final data = msgEvent.data;
-      if (data == null || !data.isA<JSObject>()) return;
-      final obj = data as JSObject;
-      final type = obj.getProperty('type'.toJS);
-      if (type != null && type.dartify() == 'recaptcha-token') {
-        final token = obj.getProperty('token'.toJS)?.dartify()?.toString() ?? '';
-        widget.onTokenChanged(token);
+  void _scheduleRender() {
+    _initTimer?.cancel();
+    if (_tryRender()) return;
+    _initTimer = Timer.periodic(const Duration(milliseconds: 200), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
       }
-    }).toJS;
-    web.window.addEventListener('message', _messageListener);
+      if (_tryRender()) {
+        timer.cancel();
+      }
+    });
+  }
+
+  JSObject? _getGrecaptcha() {
+    if (!web.window.hasProperty('grecaptcha'.toJS).toDart) return null;
+    final raw = web.window.getProperty('grecaptcha'.toJS);
+    if (raw == null || !raw.isA<JSObject>()) return null;
+    final obj = raw as JSObject;
+    if (!obj.hasProperty('render'.toJS).toDart) return null;
+    return obj;
+  }
+
+  bool _tryRender() {
+    if (_rendered) return true;
+    final div = _container;
+    final grecaptcha = _getGrecaptcha();
+    if (div == null || grecaptcha == null) return false;
+
+    final options = JSObject();
+    options.setProperty('sitekey'.toJS, widget.siteKey.toJS);
+    options.setProperty(
+      'callback'.toJS,
+      ((JSString token) {
+        if (mounted) {
+          widget.onTokenChanged(token.toDart);
+        }
+      }).toJS,
+    );
+    options.setProperty(
+      'expired-callback'.toJS,
+      (() {
+        if (mounted) {
+          widget.onTokenChanged('');
+        }
+      }).toJS,
+    );
+    options.setProperty(
+      'error-callback'.toJS,
+      (() {
+        if (mounted) {
+          widget.onTokenChanged('');
+        }
+      }).toJS,
+    );
+
+    _recaptchaWidgetId = grecaptcha.callMethod('render'.toJS, div, options);
+    _rendered = true;
+    return true;
   }
 
   @override
   void didUpdateWidget(covariant RecaptchaWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.resetTrigger != widget.resetTrigger ||
-        oldWidget.siteKey != widget.siteKey) {
-      _iframe?.src = _iframeUrl;
+    if (oldWidget.resetTrigger != widget.resetTrigger && _rendered) {
+      final grecaptcha = _getGrecaptcha();
+      if (grecaptcha != null && _recaptchaWidgetId != null) {
+        grecaptcha.callMethod('reset'.toJS, _recaptchaWidgetId);
+      }
     }
   }
 
   @override
   void dispose() {
-    if (_messageListener != null) {
-      web.window.removeEventListener('message', _messageListener);
-    }
+    _initTimer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 86,
+      height: 82,
       width: double.infinity,
       child: HtmlElementView(viewType: _viewType),
     );
