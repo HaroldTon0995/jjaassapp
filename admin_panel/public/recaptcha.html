@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Human Verification</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: transparent;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 82px;
+      overflow: hidden;
+      font-family: sans-serif;
+    }
+  </style>
+  <script>
+    function postToken(token) {
+      var safeToken = token || "";
+      if (window.RecaptchaChannel && typeof window.RecaptchaChannel.postMessage === "function") {
+        window.RecaptchaChannel.postMessage(safeToken);
+      }
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: "recaptcha-token", token: safeToken }, "*");
+      }
+    }
+
+    function onRecaptchaLoad() {
+      var params = new URLSearchParams(window.location.search);
+      var siteKey = params.get("sitekey") || "";
+      if (!siteKey || !window.grecaptcha) return;
+      window.grecaptcha.render("recaptcha-container", {
+        sitekey: siteKey,
+        callback: function(token) { postToken(token); },
+        "expired-callback": function() { postToken(""); },
+        "error-callback": function() { postToken(""); }
+      });
+    }
+  </script>
+  <script src="https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoad&render=explicit" async defer></script>
+</head>
+<body>
+  <div id="recaptcha-container"></div>
+</body>
+</html>

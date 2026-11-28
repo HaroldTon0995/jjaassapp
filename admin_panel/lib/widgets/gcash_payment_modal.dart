@@ -253,7 +253,7 @@ class _GCashPaymentModalState extends State<GCashPaymentModal>
         return;
       }
 
-      // If manual check didn't automatically verify from PayMongo, prompt user
+      // If manual check didn't automatically verify from Xendit, prompt user
       if (!isBackgroundPoll && mounted) {
         _showManualConfirmPrompt();
       }

@@ -141,7 +141,7 @@ class AiSupportService {
         "Store Location: $marketAddress (serving Bacacay, Albay).\n"
         "Operating Hours: Monday to Sunday, 7:00 AM - 7:00 PM.\n"
         "Available Jug Types: 5-Gallon Slim (with faucet & handle) and 5-Gallon Round (for water dispensers).\n"
-        "Available Payment Methods: Cash on Delivery (COD) and GCash Mobile Payment (via PayMongo).\n"
+        "Available Payment Methods: Cash on Delivery (COD) and GCash Mobile Payment (via Xendit).\n"
         "$roleScopeRule\n\n"
         "ALLOWED LIVE DATA FOR THIS ROLE:\n"
         "$contextData\n\n"
@@ -359,7 +359,7 @@ class AiSupportService {
           "- 📦 **Live Order Tracking & Pinned GPS Delivery**\n"
           "- 📸 **Reporting Delivery Defects** (with Camera/Gallery photo evidence)${swapCredits > 0 ? '\n- ✅ **You have $swapCredits Approved Free Swap Gallon(s) ready to redeem!**' : ''}\n"
           "- 🛡️ **Station Safety & Compliance Permits**\n"
-          "- 💳 **GCash (PayMongo) & Cash on Delivery (COD)**\n\n"
+          "- 💳 **GCash (Xendit) & Cash on Delivery (COD)**\n\n"
           "What would you like to ask?";
     }
 
@@ -397,7 +397,7 @@ class AiSupportService {
               "- Gallon Returns and Payments: Log returned Slim/Round borrowed gallons, verify GCash/COD, and message Customer or Station Admin Desk.";
         }
         return "Customer Role Guide\n\n"
-            "- Order Water: Order Refills (₱30) or Set A with New Jug (₱230), choose 5-Gallon Slim or Round, pin house GPS, and pay via GCash (PayMongo) or COD.\n"
+            "- Order Water: Order Refills (₱30) or Set A with New Jug (₱230), choose 5-Gallon Slim or Round, pin house GPS, and pay via GCash (Xendit) or COD.\n"
             "- Track and Chat: Track the rider on the live map and chat with the Driver or Station Admin.\n"
             "- Defect Claims and Permits: Submit defect claims with Camera/Gallery photo evidence, redeem approved free swaps, and view official Station Safety Permits.";
       }
@@ -612,7 +612,8 @@ class AiSupportService {
 
     // 12. Payments (Role-Scoped: Admin sees revenue, Customer/Driver only see payment instructions)
     if (query.contains('gcash') ||
-        query.contains('paymongo') ||
+        query.contains('xendit') ||
+        query.contains('zendit') ||
         query.contains('cod') ||
         query.contains('cash on delivery') ||
         query.contains('payment')) {
@@ -623,7 +624,7 @@ class AiSupportService {
               "- COD (Pending) orders require collecting exact cash upon delivery and tapping Mark as Delivered & Paid.";
         }
         return "Customer Payment Methods\n\n"
-            "- GCash (PayMongo): Select GCash at checkout for instant digital payment.\n"
+            "- GCash (Xendit): Select GCash at checkout for instant digital payment.\n"
             "- Cash on Delivery (COD): Pay the driver in cash when your water delivery arrives.";
       }
       final completedOrders = orderProvider.orders
@@ -644,7 +645,7 @@ class AiSupportService {
 
       return "Payments, Revenue Analytics & Water Volume Dispensed\n\n"
           "- Total Completed Revenue: ₱${totalRev.toStringAsFixed(2)} (${completedOrders.length} completed orders)\n"
-          "- GCash (PayMongo) Revenue: ₱${gcashRev.toStringAsFixed(2)}\n"
+          "- GCash (Xendit) Revenue: ₱${gcashRev.toStringAsFixed(2)}\n"
           "- Cash on Delivery (COD) Revenue: ₱${codRev.toStringAsFixed(2)}\n"
           "- Total Water Dispensed: $totalLiters Liters ($totalGallons x 19L 5-gallon jugs)";
     }

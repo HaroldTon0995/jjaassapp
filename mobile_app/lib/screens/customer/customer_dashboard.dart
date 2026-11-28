@@ -5968,7 +5968,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                                     title: '💳 Payment & Checkout',
                                     color: const Color(0xFF0F2B5C),
                                     questions: [
-                                      'How do I pay using GCash (PayMongo)?',
+                                      'How do I pay using GCash (Xendit)?',
                                       'What are the guidelines for Cash on Delivery (COD)?',
                                     ],
                                   ),

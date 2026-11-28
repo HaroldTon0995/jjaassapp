@@ -32,9 +32,22 @@ class AppConstants {
   static bool get isSupabaseConfigured =>
       supabaseUrl.isNotEmpty && !supabaseUrl.contains('YOUR_SUPABASE');
 
-  // PayMongo Keys Configuration
-  // Secret key is stored server-side in Supabase Edge Function secrets (PAYMONGO_SECRET_KEY).
-  static const String paymongoPublicKey = 'pk_test_Y2Rq8RD2whVztowJYaEaAo7p';
+  // Xendit Payment Gateway Configuration
+  // Secret key (XENDIT_SECRET_KEY) is stored server-side in Supabase Edge Function secrets.
+
+  // Google reCAPTCHA v2 Configuration
+  // Get your Site Key (v2 "I'm not a robot" Checkbox) at: https://www.google.com/recaptcha/admin
+  // Secret key (RECAPTCHA_SECRET_KEY) is stored server-side in Supabase Edge Function secrets.
+  static const String recaptchaSiteKey = String.fromEnvironment(
+    'RECAPTCHA_SITE_KEY',
+    defaultValue: '6LfDdjYuAAAAAOaVtw9HbFpdHH7Z0lo-sd4ErbTh',
+  );
+  // Hosted URL of recaptcha.html (used by Android WebView)
+  static const String recaptchaBridgeUrl = String.fromEnvironment(
+    'RECAPTCHA_BRIDGE_URL',
+    defaultValue: 'https://jjaass-admin.vercel.app/recaptcha.html',
+  );
+  static bool get isRecaptchaConfigured => recaptchaSiteKey.trim().isNotEmpty;
 
   // Gemini API Configuration for AquaBot Support
   // Get your free Gemini API key at: https://aistudio.google.com/app/apikey

@@ -1,12 +1,10 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/constants/app_constants.dart';
 
 class PaymentResponse {
   final String orderId;
-  final String paymentIntentId; // Holds link ID (link_xxxx), source ID (src_xxxx), or mock ID
+  final String paymentIntentId; // Holds Xendit charge ID (ewc:...), invoice ID (inv:...), or mock ID
   final String redirectUrl;
   final String status;
   final String? qrCodeUrl;
@@ -34,20 +32,12 @@ class PaymentResponse {
 }
 
 class PaymentService {
-  final http.Client _client = http.Client();
-
-  // Helper to construct basic auth header
-  String _getAuthHeader(String key) {
-    return 'Basic ${base64Encode(utf8.encode("$key:"))}';
-  }
-
-  /// Initiates a GCash / E-Wallet payment via Supabase Edge Function (PayMongo) or Public Key Sources API.
+  /// Initiates a GCash payment via Xendit through the secure Supabase Edge Function.
   Future<PaymentResponse> initiateGCashPayment({
     required String orderId,
     required double amount,
     required String role,
   }) async {
-    final publicKey = AppConstants.paymongoPublicKey;
     final successUrl = kIsWeb
         ? Uri.base.origin
         : 'io.supabase.jjaassapp://payment-success?order_id=$orderId';
@@ -55,11 +45,10 @@ class PaymentService {
         ? Uri.base.origin
         : 'io.supabase.jjaassapp://payment-cancel?order_id=$orderId';
 
-    // 1. Try secure Supabase Edge Function (holds PAYMONGO_SECRET_KEY server-side)
     if (AppConstants.isSupabaseConfigured) {
       try {
         final fnRes = await Supabase.instance.client.functions.invoke(
-          'paymongo-checkout',
+          'xendit-checkout',
           body: {
             'action': 'initiate',
             'orderId': orderId,
@@ -77,87 +66,34 @@ class PaymentService {
             orderId: orderId,
             paymentIntentId: (data['payment_intent_id'] ?? '').toString(),
             redirectUrl: checkoutUrl,
-            status: (data['status'] ?? 'active').toString(),
+            status: (data['status'] ?? 'PENDING').toString(),
             qrCodeUrl: getQrCodeUrl(checkoutUrl),
             isMock: false,
           );
         }
       } catch (e) {
-        debugPrint('PayMongo Edge Function initiate failed: $e');
+        debugPrint('Xendit Edge Function initiate failed: $e');
       }
     }
 
-    // 2. Fallback: PayMongo Sources API with Public Key (no secret key, no third-party CORS proxies)
-    if (publicKey.isNotEmpty && !publicKey.contains('your_public_key_here')) {
-      try {
-        final amountInCentavos = (amount * 100).round();
-        final response = await _client.post(
-          Uri.parse('https://api.paymongo.com/v1/sources'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Authorization': _getAuthHeader(publicKey),
-          },
-          body: jsonEncode({
-            'data': {
-              'attributes': {
-                'type': 'gcash',
-                'amount': amountInCentavos,
-                'currency': 'PHP',
-                'redirect': {
-                  'success': 'https://jjaass-water.web.app/payment-success?orderId=$orderId',
-                  'failed': 'https://jjaass-water.web.app/payment-failed?orderId=$orderId'
-                },
-                'metadata': {
-                  'orderId': orderId,
-                }
-              }
-            }
-          }),
-        );
-
-        if (response.statusCode == 200 || response.statusCode == 201) {
-          final json = jsonDecode(response.body);
-          final sourceId = json['data']['id'];
-          final checkoutUrl = json['data']['attributes']['redirect']['checkout_url'];
-          final status = json['data']['attributes']['status'];
-
-          return PaymentResponse(
-            orderId: orderId,
-            paymentIntentId: sourceId,
-            redirectUrl: checkoutUrl,
-            status: status,
-            qrCodeUrl: getQrCodeUrl(checkoutUrl),
-            isMock: false,
-          );
-        }
-      } catch (e) {
-        debugPrint('PayMongo Sources API error: $e');
-      }
-    }
-
-    // 3. Fallback to Safe In-App Test Mode (Never opens invalid test-sources.paymongo.com URLs)
+    // Fallback to Safe In-App Test Mode if Edge Function is not yet deployed
     debugPrint('Using local sandbox simulation mode for payment.');
     return _mockInitiateGCashPayment(orderId, amount);
   }
 
-  /// Polls or checks PayMongo via Supabase Edge Function or checks the Supabase DB
+  /// Polls Xendit status via Supabase Edge Function or checks the Supabase DB
   Future<bool> checkPaymentStatus(String identifier) async {
-    // Mock Mode identifiers
     if (identifier.startsWith('mock_') || identifier.startsWith('src_mock_')) {
       return false;
     }
 
-    // Check PayMongo Checkout Sessions, Links, or Sources via server-side Edge Function
-    if (identifier.startsWith('cs_') ||
-        identifier.startsWith('link_') ||
-        identifier.startsWith('src_')) {
+    if (identifier.startsWith('ewc:') || identifier.startsWith('inv:')) {
       if (!AppConstants.isSupabaseConfigured) {
         return false;
       }
       try {
         final fnRes = await Supabase.instance.client.functions.invoke(
-          'paymongo-checkout',
+          'xendit-checkout',
           body: {
             'action': 'check_status',
             'identifier': identifier,
@@ -168,15 +104,13 @@ class PaymentService {
           return true;
         }
       } catch (e) {
-        debugPrint('PayMongo Edge Function status check failed: $e');
+        debugPrint('Xendit Edge Function status check failed: $e');
       }
       return false;
     }
 
     // Otherwise, check Supabase DB for Order ID status updates
-    final isSupabaseConfigured = (AppConstants.supabaseUrl != 'YOUR_SUPABASE_PROJECT_URL' &&
-        AppConstants.supabaseAnonKey != 'YOUR_SUPABASE_PROJECT_ANON_KEY');
-    if (isSupabaseConfigured) {
+    if (AppConstants.isSupabaseConfigured) {
       try {
         final supabase = Supabase.instance.client;
         final response = await supabase
@@ -208,7 +142,7 @@ class PaymentService {
     );
   }
 
-  /// Helper to generate a helper QR Code link for any checkout URL.
+  /// Helper to generate a QR Code link for any checkout URL.
   String getQrCodeUrl(String redirectUrl) {
     if (redirectUrl.isEmpty) {
       return 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=JJAASS-GCASH-PAYMENT';

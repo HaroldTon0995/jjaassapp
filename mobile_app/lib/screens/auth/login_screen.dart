@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../core/constants/app_constants.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/helpers.dart';
@@ -11,6 +12,7 @@ import '../../models/user_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
+import '../../widgets/recaptcha_widget.dart';
 import '../../widgets/water_widgets.dart';
 import '../../widgets/forgot_password_modal.dart';
 
@@ -35,6 +37,8 @@ class _LoginScreenState extends State<LoginScreen> {
   int _failedAttempts = 0;
   int _captchaA = 3;
   int _captchaB = 4;
+  String _recaptchaToken = '';
+  int _recaptchaResetCounter = 0;
 
   bool get _isLockedOut => _lockoutSeconds > 0;
 
@@ -88,6 +92,46 @@ class _LoginScreenState extends State<LoginScreen> {
     _captchaA = _random.nextInt(9) + 1;
     _captchaB = _random.nextInt(9) + 1;
     _captchaController.clear();
+    _recaptchaToken = '';
+    _recaptchaResetCounter++;
+  }
+
+  Future<bool> _verifyRecaptchaToken() async {
+    if (!AppConstants.isRecaptchaConfigured) return true;
+    if (_recaptchaToken.isEmpty) {
+      Helpers.showSnackBar(
+        context,
+        'Please complete the reCAPTCHA human verification first.',
+        isError: true,
+      );
+      return false;
+    }
+    try {
+      final res = await Supabase.instance.client.functions.invoke(
+        'verify-recaptcha',
+        body: {'token': _recaptchaToken},
+      );
+      final data = res.data;
+      final ok = data is Map && data['success'] == true;
+      if (!ok && mounted) {
+        setState(() => _generateCaptcha());
+        Helpers.showSnackBar(
+          context,
+          'reCAPTCHA verification failed. Please try again.',
+          isError: true,
+        );
+      }
+      return ok;
+    } catch (_) {
+      if (mounted) {
+        Helpers.showSnackBar(
+          context,
+          'Unable to verify reCAPTCHA. Please try again.',
+          isError: true,
+        );
+      }
+      return false;
+    }
   }
 
   String _formatCountdown(int totalSeconds) {
@@ -254,6 +298,11 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleLogin() async {
     if (_isLockedOut) return;
     if (!_formKey.currentState!.validate()) return;
+
+    if (AppConstants.isRecaptchaConfigured) {
+      final recaptchaOk = await _verifyRecaptchaToken();
+      if (!mounted || !recaptchaOk) return;
+    }
 
     final email = _emailController.text.trim();
     final lockStatus = await _checkLockoutStatus(email);
@@ -549,62 +598,74 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                   const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEFF6FF),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: AppTheme.secondaryColor.withValues(
-                              alpha: 0.4,
+                  if (AppConstants.isRecaptchaConfigured)
+                    RecaptchaWidget(
+                      siteKey: AppConstants.recaptchaSiteKey,
+                      bridgeUrl: AppConstants.recaptchaBridgeUrl,
+                      resetTrigger: _recaptchaResetCounter,
+                      onTokenChanged: (token) {
+                        if (mounted) {
+                          setState(() => _recaptchaToken = token);
+                        }
+                      },
+                    )
+                  else
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: AppTheme.secondaryColor.withValues(
+                                alpha: 0.4,
+                              ),
+                            ),
+                          ),
+                          child: Text(
+                            'What is $_captchaA + $_captchaB?',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.navyColor,
                             ),
                           ),
                         ),
-                        child: Text(
-                          'What is $_captchaA + $_captchaB?',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            color: AppTheme.navyColor,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _captchaController,
-                          enabled: !_isLockedOut,
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
-                          ],
-                          decoration: const InputDecoration(
-                            hintText: 'Answer',
-                            isDense: true,
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 12,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _captchaController,
+                            enabled: !_isLockedOut,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                            decoration: const InputDecoration(
+                              hintText: 'Answer',
+                              isDense: true,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
                             ),
+                            validator: (value) {
+                              final parsed = int.tryParse(value?.trim() ?? '');
+                              if (parsed == null) {
+                                return 'Enter answer';
+                              }
+                              if (parsed != _captchaA + _captchaB) {
+                                return 'Incorrect answer';
+                              }
+                              return null;
+                            },
                           ),
-                          validator: (value) {
-                            final parsed = int.tryParse(value?.trim() ?? '');
-                            if (parsed == null) {
-                              return 'Enter answer';
-                            }
-                            if (parsed != _captchaA + _captchaB) {
-                              return 'Incorrect answer';
-                            }
-                            return null;
-                          },
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
                 ],
               ),
             ),
